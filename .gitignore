@@ -1,0 +1,11 @@
+# Datos derivados: se regeneran con los scripts de src/
+data/
+
+# Entornos: Python y dependencias de Node (herramientas/)
+.venv/
+node_modules/
+
+# Archivos temporales de Python
+__pycache__/
+*.pyc
+.ipynb_checkpoints/

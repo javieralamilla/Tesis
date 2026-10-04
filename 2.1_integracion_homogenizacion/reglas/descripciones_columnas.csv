@@ -1,0 +1,47 @@
+﻿seccion;columnas;descripcion;origen;valores
+1. Identificación y trazabilidad;ID_EGRESO;Identificador único del egreso. Se forma con el año del archivo y el número de línea del txt original (año × 10.000.000 + línea).;Creada;ninguno
+1. Identificación y trazabilidad;ANIO_ARCHIVO;Año del archivo de origen. Coincide con el año de la fecha de alta.;Trazabilidad;categorias
+1. Identificación y trazabilidad;ARCHIVO_ORIGEN;Nombre del archivo txt del que proviene el registro.;Trazabilidad;categorias
+1. Identificación y trazabilidad;FILA_ORIGEN;Número de línea del registro en el txt original (la línea 1 es el encabezado).;Trazabilidad;rango
+1. Identificación y trazabilidad;DUP_EXACTO;Verdadero si el registro es copia idéntica de un registro anterior del mismo año, con todas las columnas de datos iguales.;Creada;categorias
+1. Identificación y trazabilidad;DUP_CLAVE;Verdadero si el registro comparte paciente, hospital, fecha de ingreso y fecha de alta con otro registro. Solo se evalúa cuando esos cuatro datos existen.;Creada;categorias
+2. Paciente;ID_PACIENTE;Identificador encriptado del paciente. En los archivos originales se llama CIP_ENCRIPTADO (2019 a 2023) e ID_BENEFICIARIO (2024). Solo permite seguir a un paciente dentro de un mismo BLOQUE_ID.;Renombrada;ninguno
+2. Paciente;BLOQUE_ID;Sistema de identificador de paciente: A corresponde a 2019 y 2020, B a 2021 en adelante. Los identificadores de un bloque no se pueden vincular con los del otro.;Creada;categorias
+2. Paciente;SEXO;Sexo del paciente.;Original;categorias
+2. Paciente;FECHA_NACIMIENTO;Fecha de nacimiento del paciente.;Original;rango
+2. Paciente;ETNIA;Pueblo originario al que declara pertenecer el paciente. NINGUNO y OTRO no son comparables entre años: en 2022 y 2023 casi todos los registros figuran como OTRO.;Original;categorias
+2. Paciente;NACIONALIDAD;Nacionalidad del paciente. Desde 2020 algunos registros indican un continente en lugar de un país.;Original;categorias
+2. Paciente;PROVINCIA;Provincia de residencia del paciente.;Original;categorias
+2. Paciente;COMUNA;Comuna de residencia del paciente.;Original;categorias
+2. Paciente;SERVICIO_SALUD;Servicio de Salud asociado al paciente, no al establecimiento: un mismo hospital atiende pacientes de varios servicios.;Original;categorias
+2. Paciente;PREVISION;Previsión de salud del paciente (tramos de FONASA, ISAPRE y otras).;Original;categorias
+3. Episodio de hospitalización;COD_HOSPITAL;Código del establecimiento donde ocurre el egreso. Los nombres están en la hoja Hospitales de la tabla maestra del DEIS.;Original;categorias
+3. Episodio de hospitalización;TIPO_ACTIVIDAD;Tipo de atención. HOSPITALIZACIÓN DIURNA y HOSPITALIZACIÓN EN URGENCIA solo existen en 2019.;Original;categorias
+3. Episodio de hospitalización;TIPO_INGRESO;Forma de ingreso del paciente: por urgencia, programada u obstétrica.;Original;categorias
+3. Episodio de hospitalización;TIPO_PROCEDENCIA;Lugar o programa desde el que llega el paciente (servicio de emergencia, centro de especialidades, otro hospital, etc.).;Original;categorias
+3. Episodio de hospitalización;HOSPPROCEDENCIA;Establecimiento de procedencia cuando el paciente llega desde otro establecimiento. Los nombres no están unificados entre años.;Original;categorias
+3. Episodio de hospitalización;ESPECIALIDAD_MEDICA;Especialidad médica asociada al episodio. Los nombres propios de 2019 se llevaron a los usados desde 2020.;Original;categorias
+3. Episodio de hospitalización;FECHA_INGRESO;Fecha de ingreso al establecimiento.;Original;rango
+3. Episodio de hospitalización;SERVICIOINGRESO;Servicio clínico o unidad de ingreso.;Original;categorias
+3. Episodio de hospitalización;FECHATRASLADO{1-9};Fecha de cada traslado entre servicios durante la hospitalización (hasta 9).;Original;rango
+3. Episodio de hospitalización;SERVICIOTRASLADO{1-9};Servicio clínico de destino de cada traslado interno. Algunos valores de 2021, 2022 y 2024 son códigos numéricos sin diccionario.;Original;categorias
+3. Episodio de hospitalización;FECHAALTA;Fecha de alta. Define el año del archivo.;Original;rango
+3. Episodio de hospitalización;SERVICIOALTA;Servicio clínico desde el que egresa el paciente.;Original;categorias
+3. Episodio de hospitalización;TIPOALTA;Destino o condición del paciente al alta (domicilio, fallecido, derivación a otro establecimiento, etc.).;Original;categorias
+3. Episodio de hospitalización;MEDICOALTA_ENCRIPTADO;Identificador encriptado del médico que da el alta. Cambia de sistema entre 2020 y 2021, igual que el identificador de paciente.;Original;ninguno
+4. Diagnósticos, procedimientos e intervención;DIAGNOSTICO1;Diagnóstico principal, codificado en CIE-10.;Original;categorias
+4. Diagnósticos, procedimientos e intervención;DIAGNOSTICO{2-35};Diagnósticos secundarios, codificados en CIE-10.;Original;categorias
+4. Diagnósticos, procedimientos e intervención;PROCEDIMIENTO{1-30};Procedimientos realizados, codificados en CIE-9-MC.;Original;categorias
+4. Diagnósticos, procedimientos e intervención;FECHAINTERV1;Fecha de la primera intervención quirúrgica.;Original;rango
+4. Diagnósticos, procedimientos e intervención;MEDICOINTERV1_ENCRIPTADO;Identificador encriptado del médico de la primera intervención.;Original;ninguno
+4. Diagnósticos, procedimientos e intervención;ESPECIALIDADINTERVENCION;Especialidad del profesional que realiza la intervención.;Original;categorias
+4. Diagnósticos, procedimientos e intervención;USOSPABELLON;Tipo de pabellón utilizado, según la hoja Tipo de Pabellón de la tabla maestra: 1 central u obstétrico, 2 ambulatorio, 3 sala de procedimiento, 4 hemodinamia, 5 urgencia, 6 urgencia habilitado en UCI, 7 hospital de campaña, 8 operativos especiales. Casi sin datos en 2020. En 2019 hay valores fuera del rango 1 a 8.;Original;categorias
+5. Clasificación GRD;IR_29301_COD_GRD;Código IR-GRD asignado al egreso. Tiene 6 dígitos y se guarda como texto para conservar los ceros iniciales. Las descripciones están en la hoja IR - GRD de la tabla maestra.;Original;categorias
+5. Clasificación GRD;CDM;Categoría Diagnóstica Mayor: los 2 primeros dígitos del código GRD (01 a 23, y 99 para los inagrupables).;Creada;categorias
+5. Clasificación GRD;IR_29301_PESO;Peso relativo del GRD.;Original;rango
+5. Clasificación GRD;IR_29301_SEVERIDAD;Nivel de severidad del GRD: 0 sin gravedad, 1 menor, 2 moderada, 3 mayor.;Original;categorias
+5. Clasificación GRD;IR_29301_MORTALIDAD;Nivel de riesgo de mortalidad del GRD, en la misma escala de 0 a 3.;Original;categorias
+6. Recién nacido;CONDICIONDEALTANEONATO{1-4};Condición al alta de cada recién nacido (VIVO o FALLECIDO). Solo se informó en 2019.;Original;categorias
+6. Recién nacido;PESORN{1-4};Peso de cada recién nacido, en gramos.;Original;rango
+6. Recién nacido;SEXORN{1-4};Sexo de cada recién nacido.;Original;categorias
+6. Recién nacido;RN{1-4}ESTADO;Valor numérico asociado a cada recién nacido. Su significado no está documentado en las tablas disponibles. En 2019 y 2020 el 0 aparece también en episodios sin recién nacido.;Original;categorias

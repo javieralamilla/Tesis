@@ -1,0 +1,11 @@
+{
+  "name": "bitacora-word",
+  "private": true,
+  "description": "Genera docs/bitacora.docx a partir de docs/bitacora.md",
+  "scripts": {
+    "generar": "node generar.js"
+  },
+  "dependencies": {
+    "docx": "9.8.1"
+  }
+}
