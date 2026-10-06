@@ -1,0 +1,14 @@
+﻿codigo;columna;criterio;papel;activo;obligatorio;bitacora
+E01;EXC_SIN_ID;Sin identificador de paciente;AMBOS;SI;SI;D21
+E02;EXC_ID_GENERICO;Identificador genérico: lo usan muchas personas distintas;AMBOS;SI;NO;H13, D18
+E03;EXC_FECHAS;Sin fecha de ingreso o de alta, o con el alta anterior al ingreso;AMBOS;SI;SI;H10, D21
+E04;EXC_ACTIVIDAD_2019;Hospitalización diurna o en urgencia: tipos de actividad que solo existen en 2019;AMBOS;SI;NO;H09
+E05;EXC_TRAMO_EPISODIO;Tramo de un traslado: no es el alta final de su episodio asistencial;CASO;SI;NO;D19
+E06;EXC_FALLECIDO;Alta por fallecimiento;CASO;SI;NO;D23
+E07;EXC_DERIVADO_HOSPITAL;Alta por derivación a otro hospital;CASO;SI;NO;H14, D19
+E08;EXC_DERIVADO_PRIVADO;Alta por derivación a una institución privada;CASO;SI;NO;D19
+E09;EXC_SIN_GRD;Sin GRD válido: sin código GRD o con CDM 99;CASO;SI;NO;D07, D08
+E10;EXC_DATOS_FALTANTES;Sin fecha de nacimiento válida (falta, es posterior al ingreso o la edad supera el máximo) o sin tipo de alta;CASO;SI;NO;H10, D21
+E11;EXC_CENSURA;Ventana de seguimiento incompleta: el alta está demasiado cerca del cierre del bloque;CASO;SI;NO;D03, D22
+E12;EXC_ALTA_VOLUNTARIA_FUGA;Alta voluntaria o fuga del paciente;CASO;NO;NO;D23
+E13;EXC_CMA;Cirugía mayor ambulatoria;CASO;NO;NO;D23

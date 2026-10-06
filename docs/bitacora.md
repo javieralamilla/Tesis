@@ -99,13 +99,15 @@ y homogenización). Desde la actividad 2.2, cada actividad lleva su propia bitá
 
 ### D07 · 2026-09-30 · Egresos sin diagnóstico principal
 - **Actividad:** 2.2
-- **Decisión propuesta:** Excluir los 11.316 egresos con `DIAGNOSTICO1 = DESCONOCIDO` (concentrados en 2019–2020).
+- **Decisión propuesta:** Conservar los egresos sin diagnóstico principal. Son 11.396 (0,20 %) y casi todos tienen GRD, CDM, diagnósticos secundarios y procedimientos. Solo se excluyen como caso de estudio los que no tienen un GRD válido (ver D08). Reemplaza la propuesta inicial de excluirlos.
+- **Fundamento:** Revisión del 5 de octubre de 2026 sobre la tabla integrada. El 95 % de estos egresos tiene diagnósticos secundarios, el 98 % tiene procedimientos y todos salvo 19 tienen código GRD; el 65 % pertenece a la CDM 08. Se concentran en 2019 (8.650) y 2020 (2.372). En un conteo preliminar, 871 ocurren dentro de los 30 días posteriores a un alta anterior del mismo paciente, por lo que eliminarlos dejaría esas altas sin su reingreso.
 - **Estado:** Pendiente de validar con profesor guía.
 
 ### D08 · 2026-09-30 · GRD inagrupable (CDM 99)
 - **Actividad:** 2.2
-- **Decisión propuesta:** Definir cómo se tratan los egresos con CDM 99 en el reingreso relacionado (no tienen una categoría clínica con la cual comparar).
-- **Estado:** Pendiente.
+- **Decisión propuesta:** Los egresos con GRD inagrupable (CDM 99) se excluyen como caso de estudio (egreso índice), porque no tienen una categoría diagnóstica ni un peso GRD válidos. Se conservan en la tabla para identificar reingresos por cualquier causa. Un reingreso con CDM 99 no se cuenta como relacionado con el diagnóstico. El mismo criterio se aplica a los 90 egresos sin código GRD (H07).
+- **Fundamento:** Revisión del 5 de octubre de 2026. Son 4.983 egresos (0,09 %). El 91 % corresponde al GRD 990099, "paciente ambulatorio con procedimiento de hospitalización" (cirugía mayor ambulatoria), y todos tienen peso GRD igual a 0. En un conteo preliminar, de unos 671.000 pares de alta seguida de un nuevo ingreso dentro de 30 días, solo 383 involucran la CDM 99.
+- **Estado:** Pendiente de validar con profesor guía.
 
 ### H06 · 2026-09-30 · Línea con un separador de más en 2022
 - **Actividad:** 1.2
@@ -153,7 +155,8 @@ y homogenización). Desde la actividad 2.2, cada actividad lleva su propia bitá
 - **Actividad:** 1.2 y 2.2
 - **Hallazgo:** 2019 incluye 55.328 egresos `HOSPITALIZACIÓN DIURNA` (98,6 % con estadía de 0 días, casi todos programados) y 62.551 `HOSPITALIZACIÓN EN URGENCIA` (mediana de 1 día, casi todos por urgencia). Desde 2020 solo existen `HOSPITALIZACIÓN` y `CIRUGÍA MAYOR AMBULATORIA (CMA)`, y la proporción de hospitalizaciones de 0 días se mantiene en ~5 % todos los años: esos episodios no se reclasificaron, dejaron de registrarse en la base.
 - **Consecuencia:** 2019 contiene ~118 mil episodios (10 % del año) de tipos que no existen después. Propuesta: no renombrarlos en la homogenización y excluirlos en la actividad 2.2 para que 2019 sea comparable con 2020–2024.
-- **Estado:** Pendiente de validar con profesor guía.
+- **Evidencia adicional:** Revisión del 5 de octubre de 2026. La hospitalización diurna corresponde sobre todo a tratamientos que se repiten: sesiones de quimioterapia (12.576) y diálisis (10.068); 649 pacientes tienen 10 o más episodios en el año, y el 30 % de los episodios diurnos va seguido de otro ingreso dentro de 7 días. Con estos dos tipos de actividad, el 14,0 % de las altas de 2019 va seguido de un nuevo ingreso del mismo paciente dentro de 30 días, frente a entre 10,7 % y 11,4 % en los demás años; sin ellos, el valor de 2019 es 11,6 % (conteo preliminar, sin otras exclusiones).
+- **Estado:** Se aplicará en la actividad 2.2: estos episodios quedan fuera como caso de estudio y como reingreso de otra alta. Pendiente de validar con profesor guía.
 
 ### D10 · 2026-10-02 · Protección de los valores con forma de RUT
 - **Actividad:** 2.1
@@ -199,7 +202,9 @@ y homogenización). Desde la actividad 2.2, cada actividad lleva su propia bitá
 - **Actividad:** 2.1 y 2.2
 - **Decisión:** Dos registros se consideran el mismo episodio cuando coinciden paciente, hospital, fecha de ingreso y fecha de alta. En la integración los duplicados solo se marcan, con dos columnas: `DUP_EXACTO` (copia idéntica de un registro anterior, en todas las columnas de datos) y `DUP_CLAVE` (comparte los cuatro datos de la clave con otro registro). La eliminación se hará en la actividad 2.2.
 - **Resultado:** 3.818 copias exactas (2.818 de ellas en 2020) y 15.734 registros con clave repetida, en 7.850 grupos de 2 a 4 registros. Los 17.934 registros sin clave completa (sin identificador de paciente o sin fechas) no se pueden evaluar por clave.
-- **Estado:** Adoptada. Queda por definir en 2.2 qué registro se conserva en los grupos con clave repetida que no son copias exactas.
+- **Regla de eliminación:** Definida el 5 de octubre de 2026. Las copias exactas se eliminan. Al quitarlas quedan 4.041 episodios con dos o más registros distintos (el 86 % con estadía de 0 días y el 78 % de cirugía mayor ambulatoria); en el 39 % de los pares lo único distinto es el médico registrado. En esos episodios se conserva el registro más completo: el que tiene más diagnósticos; si empatan, el que tiene más procedimientos; si empatan, el de mayor peso GRD; y si siguen empatados, el primero del archivo. Sobran 4.067 registros. El reingreso no depende de cuál se conserve, porque el paciente y las fechas son los mismos.
+- **Caso especial:** En 296 pares los dos registros tienen distinto sexo o distinta fecha de nacimiento, es decir, son personas distintas que comparten identificador. En 124 de ellos uno es menor de un año y el otro tiene más de 12, probablemente un recién nacido registrado con el identificador de su madre. Estos pares no se fusionan; su tratamiento se define en la actividad 2.2, junto con el criterio de «mismo paciente».
+- **Estado:** Adoptada. Pendiente de validar con profesor guía.
 
 ### H11 · 2026-10-03 · Hallazgos de la tabla integrada
 - **Actividad:** 1.2 y 2.2
@@ -238,6 +243,7 @@ y homogenización). Desde la actividad 2.2, cada actividad lleva su propia bitá
 - [ ] Validar con profesor guía la exclusión en 2.2 de los 90 egresos con GRD `DESCONOCIDO` (H07).
 - [ ] Revisar la tabla de equivalencias y decidir qué hacer con los 4 nombres de especialidad sin equivalente (D12).
 - [ ] En la actividad 2.2, definir el tratamiento de los egresos con fechas faltantes o incoherentes (H10).
-- [ ] En la actividad 2.2, definir qué registro se conserva en los grupos con clave repetida (D15).
+- [x] En la actividad 2.2, definir qué registro se conserva en los grupos con clave repetida (D15). Definido el 5 de octubre de 2026: el más completo.
+- [ ] En la actividad 2.2, definir cómo se tratan los identificadores compartidos por dos personas, por ejemplo madre y recién nacido (D15).
 - [ ] Contrastar el diccionario de datos con la documentación oficial de la base GRD (D16).
 - [ ] Validar con profesor guía la propuesta de H09 (excluir en 2.2 los tipos de actividad que solo existen en 2019).

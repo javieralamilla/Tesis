@@ -1,8 +1,10 @@
-// Genera la versión Word de la bitácora (docs/bitacora.docx) a partir de docs/bitacora.md.
+// Genera la versión Word de una bitácora a partir de su Markdown.
 // La bitácora en Markdown es el documento principal: el Word se regenera cada vez que cambia.
 //
 // Uso (desde esta carpeta, la primera vez ejecutar "npm install"):
-//     npm run generar
+//     npm run generar            docs/bitacora.md (actividades 1.2 y 2.1)
+//     npm run generar:2.2        2.2_depuracion_etiquetado/bitacora.md
+//     node generar.js <entrada.md> <salida.docx>    cualquier otra bitácora
 const fs = require("fs");
 const path = require("path");
 const {
@@ -14,6 +16,8 @@ const {
 const DIR_DOCS = path.join(__dirname, "..", "..", "docs");
 const SRC = process.argv[2] || path.join(DIR_DOCS, "bitacora.md");
 const OUT = process.argv[3] || path.join(DIR_DOCS, "bitacora.docx");
+// Ruta del Markdown que se cita en la portada, relativa a la carpeta de la tesis.
+const ORIGEN = path.relative(path.join(__dirname, "..", "..", ".."), path.resolve(SRC)).split(path.sep).join("/");
 const SUBTITULO = "Análisis de reingresos hospitalarios mediante selección de variables sobre datos GRD";
 
 // A4 con márgenes de 1" (el informe de la tesis está en A4).
@@ -289,7 +293,7 @@ for (const b of bloques) {
       spacing: { after: 280 },
       border: { bottom: { style: BorderStyle.SINGLE, size: 6, color: AZUL, space: 6 } },
       children: [new TextRun({
-        text: `Actualizada al ${fechaLarga(ultimaFecha)} · Versión Word generada a partir de Codigo/docs/bitacora.md`,
+        text: `Actualizada al ${fechaLarga(ultimaFecha)} · Versión Word generada a partir de ${ORIGEN}`,
         color: GRIS, size: 18,
       })],
     }));
@@ -349,7 +353,7 @@ const estiloTitulo = (id, nombre, tam, antes, despues, nivel) => ({
 
 const doc = new Document({
   creator: "Tesis GRD",
-  title: "Bitácora de decisiones sobre los datos",
+  title: (bloques.find((b) => b.tipo === "titulo") || {}).texto || "Bitácora de decisiones sobre los datos",
   description: "Hallazgos y decisiones del procesamiento de la base GRD 2019–2024",
   styles: {
     default: {

@@ -1,0 +1,13 @@
+﻿parametro;valor;usado_en;descripcion
+persona_dias_fnac;366;08;Dos egresos con el mismo identificador son de personas distintas cuando sus fechas de nacimiento difieren en más de este número de días (D18)
+persona_mismo_dia_mes;SI;08;SI = si las fechas de nacimiento coinciden en día y mes son de la misma persona aunque difieran en más de un año: error de digitación en el año (D18)
+id_generico_min_personas;5;08;Un identificador con este número de combinaciones distintas de sexo y fecha de nacimiento, o más, se considera genérico (D18)
+traslado_dias_max;1;08;"Un ingreso en otro hospital hasta este número de días después del alta continúa el mismo episodio asistencial: 0 = solo el mismo día; 1 = el mismo día o el siguiente (D19)"
+traslado_exige_marca;NO;08;SI = además debe constar el traslado en el tipo de alta (derivación) o en la procedencia del ingreso (otros hospitales) (D19)
+censura_dias;30;08 y 09;Días de seguimiento que deben quedar dentro del bloque después del alta (D22)
+edad_maxima;110;08;Edad al ingreso, en años, sobre la cual la fecha de nacimiento se considera no válida (D21)
+ventanas_dias;7|30;09;Ventanas de reingreso, en días, separadas por una barra vertical. La más larga no puede superar censura_dias (D20, D22)
+reingreso_solo_no_planificado;SI;09;"SI = solo cuentan como reingreso los ingresos no planificados, como indica el resumen de la propuesta; NO = cuenta todo ingreso, también los programados y los partos (D20, D26)"
+ingresos_no_planificados;URGENCIA|OBSTETRICA;09;Tipos de ingreso que cuentan como reingreso no planificado, separados por una barra vertical (D20)
+grd_parto;146|147;09;Comienzo de los códigos GRD de parto o cesárea: un ingreso con uno de estos GRD no cuenta como reingreso no planificado (D20)
+cdm_agrupadas;13+14;09;CDM que se consideran una sola al comparar la CDM del reingreso con la del caso de estudio. Las CDM de un grupo se unen con + y los grupos se separan con una barra vertical. Vacío = ninguna (H17, D25)

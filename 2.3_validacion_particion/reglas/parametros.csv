@@ -1,0 +1,4 @@
+﻿parametro;valor;descripcion
+semilla;2026;Semilla fija del proyecto para todo componente aleatorio: la partición inicial y, en las etapas siguientes, la validación cruzada y los modelos
+prueba_una_de_cada;5;Tamaño del conjunto de prueba: una de cada N unidades de reparto. 5 = 20 % para prueba y 80 % para desarrollo
+agrupar_por_nacimiento;SI;"SI = la unidad de reparto es el grupo de personas con la misma fecha de nacimiento y el mismo sexo, para que una persona con un identificador en cada bloque quede en un solo conjunto; NO = la unidad de reparto es el identificador de paciente"

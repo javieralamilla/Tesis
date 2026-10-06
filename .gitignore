@@ -5,6 +5,9 @@ data/
 .venv/
 node_modules/
 
+# Archivos de bloqueo de Word (aparecen mientras un .docx está abierto)
+~$*
+
 # Archivos temporales de Python
 __pycache__/
 *.pyc
