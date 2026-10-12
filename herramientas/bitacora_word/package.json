@@ -4,7 +4,8 @@
   "description": "Genera la versión Word de las bitácoras a partir de su Markdown",
   "scripts": {
     "generar": "node generar.js",
-    "generar:2.2": "node generar.js ../../2.2_depuracion_etiquetado/bitacora.md ../../2.2_depuracion_etiquetado/bitacora.docx"
+    "generar:2.2": "node generar.js ../../2.2_depuracion_etiquetado/bitacora.md ../../2.2_depuracion_etiquetado/bitacora.docx",
+    "generar:2.3": "node generar.js ../../2.3_validacion_particion/bitacora.md ../../2.3_validacion_particion/bitacora.docx"
   },
   "dependencies": {
     "docx": "9.8.1"

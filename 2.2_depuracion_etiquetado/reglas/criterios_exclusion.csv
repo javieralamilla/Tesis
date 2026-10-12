@@ -1,14 +1,15 @@
-﻿codigo;columna;criterio;papel;activo;obligatorio;bitacora
-E01;EXC_SIN_ID;Sin identificador de paciente;AMBOS;SI;SI;D21
-E02;EXC_ID_GENERICO;Identificador genérico: lo usan muchas personas distintas;AMBOS;SI;NO;H13, D18
-E03;EXC_FECHAS;Sin fecha de ingreso o de alta, o con el alta anterior al ingreso;AMBOS;SI;SI;H10, D21
-E04;EXC_ACTIVIDAD_2019;Hospitalización diurna o en urgencia: tipos de actividad que solo existen en 2019;AMBOS;SI;NO;H09
-E05;EXC_TRAMO_EPISODIO;Tramo de un traslado: no es el alta final de su episodio asistencial;CASO;SI;NO;D19
-E06;EXC_FALLECIDO;Alta por fallecimiento;CASO;SI;NO;D23
-E07;EXC_DERIVADO_HOSPITAL;Alta por derivación a otro hospital;CASO;SI;NO;H14, D19
-E08;EXC_DERIVADO_PRIVADO;Alta por derivación a una institución privada;CASO;SI;NO;D19
-E09;EXC_SIN_GRD;Sin GRD válido: sin código GRD o con CDM 99;CASO;SI;NO;D07, D08
-E10;EXC_DATOS_FALTANTES;Sin fecha de nacimiento válida (falta, es posterior al ingreso o la edad supera el máximo) o sin tipo de alta;CASO;SI;NO;H10, D21
-E11;EXC_CENSURA;Ventana de seguimiento incompleta: el alta está demasiado cerca del cierre del bloque;CASO;SI;NO;D03, D22
-E12;EXC_ALTA_VOLUNTARIA_FUGA;Alta voluntaria o fuga del paciente;CASO;NO;NO;D23
-E13;EXC_CMA;Cirugía mayor ambulatoria;CASO;NO;NO;D23
+﻿codigo;columna;criterio;papel;activo;obligatorio;bitacora;justificacion
+E01;EXC_SIN_ID;Sin identificador de paciente;AMBOS;SI;SI;D21;Sin identificador no se puede saber si la persona vuelve a ingresar ni reconocer sus reingresos.
+E02;EXC_ID_GENERICO;Identificador genérico: lo usan muchas personas distintas;AMBOS;SI;NO;H13, D18;El identificador reúne a personas distintas: seguirlo produciría reingresos falsos.
+E03;EXC_FECHAS;Sin fecha de ingreso o de alta, o con el alta anterior al ingreso;AMBOS;SI;SI;H10, D21;Sin fechas coherentes no se pueden contar los días entre un alta y un nuevo ingreso.
+E04;EXC_ACTIVIDAD_2019;Hospitalización diurna o en urgencia: tipos de actividad que solo existen en 2019;AMBOS;SI;NO;H09;Solo se registraron en 2019: con ellos ese año no es comparable con los demás.
+E05;EXC_TRAMO_EPISODIO;Tramo de un traslado: no es el alta final de su episodio asistencial;CASO;SI;NO;D19;El paciente sigue hospitalizado en otro establecimiento: el alta que cuenta es la final del episodio.
+E06;EXC_FALLECIDO;Alta por fallecimiento;CASO;SI;NO;D23;"Quien fallece no puede reingresar; la propuesta de tesis los excluye."
+E07;EXC_DERIVADO_HOSPITAL;Alta por derivación a otro hospital;CASO;SI;NO;H14, D19;La hospitalización continúa en un establecimiento que no está en la base. Es una censura administrativa del seguimiento, no una característica clínica del paciente.
+E08;EXC_DERIVADO_PRIVADO;Alta por derivación a una institución privada;CASO;SI;NO;D19;La atención continúa fuera de la red pública, donde no se puede observar. También es una censura administrativa.
+E09;EXC_SIN_GRD;Sin GRD válido: sin código GRD o con CDM 99;CASO;SI;NO;D07, D08;Sin GRD válido no hay CDM ni peso GRD, que son variables del estudio.
+E10;EXC_DATOS_FALTANTES;Sin fecha de nacimiento válida (falta, es posterior al ingreso o la edad supera el máximo) o sin tipo de alta;CASO;SI;NO;H10, D21;Sin fecha de nacimiento no hay edad, y sin tipo de alta no se sabe si el paciente egresó vivo.
+E11;EXC_CENSURA;Seguimiento incompleto: el alta está demasiado cerca del cierre del bloque incluso para la ventana más corta;CASO;SI;NO;D03, H20, D30;"Un reingreso solo aparece en la base si termina antes del cierre del bloque; sin ese seguimiento no se puede saber si lo hubo."
+E12;EXC_ALTA_VOLUNTARIA_FUGA;Alta voluntaria o fuga del paciente;CASO;NO;NO;D23;Se conservan: son egresos hospitalarios, y dejarlos fuera quitaría un grupo de mayor riesgo de reingreso.
+E13;EXC_CMA;Cirugía mayor ambulatoria;CASO;SI;NO;D23, D32;Es un proceso asistencial distinto de la hospitalización convencional, y el estudio trata del reingreso después de un egreso hospitalario (revisión del profesor guía, 7 de octubre de 2026).
+E14;EXC_SESION;Sesión de tratamiento: diagnóstico principal Z51;CASO;SI;NO;H18, D33;Son atenciones planificadas o repetitivas, con una dinámica distinta de la del episodio agudo (revisión del profesor guía, 7 de octubre de 2026).

@@ -1,0 +1,401 @@
+﻿COD_HOSPITAL;HOSPITAL;ANIO;EGRESOS;DERIVADOS_OTRO_HOSPITAL;CON_CONTINUACION_VISIBLE;EXCLUIDOS_E07;EXCLUIDOS_E08
+101100;Hospital Dr. Juan Noé Crevanni (Arica);2019;19724;113;72;41;31
+101100;Hospital Dr. Juan Noé Crevanni (Arica);2020;15210;117;77;40;72
+101100;Hospital Dr. Juan Noé Crevanni (Arica);2021;16662;128;93;35;40
+101100;Hospital Dr. Juan Noé Crevanni (Arica);2022;17972;76;65;11;39
+101100;Hospital Dr. Juan Noé Crevanni (Arica);2023;19420;113;99;14;34
+101100;Hospital Dr. Juan Noé Crevanni (Arica);2024;19662;128;111;17;41
+102100;Hospital Dr. Ernesto Torres Galdames (Iquique);2019;22248;261;181;80;67
+102100;Hospital Dr. Ernesto Torres Galdames (Iquique);2020;17306;246;174;72;172
+102100;Hospital Dr. Ernesto Torres Galdames (Iquique);2021;17902;233;188;45;161
+102100;Hospital Dr. Ernesto Torres Galdames (Iquique);2022;19358;217;188;29;91
+102100;Hospital Dr. Ernesto Torres Galdames (Iquique);2023;20603;423;193;230;64
+102100;Hospital Dr. Ernesto Torres Galdames (Iquique);2024;20297;1110;190;920;72
+103100;Hospital Dr. Leonardo Guzmán (Antofagasta);2019;23571;68;20;48;95
+103100;Hospital Dr. Leonardo Guzmán (Antofagasta);2020;18513;172;79;93;64
+103100;Hospital Dr. Leonardo Guzmán (Antofagasta);2021;20137;209;73;136;50
+103100;Hospital Dr. Leonardo Guzmán (Antofagasta);2022;20589;127;83;44;18
+103100;Hospital Dr. Leonardo Guzmán (Antofagasta);2023;21076;136;99;37;32
+103100;Hospital Dr. Leonardo Guzmán (Antofagasta);2024;23141;152;87;65;37
+103101;Hospital Dr. Carlos Cisternas (Calama);2019;9501;238;199;39;14
+103101;Hospital Dr. Carlos Cisternas (Calama);2020;9076;271;232;39;96
+103101;Hospital Dr. Carlos Cisternas (Calama);2021;8977;284;233;51;75
+103101;Hospital Dr. Carlos Cisternas (Calama);2022;10483;233;201;32;24
+103101;Hospital Dr. Carlos Cisternas (Calama);2023;11384;263;232;31;22
+103101;Hospital Dr. Carlos Cisternas (Calama);2024;11021;228;197;31;24
+104100;Hospital San José del Carmen (Copiapó);2019;13861;209;97;112;28
+104100;Hospital San José del Carmen (Copiapó);2020;10899;232;133;99;55
+104100;Hospital San José del Carmen (Copiapó);2021;11853;217;158;59;61
+104100;Hospital San José del Carmen (Copiapó);2022;12259;209;161;48;54
+104100;Hospital San José del Carmen (Copiapó);2023;13600;212;154;58;47
+104100;Hospital San José del Carmen (Copiapó);2024;14269;201;148;53;36
+104103;Hospital Provincial del Huasco Monseñor Fernando Ariztía Ruiz (Vallenar);2019;5720;106;54;52;22
+104103;Hospital Provincial del Huasco Monseñor Fernando Ariztía Ruiz (Vallenar);2020;4521;105;65;40;10
+104103;Hospital Provincial del Huasco Monseñor Fernando Ariztía Ruiz (Vallenar);2021;4777;130;107;23;23
+104103;Hospital Provincial del Huasco Monseñor Fernando Ariztía Ruiz (Vallenar);2022;5735;109;87;22;23
+104103;Hospital Provincial del Huasco Monseñor Fernando Ariztía Ruiz (Vallenar);2023;6335;200;174;26;21
+104103;Hospital Provincial del Huasco Monseñor Fernando Ariztía Ruiz (Vallenar);2024;6454;157;128;29;33
+105100;Hospital San Juan de Dios (La Serena);2019;18570;311;215;96;37
+105100;Hospital San Juan de Dios (La Serena);2020;12390;357;224;133;29
+105100;Hospital San Juan de Dios (La Serena);2021;14273;337;251;86;41
+105100;Hospital San Juan de Dios (La Serena);2022;15381;367;299;68;24
+105100;Hospital San Juan de Dios (La Serena);2023;19951;397;316;81;32
+105100;Hospital San Juan de Dios (La Serena);2024;21120;412;332;80;29
+105101;Hospital San Pablo (Coquimbo);2019;19245;239;129;110;42
+105101;Hospital San Pablo (Coquimbo);2020;13745;244;147;97;41
+105101;Hospital San Pablo (Coquimbo);2021;14626;225;169;56;35
+105101;Hospital San Pablo (Coquimbo);2022;16120;206;154;52;26
+105101;Hospital San Pablo (Coquimbo);2023;18573;284;213;71;29
+105101;Hospital San Pablo (Coquimbo);2024;18659;249;186;63;26
+105102;Hospital Dr. Antonio Tirado Lanas (Ovalle);2019;12854;182;157;25;13
+105102;Hospital Dr. Antonio Tirado Lanas (Ovalle);2020;7975;215;159;56;15
+105102;Hospital Dr. Antonio Tirado Lanas (Ovalle);2021;8287;196;160;36;33
+105102;Hospital Dr. Antonio Tirado Lanas (Ovalle);2022;11169;243;176;67;21
+105102;Hospital Dr. Antonio Tirado Lanas (Ovalle);2023;12687;267;175;92;12
+105102;Hospital Dr. Antonio Tirado Lanas (Ovalle);2024;11587;302;203;99;17
+106100;Hospital Carlos Van Buren (Valparaíso);2019;41872;431;220;211;112
+106100;Hospital Carlos Van Buren (Valparaíso);2020;13551;423;311;112;64
+106100;Hospital Carlos Van Buren (Valparaíso);2021;14646;805;657;148;134
+106100;Hospital Carlos Van Buren (Valparaíso);2022;17477;829;711;118;158
+106100;Hospital Carlos Van Buren (Valparaíso);2023;20843;1205;1067;138;170
+106100;Hospital Carlos Van Buren (Valparaíso);2024;21315;1684;1488;196;160
+106102;Hospital Dr. Eduardo Pereira Ramírez (Valparaíso);2019;6126;134;19;115;2
+106102;Hospital Dr. Eduardo Pereira Ramírez (Valparaíso);2020;3959;91;37;54;2
+106102;Hospital Dr. Eduardo Pereira Ramírez (Valparaíso);2021;3705;69;38;31;3
+106102;Hospital Dr. Eduardo Pereira Ramírez (Valparaíso);2022;4008;64;43;21;5
+106102;Hospital Dr. Eduardo Pereira Ramírez (Valparaíso);2023;4818;103;67;36;2
+106102;Hospital Dr. Eduardo Pereira Ramírez (Valparaíso);2024;4779;125;77;48;1
+106103;Hospital Claudio Vicuña (San Antonio);2019;9089;216;140;76;44
+106103;Hospital Claudio Vicuña (San Antonio);2020;5890;209;147;62;38
+106103;Hospital Claudio Vicuña (San Antonio);2021;6870;287;213;74;118
+106103;Hospital Claudio Vicuña (San Antonio);2022;7884;198;151;47;82
+106103;Hospital Claudio Vicuña (San Antonio);2023;9337;277;247;30;108
+106103;Hospital Claudio Vicuña (San Antonio);2024;9900;339;296;43;160
+107100;Hospital Dr. Gustavo Fricke (Viña del Mar);2019;31039;882;308;574;171
+107100;Hospital Dr. Gustavo Fricke (Viña del Mar);2020;17192;535;260;275;91
+107100;Hospital Dr. Gustavo Fricke (Viña del Mar);2021;16590;547;332;215;115
+107100;Hospital Dr. Gustavo Fricke (Viña del Mar);2022;19338;614;345;269;62
+107100;Hospital Dr. Gustavo Fricke (Viña del Mar);2023;26624;847;549;298;64
+107100;Hospital Dr. Gustavo Fricke (Viña del Mar);2024;27950;861;548;313;65
+107101;Hospital San Martín (Quillota);2019;13206;341;127;214;29
+107101;Hospital San Martín (Quillota);2020;8761;394;193;201;48
+107101;Hospital San Martín (Quillota);2021;8477;409;204;205;141
+107101;Hospital San Martín (Quillota);2022;9352;442;224;218;104
+107101;Hospital San Martín (Quillota);2023;13728;722;357;365;48
+107101;Hospital San Martín (Quillota);2024;14245;853;317;536;33
+107102;Hospital de Quilpué;2019;11106;340;126;214;12
+107102;Hospital de Quilpué;2020;6981;286;138;148;19
+107102;Hospital de Quilpué;2021;6993;252;161;91;38
+107102;Hospital de Quilpué;2022;8247;227;147;80;14
+107102;Hospital de Quilpué;2023;8998;394;255;139;24
+107102;Hospital de Quilpué;2024;9526;359;199;160;33
+108100;Hospital de San Camilo (San Felipe);2019;13059;227;130;97;34
+108100;Hospital de San Camilo (San Felipe);2020;9443;305;137;168;30
+108100;Hospital de San Camilo (San Felipe);2021;9146;252;143;109;24
+108100;Hospital de San Camilo (San Felipe);2022;10870;248;116;132;39
+108100;Hospital de San Camilo (San Felipe);2023;12630;304;160;144;19
+108100;Hospital de San Camilo (San Felipe);2024;13210;329;161;168;38
+108101;Hospital San Juan de Dios (Los Andes);2019;9652;188;123;65;43
+108101;Hospital San Juan de Dios (Los Andes);2020;7052;196;124;72;32
+108101;Hospital San Juan de Dios (Los Andes);2021;7156;196;120;76;31
+108101;Hospital San Juan de Dios (Los Andes);2022;7739;202;124;78;29
+108101;Hospital San Juan de Dios (Los Andes);2023;8455;274;169;105;26
+108101;Hospital San Juan de Dios (Los Andes);2024;8784;320;208;112;41
+109100;Complejo Hospitalario San José (Santiago, Independencia);2019;35921;190;76;114;139
+109100;Complejo Hospitalario San José (Santiago, Independencia);2020;24890;283;107;176;208
+109100;Complejo Hospitalario San José (Santiago, Independencia);2021;24946;229;119;110;273
+109100;Complejo Hospitalario San José (Santiago, Independencia);2022;28275;175;85;90;91
+109100;Complejo Hospitalario San José (Santiago, Independencia);2023;28496;238;108;130;108
+109100;Complejo Hospitalario San José (Santiago, Independencia);2024;27157;255;122;133;48
+109101;Hospital Clínico de Niños Dr. Roberto del Río (Santiago, Independencia);2019;10560;119;99;20;8
+109101;Hospital Clínico de Niños Dr. Roberto del Río (Santiago, Independencia);2020;5572;151;114;37;3
+109101;Hospital Clínico de Niños Dr. Roberto del Río (Santiago, Independencia);2021;6305;141;122;19;11
+109101;Hospital Clínico de Niños Dr. Roberto del Río (Santiago, Independencia);2022;7657;126;108;18;13
+109101;Hospital Clínico de Niños Dr. Roberto del Río (Santiago, Independencia);2023;8597;130;112;18;15
+109101;Hospital Clínico de Niños Dr. Roberto del Río (Santiago, Independencia);2024;9168;165;128;37;8
+110100;Hospital San Juan de Dios (Santiago, Santiago);2019;33618;184;126;58;57
+110100;Hospital San Juan de Dios (Santiago, Santiago);2020;20056;240;118;122;31
+110100;Hospital San Juan de Dios (Santiago, Santiago);2021;20981;254;165;89;36
+110100;Hospital San Juan de Dios (Santiago, Santiago);2022;24252;228;111;117;28
+110100;Hospital San Juan de Dios (Santiago, Santiago);2023;26738;160;109;51;39
+110100;Hospital San Juan de Dios (Santiago, Santiago);2024;26626;158;98;60;72
+110110;Instituto Traumatológico Dr. Teodoro Gebauer;2023;4683;50;42;8;1
+110110;Instituto Traumatológico Dr. Teodoro Gebauer;2024;4421;43;31;12;1
+110120;Hospital Dr. Félix Bulnes Cerda (Santiago, Quinta Normal);2019;20657;99;72;27;44
+110120;Hospital Dr. Félix Bulnes Cerda (Santiago, Quinta Normal);2020;15788;166;106;60;37
+110120;Hospital Dr. Félix Bulnes Cerda (Santiago, Quinta Normal);2021;19263;261;126;135;57
+110120;Hospital Dr. Félix Bulnes Cerda (Santiago, Quinta Normal);2022;23848;272;198;74;66
+110120;Hospital Dr. Félix Bulnes Cerda (Santiago, Quinta Normal);2023;25063;217;167;50;76
+110120;Hospital Dr. Félix Bulnes Cerda (Santiago, Quinta Normal);2024;25837;224;181;43;66
+110130;Hospital Adalberto Steeger (Talagante);2019;6686;192;130;62;23
+110130;Hospital Adalberto Steeger (Talagante);2020;5094;257;102;155;37
+110130;Hospital Adalberto Steeger (Talagante);2021;5451;164;103;61;34
+110130;Hospital Adalberto Steeger (Talagante);2022;5561;150;120;30;21
+110130;Hospital Adalberto Steeger (Talagante);2023;6098;196;168;28;18
+110130;Hospital Adalberto Steeger (Talagante);2024;5972;180;154;26;16
+110150;Hospital San José (Melipilla);2019;7863;177;155;22;14
+110150;Hospital San José (Melipilla);2020;6348;178;144;34;28
+110150;Hospital San José (Melipilla);2021;6752;227;159;68;24
+110150;Hospital San José (Melipilla);2022;8259;212;188;24;18
+110150;Hospital San José (Melipilla);2023;8894;247;214;33;13
+110150;Hospital San José (Melipilla);2024;10206;256;230;26;27
+111100;Hospital Clínico San Borja-Arriarán (Santiago, Santiago);2019;28468;203;115;88;85
+111100;Hospital Clínico San Borja-Arriarán (Santiago, Santiago);2020;18035;136;78;58;64
+111100;Hospital Clínico San Borja-Arriarán (Santiago, Santiago);2021;9019;149;81;68;54
+111100;Hospital Clínico San Borja-Arriarán (Santiago, Santiago);2022;17637;98;64;34;36
+111100;Hospital Clínico San Borja-Arriarán (Santiago, Santiago);2023;19811;95;57;38;17
+111100;Hospital Clínico San Borja-Arriarán (Santiago, Santiago);2024;20268;93;73;20;21
+111101;Hospital Clínico Metropolitano El Carmen Doctor Luis Valentín Ferrada;2019;25168;354;106;248;50
+111101;Hospital Clínico Metropolitano El Carmen Doctor Luis Valentín Ferrada;2020;16549;479;225;254;71
+111101;Hospital Clínico Metropolitano El Carmen Doctor Luis Valentín Ferrada;2021;17810;423;255;168;143
+111101;Hospital Clínico Metropolitano El Carmen Doctor Luis Valentín Ferrada;2022;18521;325;182;143;46
+111101;Hospital Clínico Metropolitano El Carmen Doctor Luis Valentín Ferrada;2023;20414;431;235;196;28
+111101;Hospital Clínico Metropolitano El Carmen Doctor Luis Valentín Ferrada;2024;20383;422;233;189;38
+111195;Hospital de Urgencia Asistencia Pública Dr. Alejandro del Río;2019;11282;271;167;104;42
+111195;Hospital de Urgencia Asistencia Pública Dr. Alejandro del Río;2020;8804;386;279;107;79
+111195;Hospital de Urgencia Asistencia Pública Dr. Alejandro del Río;2021;10467;633;433;200;89
+111195;Hospital de Urgencia Asistencia Pública Dr. Alejandro del Río;2022;10682;500;331;169;71
+111195;Hospital de Urgencia Asistencia Pública Dr. Alejandro del Río;2023;11238;490;336;154;60
+111195;Hospital de Urgencia Asistencia Pública Dr. Alejandro del Río;2024;11565;540;329;211;67
+112100;Hospital Del Salvador (Santiago, Providencia);2019;22529;569;234;335;85
+112100;Hospital Del Salvador (Santiago, Providencia);2020;15284;1145;177;968;44
+112100;Hospital Del Salvador (Santiago, Providencia);2021;16171;840;200;640;36
+112100;Hospital Del Salvador (Santiago, Providencia);2022;17176;654;152;502;42
+112100;Hospital Del Salvador (Santiago, Providencia);2023;18308;658;184;474;40
+112100;Hospital Del Salvador (Santiago, Providencia);2024;18875;889;265;624;42
+112101;Hospital Dr. Luis Tisné B. (Santiago, Peñalolén);2019;18797;286;253;33;28
+112101;Hospital Dr. Luis Tisné B. (Santiago, Peñalolén);2020;14410;420;344;76;51
+112101;Hospital Dr. Luis Tisné B. (Santiago, Peñalolén);2021;14192;370;235;135;39
+112101;Hospital Dr. Luis Tisné B. (Santiago, Peñalolén);2022;16520;682;234;448;47
+112101;Hospital Dr. Luis Tisné B. (Santiago, Peñalolén);2023;17553;953;251;702;67
+112101;Hospital Dr. Luis Tisné B. (Santiago, Peñalolén);2024;17717;1237;258;979;47
+112102;Hospital de Niños Dr. Luis Calvo Mackenna (Santiago, Providencia);2019;13214;205;165;40;8
+112102;Hospital de Niños Dr. Luis Calvo Mackenna (Santiago, Providencia);2020;6093;253;175;78;6
+112102;Hospital de Niños Dr. Luis Calvo Mackenna (Santiago, Providencia);2021;8101;256;211;45;3
+112102;Hospital de Niños Dr. Luis Calvo Mackenna (Santiago, Providencia);2022;8335;261;221;40;5
+112102;Hospital de Niños Dr. Luis Calvo Mackenna (Santiago, Providencia);2023;8816;266;230;36;24
+112102;Hospital de Niños Dr. Luis Calvo Mackenna (Santiago, Providencia);2024;7344;203;163;40;34
+112103;Instituto Nacional de Enfermedades Respiratorias y Cirugía Torácica;2019;7523;139;87;52;5
+112103;Instituto Nacional de Enfermedades Respiratorias y Cirugía Torácica;2020;2851;83;51;32;8
+112103;Instituto Nacional de Enfermedades Respiratorias y Cirugía Torácica;2021;3086;63;42;21;2
+112103;Instituto Nacional de Enfermedades Respiratorias y Cirugía Torácica;2022;3219;74;54;20;0
+112103;Instituto Nacional de Enfermedades Respiratorias y Cirugía Torácica;2023;3594;107;79;28;0
+112103;Instituto Nacional de Enfermedades Respiratorias y Cirugía Torácica;2024;3951;153;100;53;1
+112104;Instituto de Neurocirugía Dr. Alfonso Asenjo;2019;4187;145;104;41;3
+112104;Instituto de Neurocirugía Dr. Alfonso Asenjo;2020;2446;101;72;29;0
+112104;Instituto de Neurocirugía Dr. Alfonso Asenjo;2021;2791;95;64;31;2
+112104;Instituto de Neurocirugía Dr. Alfonso Asenjo;2022;3409;130;90;40;1
+112104;Instituto de Neurocirugía Dr. Alfonso Asenjo;2023;3558;112;83;29;1
+112104;Instituto de Neurocirugía Dr. Alfonso Asenjo;2024;3560;131;87;44;2
+113100;Hospital Barros Luco Trudeau (Santiago, San Miguel);2019;34123;740;81;659;90
+113100;Hospital Barros Luco Trudeau (Santiago, San Miguel);2020;28621;546;97;449;82
+113100;Hospital Barros Luco Trudeau (Santiago, San Miguel);2021;27953;589;93;496;90
+113100;Hospital Barros Luco Trudeau (Santiago, San Miguel);2022;26794;550;83;467;111
+113100;Hospital Barros Luco Trudeau (Santiago, San Miguel);2023;26701;468;80;388;76
+113100;Hospital Barros Luco Trudeau (Santiago, San Miguel);2024;27131;511;107;404;139
+113130;Hospital Dr. Exequiel González Cortés (Santiago, San Miguel);2019;10228;92;68;24;10
+113130;Hospital Dr. Exequiel González Cortés (Santiago, San Miguel);2020;5786;42;35;7;8
+113130;Hospital Dr. Exequiel González Cortés (Santiago, San Miguel);2021;7550;140;117;23;11
+113130;Hospital Dr. Exequiel González Cortés (Santiago, San Miguel);2022;8770;98;83;15;12
+113130;Hospital Dr. Exequiel González Cortés (Santiago, San Miguel);2023;9079;49;44;5;8
+113130;Hospital Dr. Exequiel González Cortés (Santiago, San Miguel);2024;9941;66;59;7;4
+113150;Hospital San Luis (Buin);2019;6240;211;190;21;7
+113150;Hospital San Luis (Buin);2020;4292;194;169;25;47
+113150;Hospital San Luis (Buin);2021;4869;147;89;58;88
+113150;Hospital San Luis (Buin);2022;5672;112;92;20;51
+113150;Hospital San Luis (Buin);2023;5557;138;122;16;45
+113150;Hospital San Luis (Buin);2024;5573;122;104;18;54
+113180;Hospital El Pino (Santiago, San Bernardo);2019;16579;308;198;110;224
+113180;Hospital El Pino (Santiago, San Bernardo);2020;13385;727;225;502;204
+113180;Hospital El Pino (Santiago, San Bernardo);2021;13767;731;220;511;495
+113180;Hospital El Pino (Santiago, San Bernardo);2022;15109;663;233;430;560
+113180;Hospital El Pino (Santiago, San Bernardo);2023;15816;852;281;571;701
+113180;Hospital El Pino (Santiago, San Bernardo);2024;15900;1017;307;710;668
+114101;Complejo Hospitalario Dr. Sótero del Río (Santiago, Puente Alto);2019;55235;669;169;500;453
+114101;Complejo Hospitalario Dr. Sótero del Río (Santiago, Puente Alto);2020;36735;642;210;432;385
+114101;Complejo Hospitalario Dr. Sótero del Río (Santiago, Puente Alto);2021;44276;1167;546;621;472
+114101;Complejo Hospitalario Dr. Sótero del Río (Santiago, Puente Alto);2022;46849;1470;561;909;282
+114101;Complejo Hospitalario Dr. Sótero del Río (Santiago, Puente Alto);2023;48777;1918;741;1177;632
+114101;Complejo Hospitalario Dr. Sótero del Río (Santiago, Puente Alto);2024;48296;2104;908;1196;618
+114103;Hospital Padre Alberto Hurtado (San Ramón);2019;20544;154;95;59;28
+114103;Hospital Padre Alberto Hurtado (San Ramón);2020;15589;238;151;87;56
+114103;Hospital Padre Alberto Hurtado (San Ramón);2021;15149;181;125;56;75
+114103;Hospital Padre Alberto Hurtado (San Ramón);2022;18690;159;133;26;39
+114103;Hospital Padre Alberto Hurtado (San Ramón);2023;19192;187;155;32;57
+114103;Hospital Padre Alberto Hurtado (San Ramón);2024;20926;260;182;78;80
+114105;Hospital Clínico Metropolitano La Florida Dra. Eloisa Díaz Inzunza;2019;20231;75;42;33;18
+114105;Hospital Clínico Metropolitano La Florida Dra. Eloisa Díaz Inzunza;2020;15364;128;67;61;36
+114105;Hospital Clínico Metropolitano La Florida Dra. Eloisa Díaz Inzunza;2021;17027;168;111;57;98
+114105;Hospital Clínico Metropolitano La Florida Dra. Eloisa Díaz Inzunza;2022;20147;158;121;37;59
+114105;Hospital Clínico Metropolitano La Florida Dra. Eloisa Díaz Inzunza;2023;21176;180;140;40;37
+114105;Hospital Clínico Metropolitano La Florida Dra. Eloisa Díaz Inzunza;2024;20088;174;118;56;55
+115100;Hospital Regional de Rancagua;2019;30806;534;225;309;69
+115100;Hospital Regional de Rancagua;2020;22498;737;183;554;91
+115100;Hospital Regional de Rancagua;2021;22827;1098;229;869;70
+115100;Hospital Regional de Rancagua;2022;25669;874;235;639;77
+115100;Hospital Regional de Rancagua;2023;26256;876;256;620;96
+115100;Hospital Regional de Rancagua;2024;26961;892;275;617;91
+115107;Hospital San Juan de Dios (San Fernando);2019;10805;153;104;49;11
+115107;Hospital San Juan de Dios (San Fernando);2020;6645;151;94;57;19
+115107;Hospital San Juan de Dios (San Fernando);2021;7378;283;119;164;15
+115107;Hospital San Juan de Dios (San Fernando);2022;8909;192;90;102;19
+115107;Hospital San Juan de Dios (San Fernando);2023;9483;248;117;131;21
+115107;Hospital San Juan de Dios (San Fernando);2024;9682;346;138;208;14
+115110;Hospital de Santa Cruz;2019;8017;138;83;55;19
+115110;Hospital de Santa Cruz;2020;5491;181;103;78;16
+115110;Hospital de Santa Cruz;2021;5793;208;118;90;30
+115110;Hospital de Santa Cruz;2022;7337;208;154;54;32
+115110;Hospital de Santa Cruz;2023;7155;290;183;107;23
+115110;Hospital de Santa Cruz;2024;7000;298;192;106;25
+116100;Hospital San Juan de Dios (Curicó);2019;20722;271;120;151;28
+116100;Hospital San Juan de Dios (Curicó);2020;13409;262;137;125;29
+116100;Hospital San Juan de Dios (Curicó);2021;12523;259;150;109;42
+116100;Hospital San Juan de Dios (Curicó);2022;16260;267;162;105;35
+116100;Hospital San Juan de Dios (Curicó);2023;18087;333;208;125;76
+116100;Hospital San Juan de Dios (Curicó);2024;21397;374;197;177;67
+116105;Hospital Dr. César Garavagno Burotto (Talca);2019;31856;481;272;209;57
+116105;Hospital Dr. César Garavagno Burotto (Talca);2020;25318;448;249;199;53
+116105;Hospital Dr. César Garavagno Burotto (Talca);2021;25610;541;291;250;66
+116105;Hospital Dr. César Garavagno Burotto (Talca);2022;30289;431;231;200;76
+116105;Hospital Dr. César Garavagno Burotto (Talca);2023;32145;454;274;180;50
+116105;Hospital Dr. César Garavagno Burotto (Talca);2024;33856;503;319;184;47
+116107;Hospital de Constitución;2024;3204;262;190;72;10
+116108;Hospital Presidente Carlos Ibáñez del Campo (Linares);2019;16234;469;311;158;26
+116108;Hospital Presidente Carlos Ibáñez del Campo (Linares);2020;11337;381;247;134;23
+116108;Hospital Presidente Carlos Ibáñez del Campo (Linares);2021;11770;372;254;118;44
+116108;Hospital Presidente Carlos Ibáñez del Campo (Linares);2022;13663;406;303;103;39
+116108;Hospital Presidente Carlos Ibáñez del Campo (Linares);2023;14567;484;372;112;39
+116108;Hospital Presidente Carlos Ibáñez del Campo (Linares);2024;14174;568;473;95;30
+116110;Hospital San José (Parral);2019;5242;336;315;21;5
+116110;Hospital San José (Parral);2020;3671;252;219;33;8
+116110;Hospital San José (Parral);2021;4107;327;281;46;7
+116110;Hospital San José (Parral);2022;4516;356;324;32;5
+116110;Hospital San José (Parral);2023;5046;443;403;40;4
+116110;Hospital San José (Parral);2024;4817;392;343;49;6
+116111;Hospital San Juan de Dios (Cauquenes);2024;4681;465;333;132;4
+117101;Hospital Clínico Herminda Martín (Chillán);2019;26332;566;193;373;223
+117101;Hospital Clínico Herminda Martín (Chillán);2020;17468;903;238;665;192
+117101;Hospital Clínico Herminda Martín (Chillán);2021;19127;818;293;525;497
+117101;Hospital Clínico Herminda Martín (Chillán);2022;22860;617;216;401;237
+117101;Hospital Clínico Herminda Martín (Chillán);2023;25052;608;240;368;136
+117101;Hospital Clínico Herminda Martín (Chillán);2024;25827;862;301;561;61
+117102;Hospital de San Carlos;2019;8702;109;71;38;5
+117102;Hospital de San Carlos;2020;6357;161;92;69;2
+117102;Hospital de San Carlos;2021;6889;104;41;63;1
+117102;Hospital de San Carlos;2022;7894;218;97;121;5
+117102;Hospital de San Carlos;2023;8500;284;132;152;1
+117102;Hospital de San Carlos;2024;9160;464;182;282;18
+118100;Hospital Clínico Regional Dr. Guillermo Grant Benavente (Concepción);2019;40122;705;201;504;119
+118100;Hospital Clínico Regional Dr. Guillermo Grant Benavente (Concepción);2020;24515;1236;381;855;71
+118100;Hospital Clínico Regional Dr. Guillermo Grant Benavente (Concepción);2021;28848;941;447;494;52
+118100;Hospital Clínico Regional Dr. Guillermo Grant Benavente (Concepción);2022;31166;701;320;381;39
+118100;Hospital Clínico Regional Dr. Guillermo Grant Benavente (Concepción);2023;34144;724;476;248;156
+118100;Hospital Clínico Regional Dr. Guillermo Grant Benavente (Concepción);2024;35148;957;617;340;58
+118105;Hospital San José (Coronel);2019;7212;370;177;193;3
+118105;Hospital San José (Coronel);2020;5343;466;252;214;6
+118105;Hospital San José (Coronel);2021;5349;424;278;146;12
+118105;Hospital San José (Coronel);2022;6620;355;236;119;5
+118105;Hospital San José (Coronel);2023;7345;424;382;42;6
+118105;Hospital San José (Coronel);2024;7656;530;490;40;14
+118106;Hospital de Lota;2023;5444;297;239;58;0
+118106;Hospital de Lota;2024;6247;361;308;53;2
+119100;Hospital Las Higueras (Talcahuano);2019;25561;364;121;243;21
+119100;Hospital Las Higueras (Talcahuano);2020;16889;591;123;468;45
+119100;Hospital Las Higueras (Talcahuano);2021;17653;816;151;665;57
+119100;Hospital Las Higueras (Talcahuano);2022;21561;422;93;329;20
+119100;Hospital Las Higueras (Talcahuano);2023;23689;395;227;168;32
+119100;Hospital Las Higueras (Talcahuano);2024;25653;406;351;55;26
+119101;Hospital de Tomé;2023;4431;204;144;60;3
+119101;Hospital de Tomé;2024;4042;230;214;16;1
+119102;Hospital Penco - Lirquén;2024;4157;184;171;13;11
+120101;Complejo Asistencial Dr. Víctor Ríos Ruiz (Los Ángeles);2019;33180;571;126;445;101
+120101;Complejo Asistencial Dr. Víctor Ríos Ruiz (Los Ángeles);2020;22174;625;154;471;75
+120101;Complejo Asistencial Dr. Víctor Ríos Ruiz (Los Ángeles);2021;22693;813;169;644;139
+120101;Complejo Asistencial Dr. Víctor Ríos Ruiz (Los Ángeles);2022;29092;581;158;423;68
+120101;Complejo Asistencial Dr. Víctor Ríos Ruiz (Los Ángeles);2023;31251;804;164;640;56
+120101;Complejo Asistencial Dr. Víctor Ríos Ruiz (Los Ángeles);2024;30526;739;159;580;86
+121109;Hospital Dr. Hernán Henríquez Aravena (Temuco);2019;35086;1324;787;537;152
+121109;Hospital Dr. Hernán Henríquez Aravena (Temuco);2020;23378;1505;724;781;100
+121109;Hospital Dr. Hernán Henríquez Aravena (Temuco);2021;23462;1087;493;594;141
+121109;Hospital Dr. Hernán Henríquez Aravena (Temuco);2022;25841;918;527;391;43
+121109;Hospital Dr. Hernán Henríquez Aravena (Temuco);2023;29783;1061;602;459;87
+121109;Hospital Dr. Hernán Henríquez Aravena (Temuco);2024;29539;1190;908;282;69
+121110;Hospital Dr. Abraham Godoy (Lautaro);2019;6700;267;187;80;3
+121110;Hospital Dr. Abraham Godoy (Lautaro);2020;3861;371;168;203;4
+121110;Hospital Dr. Abraham Godoy (Lautaro);2021;3912;260;122;138;2
+121110;Hospital Dr. Abraham Godoy (Lautaro);2022;4115;226;136;90;2
+121110;Hospital Dr. Abraham Godoy (Lautaro);2023;4456;335;196;139;3
+121110;Hospital Dr. Abraham Godoy (Lautaro);2024;4692;362;224;138;0
+121114;Hospital Intercultural de Nueva Imperial;2019;6937;366;212;154;9
+121114;Hospital Intercultural de Nueva Imperial;2020;4686;442;249;193;14
+121114;Hospital Intercultural de Nueva Imperial;2021;5032;403;247;156;12
+121114;Hospital Intercultural de Nueva Imperial;2022;4921;362;273;89;1
+121114;Hospital Intercultural de Nueva Imperial;2023;6004;373;292;81;3
+121114;Hospital Intercultural de Nueva Imperial;2024;5966;313;208;105;1
+121117;Hospital de Pitrufquén;2019;6100;375;213;162;8
+121117;Hospital de Pitrufquén;2020;3741;407;165;242;7
+121117;Hospital de Pitrufquén;2021;3221;328;144;184;4
+121117;Hospital de Pitrufquén;2022;3512;339;128;211;1
+121117;Hospital de Pitrufquén;2023;4047;371;184;187;5
+121117;Hospital de Pitrufquén;2024;3897;406;240;166;4
+121121;Hospital de Villarrica;2019;5290;385;246;139;3
+121121;Hospital de Villarrica;2020;3841;356;248;108;4
+121121;Hospital de Villarrica;2021;4202;364;227;137;4
+121121;Hospital de Villarrica;2022;5100;330;155;175;5
+121121;Hospital de Villarrica;2023;5241;352;192;160;2
+121121;Hospital de Villarrica;2024;6789;373;205;168;7
+122100;Hospital Clínico Regional (Valdivia);2019;25063;407;113;294;24
+122100;Hospital Clínico Regional (Valdivia);2020;16981;385;103;282;15
+122100;Hospital Clínico Regional (Valdivia);2021;17057;446;119;327;31
+122100;Hospital Clínico Regional (Valdivia);2022;19362;486;148;338;16
+122100;Hospital Clínico Regional (Valdivia);2023;23837;575;131;444;26
+122100;Hospital Clínico Regional (Valdivia);2024;23549;730;149;581;31
+123100;Hospital Base San José de Osorno;2019;22211;226;78;148;28
+123100;Hospital Base San José de Osorno;2020;14575;213;74;139;37
+123100;Hospital Base San José de Osorno;2021;14800;317;110;207;70
+123100;Hospital Base San José de Osorno;2022;17260;263;124;139;52
+123100;Hospital Base San José de Osorno;2023;19407;337;120;217;27
+123100;Hospital Base San José de Osorno;2024;20170;433;146;287;36
+124105;Hospital de Puerto Montt;2019;30490;425;153;272;44
+124105;Hospital de Puerto Montt;2020;21909;426;142;284;104
+124105;Hospital de Puerto Montt;2021;22869;472;160;312;93
+124105;Hospital de Puerto Montt;2022;25088;516;141;375;48
+124105;Hospital de Puerto Montt;2023;29279;819;217;602;63
+124105;Hospital de Puerto Montt;2024;30452;736;222;514;85
+125100;Hospital Regional (Coihaique);2019;9689;257;88;169;30
+125100;Hospital Regional (Coihaique);2020;7384;281;95;186;17
+125100;Hospital Regional (Coihaique);2021;7352;382;108;274;64
+125100;Hospital Regional (Coihaique);2022;8369;267;126;141;86
+125100;Hospital Regional (Coihaique);2023;9777;341;202;139;63
+125100;Hospital Regional (Coihaique);2024;10007;319;180;139;65
+126100;Hospital Clínico de Magallanes Dr. Lautaro Navarro Avaria;2019;13473;85;24;61;42
+126100;Hospital Clínico de Magallanes Dr. Lautaro Navarro Avaria;2020;8833;208;55;153;96
+126100;Hospital Clínico de Magallanes Dr. Lautaro Navarro Avaria;2021;10428;139;52;87;89
+126100;Hospital Clínico de Magallanes Dr. Lautaro Navarro Avaria;2022;11395;124;66;58;23
+126100;Hospital Clínico de Magallanes Dr. Lautaro Navarro Avaria;2023;13193;106;47;59;25
+126100;Hospital Clínico de Magallanes Dr. Lautaro Navarro Avaria;2024;13433;79;40;39;11
+128109;Hospital Provincial Dr. Rafael Avaría (Curanilahue);2019;6664;1087;145;942;14
+128109;Hospital Provincial Dr. Rafael Avaría (Curanilahue);2020;5566;1259;128;1131;20
+128109;Hospital Provincial Dr. Rafael Avaría (Curanilahue);2021;5018;997;191;806;61
+128109;Hospital Provincial Dr. Rafael Avaría (Curanilahue);2022;6306;699;191;508;3
+128109;Hospital Provincial Dr. Rafael Avaría (Curanilahue);2023;6954;725;275;450;7
+128109;Hospital Provincial Dr. Rafael Avaría (Curanilahue);2024;7085;617;180;437;18
+129100;Hospital Dr. Mauricio Heyermann (Angol);2019;9073;132;83;49;8
+129100;Hospital Dr. Mauricio Heyermann (Angol);2020;6373;225;144;81;18
+129100;Hospital Dr. Mauricio Heyermann (Angol);2021;8333;291;193;98;45
+129100;Hospital Dr. Mauricio Heyermann (Angol);2022;10137;236;166;70;19
+129100;Hospital Dr. Mauricio Heyermann (Angol);2023;10343;288;182;106;10
+129100;Hospital Dr. Mauricio Heyermann (Angol);2024;10700;262;155;107;18
+129106;Hospital San José (Victoria);2019;8524;451;191;260;14
+129106;Hospital San José (Victoria);2020;5588;342;148;194;16
+129106;Hospital San José (Victoria);2021;6309;395;187;208;26
+129106;Hospital San José (Victoria);2022;7389;384;176;208;13
+129106;Hospital San José (Victoria);2023;8073;332;173;159;13
+129106;Hospital San José (Victoria);2024;8367;356;175;181;8
+133150;Hospital de Castro;2019;10349;291;125;166;19
+133150;Hospital de Castro;2020;6348;336;105;231;37
+133150;Hospital de Castro;2021;6720;539;116;423;50
+133150;Hospital de Castro;2022;8210;432;132;300;35
+133150;Hospital de Castro;2023;8460;479;161;318;25
+133150;Hospital de Castro;2024;8631;407;140;267;30
+200717;;2024;10354;382;290;92;6

@@ -4,6 +4,7 @@
 // Uso (desde esta carpeta, la primera vez ejecutar "npm install"):
 //     npm run generar            docs/bitacora.md (actividades 1.2 y 2.1)
 //     npm run generar:2.2        2.2_depuracion_etiquetado/bitacora.md
+//     npm run generar:2.3        2.3_validacion_particion/bitacora.md
 //     node generar.js <entrada.md> <salida.docx>    cualquier otra bitácora
 const fs = require("fs");
 const path = require("path");

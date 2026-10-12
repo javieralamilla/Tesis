@@ -4,10 +4,12 @@ persona_mismo_dia_mes;SI;08;SI = si las fechas de nacimiento coinciden en día y
 id_generico_min_personas;5;08;Un identificador con este número de combinaciones distintas de sexo y fecha de nacimiento, o más, se considera genérico (D18)
 traslado_dias_max;1;08;"Un ingreso en otro hospital hasta este número de días después del alta continúa el mismo episodio asistencial: 0 = solo el mismo día; 1 = el mismo día o el siguiente (D19)"
 traslado_exige_marca;NO;08;SI = además debe constar el traslado en el tipo de alta (derivación) o en la procedencia del ingreso (otros hospitales) (D19)
-censura_dias;30;08 y 09;Días de seguimiento que deben quedar dentro del bloque después del alta (D22)
 edad_maxima;110;08;Edad al ingreso, en años, sobre la cual la fecha de nacimiento se considera no válida (D21)
-ventanas_dias;7|30;09;Ventanas de reingreso, en días, separadas por una barra vertical. La más larga no puede superar censura_dias (D20, D22)
+ventanas_dias;7|30;08 y 09;Ventanas de reingreso, en días, separadas por una barra vertical (D20)
+censura_margen_dias;30;08 y 09;Días que se suman a cada ventana para la censura. Un caso de estudio tiene las variables de una ventana solo si su alta ocurre al menos ventana + margen días antes del cierre del bloque, porque un reingreso solo aparece en la base si termina antes del cierre. 0 = solo la ventana (H20, D30)
+diagnosticos_sesion;Z51;08 y 09;Comienzo del diagnóstico principal de las sesiones de tratamiento, separados por una barra vertical si son varios. Esos egresos no son caso de estudio (criterio E14) ni cuentan como reingreso no planificado (D33)
 reingreso_solo_no_planificado;SI;09;"SI = solo cuentan como reingreso los ingresos no planificados, como indica el resumen de la propuesta; NO = cuenta todo ingreso, también los programados y los partos (D20, D26)"
-ingresos_no_planificados;URGENCIA|OBSTETRICA;09;Tipos de ingreso que cuentan como reingreso no planificado, separados por una barra vertical (D20)
-grd_parto;146|147;09;Comienzo de los códigos GRD de parto o cesárea: un ingreso con uno de estos GRD no cuenta como reingreso no planificado (D20)
-cdm_agrupadas;13+14;09;CDM que se consideran una sola al comparar la CDM del reingreso con la del caso de estudio. Las CDM de un grupo se unen con + y los grupos se separan con una barra vertical. Vacío = ninguna (H17, D25)
+ingresos_no_planificados;URGENCIA|OBSTETRICA;09;Tipos de ingreso que cuentan como reingreso no planificado, separados por una barra vertical. Un ingreso sin tipo no cuenta (D20)
+grd_parto;146|147;09;Comienzo de los códigos GRD de parto o cesárea: un ingreso con uno de estos GRD no cuenta como reingreso no planificado, cualquiera sea su tipo de ingreso (D20)
+cdm_agrupadas;;09;CDM que se consideran una sola al comparar la CDM del reingreso con la del caso de estudio. Las CDM de un grupo se unen con + y los grupos se separan con una barra vertical. Vacío = ninguna: la comparación es literal (D31)
+cdm_sensibilidad;13+14;09;Agrupación de CDM que se informa solo como análisis de sensibilidad en el reporte, con el mismo formato que cdm_agrupadas (H17, D31)

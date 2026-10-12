@@ -5,6 +5,8 @@ Parte de data/processed/grd_2019_2024.parquet y deja data/processed/grd_depurado
   1. Duplicados (bitácora D15 y D24): se eliminan las copias exactas y, cuando varios registros
      comparten paciente, hospital, fechas, sexo y fecha de nacimiento, se conserva el más completo.
   2. Persona (D18): ID_PERSONA separa a las personas distintas que comparten un identificador.
+     IDENTIDAD_AMBIGUA marca los egresos cuyo identificador aparece con más de un sexo o con
+     más de una fecha de nacimiento.
   3. Episodio asistencial (D19): ID_EPISODIO une los egresos que son tramos de una misma
      hospitalización (traslados entre hospitales).
   4. Criterios de exclusión (D23): cada criterio de reglas/criterios_exclusion.csv se marca en una
@@ -13,6 +15,7 @@ Parte de data/processed/grd_2019_2024.parquet y deja data/processed/grd_depurado
 
 Los umbrales están en reglas/parametros.csv. El reporte reportes/08_depuracion.md muestra cuántos
 egresos quita cada criterio, paso a paso, desde la tabla integrada hasta los casos de estudio.
+reportes/08_derivaciones_por_hospital.csv detalla las altas por derivación por hospital y año.
 
 Uso (desde la carpeta Codigo):
     .venv\\Scripts\\python.exe 2.2_depuracion_etiquetado\\scripts\\08_depurar.py
@@ -35,6 +38,8 @@ ORIGEN = DIR_PROCESSED / "grd_2019_2024.parquet"
 DESTINO = DIR_PROCESSED / "grd_depurado.parquet"
 ARCHIVO_CRITERIOS = ACTIVIDAD / "reglas" / "criterios_exclusion.csv"
 ARCHIVO_PARAMETROS = ACTIVIDAD / "reglas" / "parametros.csv"
+# Nombres de los hospitales: hoja Hospitales de la tabla maestra del DEIS (solo se usan en el reporte).
+TABLA_MAESTRA = RAIZ.parent / "Datos" / "Tablas auxiliares" / "Tablas maestras bases GRD.xlsx"
 ANIOS = list(range(2019, 2025))
 
 # Último día observado de cada bloque de identificador (bitácora D03).
@@ -52,12 +57,18 @@ CMA = "CIRUGÍA MAYOR AMBULATORIA"
 
 COLUMNAS = ["ID_EGRESO", "ANIO_ARCHIVO", "DUP_EXACTO", "ID_PACIENTE", "BLOQUE_ID", "SEXO", "FECHA_NACIMIENTO",
             "COD_HOSPITAL", "TIPO_ACTIVIDAD", "TIPO_INGRESO", "TIPO_PROCEDENCIA", "FECHA_INGRESO", "FECHAALTA",
-            "TIPOALTA", "IR_29301_COD_GRD", "CDM", "IR_29301_PESO"]
+            "TIPOALTA", "DIAGNOSTICO1", "IR_29301_COD_GRD", "CDM", "IR_29301_PESO"]
 QUITAR = ["DUP_EXACTO", "DUP_CLAVE"]             # describen la tabla integrada, no la depurada
+# list = varios valores separados por una barra vertical.
 PARAMETROS = {"persona_dias_fnac": int, "persona_mismo_dia_mes": bool, "id_generico_min_personas": int,
-              "traslado_dias_max": int, "traslado_exige_marca": bool, "censura_dias": int, "edad_maxima": int}
+              "traslado_dias_max": int, "traslado_exige_marca": bool, "edad_maxima": int,
+              "ventanas_dias": list, "censura_margen_dias": int, "diagnosticos_sesion": list}
 # Motivo por el que un egreso continúa el episodio anterior.
 SOLAPADO, OTRO_MISMO_DIA, OTRO_DIA_SIGUIENTE, MISMA_ESTADIA = 1, 2, 3, 4
+# Qué dato del paciente cambia entre los registros de un identificador con identidad ambigua.
+SOLO_SEXO, SOLO_FECHA, SEXO_Y_FECHA = "Solo el sexo", "Solo la fecha de nacimiento", "El sexo y la fecha de nacimiento"
+# Cómo resolvió la regla de personas un identificador.
+UNA_PERSONA, VARIAS_PERSONAS, SIN_PERSONA = "Una persona", "Varias personas", "Sin persona (identificador genérico)"
 
 
 # ------------------------------------------------------------------ reglas
@@ -68,25 +79,43 @@ def si_no(valor: str, origen: str) -> bool:
     return valor == "SI"
 
 
-def cargar_parametros() -> dict:
+def cargar_parametros(cambios: dict | None = None) -> dict:
+    """Lee los umbrales. `cambios` reemplaza valores del archivo: lo usa el script 11 (análisis de sensibilidad)."""
     with open(ARCHIVO_PARAMETROS, encoding="utf-8-sig", newline="") as f:
         filas = {fila["parametro"]: fila for fila in csv.DictReader(f, delimiter=";")}
     faltan = sorted(set(PARAMETROS) - set(filas))      # el archivo también tiene parámetros de otros scripts
     if faltan:
         raise SystemExit(f"{ARCHIVO_PARAMETROS.name}: faltan los parámetros {faltan}.")
+    desconocidos = sorted(set(cambios or {}) - set(filas))
+    if desconocidos:
+        raise SystemExit(f"{ARCHIVO_PARAMETROS.name}: no existen los parámetros {desconocidos}.")
+    for nombre, valor in (cambios or {}).items():
+        filas[nombre]["valor"] = valor
     par = {}
     for nombre, tipo in PARAMETROS.items():
         valor = filas[nombre]["valor"]
-        par[nombre] = si_no(valor, nombre) if tipo is bool else int(valor)
+        if tipo is bool:
+            par[nombre] = si_no(valor, nombre)
+        elif tipo is list:
+            par[nombre] = [v.strip().upper() for v in valor.split("|") if v.strip()]
+        else:
+            par[nombre] = int(valor)
+    par["ventanas_dias"] = sorted(int(v) for v in par["ventanas_dias"])
+    if not par["ventanas_dias"] or par["censura_margen_dias"] < 0:
+        raise SystemExit("Se necesita al menos una ventana y un margen de censura que no sea negativo.")
     par["descripcion"] = {nombre: (filas[nombre]["valor"].strip(), filas[nombre]["descripcion"]) for nombre in PARAMETROS}
     return par
 
 
-def cargar_criterios() -> list[dict]:
+def cargar_criterios(cambios: dict | None = None) -> list[dict]:
+    """Lee los criterios. `cambios` activa o desactiva criterios por su código: lo usa el script 11."""
     with open(ARCHIVO_CRITERIOS, encoding="utf-8-sig", newline="") as f:
         criterios = list(csv.DictReader(f, delimiter=";"))
+    desconocidos = sorted(set(cambios or {}) - {c["codigo"] for c in criterios})
+    if desconocidos:
+        raise SystemExit(f"{ARCHIVO_CRITERIOS.name}: no existen los criterios {desconocidos}.")
     for c in criterios:
-        c["activo"] = si_no(c["activo"], f"{c['codigo']} (activo)")
+        c["activo"] = si_no((cambios or {}).get(c["codigo"], c["activo"]), f"{c['codigo']} (activo)")
         c["obligatorio"] = si_no(c["obligatorio"], f"{c['codigo']} (obligatorio)")
         if c["papel"] not in ("AMBOS", "CASO"):
             raise SystemExit(f"{c['codigo']}: el papel debe ser AMBOS o CASO.")
@@ -142,7 +171,9 @@ def numerar_personas(fechas: list, dias_max: int, mismo_dia_mes: bool) -> list[i
     return [numeros.setdefault(g, len(numeros) + 1) for g in grupo]
 
 
-def asignar_personas(df: pd.DataFrame, par: dict, excluir_genericos: bool) -> tuple[pd.Series, np.ndarray, dict]:
+def asignar_personas(df: pd.DataFrame, par: dict, excluir_genericos: bool) -> tuple[pd.Series, np.ndarray, pd.DataFrame, dict]:
+    """Devuelve la persona de cada egreso, los identificadores genéricos, la identidad (qué dato
+    cambia dentro del identificador y cómo lo resolvió la regla) y las cifras del reporte."""
     con_id = df["ID_PACIENTE"].notna()
     base = pd.DataFrame({"ID": df.loc[con_id, "ID_PACIENTE"].astype("int64"),
                          "SEXO": df.loc[con_id, "SEXO"].fillna("?"),
@@ -176,6 +207,21 @@ def asignar_personas(df: pd.DataFrame, par: dict, excluir_genericos: bool) -> tu
     n = sub["N"].astype("Int64").reindex(base.index).where(afectado, 1)
     persona = (base["ID"] * FACTOR_PERSONA + n).mask(es_generico & excluir_genericos)
     id_persona = persona.reindex(df.index)
+
+    # Identidad ambigua: el identificador aparece con más de un sexo o con más de una fecha de
+    # nacimiento, sin contar los datos faltantes. La regla anterior decide, pero sin certeza.
+    varios = combos[combos["ID"].isin(n_combos.index[n_combos > 1])]
+    por_id = pd.DataFrame({"sexos": varios[varios["SEXO"] != "?"].groupby("ID")["SEXO"].nunique(),
+                           "fechas": varios.dropna(subset=["FNAC"]).groupby("ID")["FNAC"].nunique()}).fillna(0)
+    que_cambia = pd.Series(np.select([(por_id["sexos"] > 1) & (por_id["fechas"] > 1), por_id["sexos"] > 1, por_id["fechas"] > 1],
+                                     [SEXO_Y_FECHA, SOLO_SEXO, SOLO_FECHA], default=""), index=por_id.index)
+    que_cambia = que_cambia[que_cambia != ""]
+    separados = personas_por_id.index[personas_por_id > 1]
+    identidad = pd.DataFrame({
+        "CAMBIA": base["ID"].map(que_cambia),
+        "RESULTADO": np.select([(es_generico & excluir_genericos).to_numpy(), base["ID"].isin(separados).to_numpy()],
+                               [SIN_PERSONA, VARIAS_PERSONAS], default=UNA_PERSONA),
+    }, index=base.index).reindex(df.index)
 
     # Cifras para el reporte.
     dos = varias[varias.groupby("ID")["N"].transform("size") == 2]
@@ -211,7 +257,7 @@ def asignar_personas(df: pd.DataFrame, par: dict, excluir_genericos: bool) -> tu
         "madre_hijo": int(((edad_menor < 1) & (diferencia > 12)).sum()),
         "con_id_sin_persona": int((con_id & id_persona.isna()).sum() - (es_generico.sum() if excluir_genericos else 0)),
     }
-    return id_persona, genericos, info
+    return id_persona, genericos, identidad, info
 
 
 # ------------------------------------------------------------------ 3. episodios asistenciales
@@ -241,7 +287,6 @@ def armar_episodios(s: pd.DataFrame, par: dict) -> tuple[pd.DataFrame, dict]:
              | s["TIPO_PROCEDENCIA"].str.startswith(VIENE_DE_HOSPITAL, na=False).to_numpy())
     solapado = (dias < 0).to_numpy()
     contiguo = dias.between(0, par["traslado_dias_max"]).to_numpy() & otro_hospital
-    contiguo_todos = contiguo.copy()
     if par["traslado_exige_marca"]:
         contiguo &= marca
     misma_estadia = ((dias == 0).to_numpy() & ~otro_hospital & ~primero
@@ -265,15 +310,24 @@ def armar_episodios(s: pd.DataFrame, par: dict) -> tuple[pd.DataFrame, dict]:
     deriva = s["TIPOALTA"].str.startswith(DERIVA_HOSPITAL, na=False).to_numpy()
     anio = s["ANIO_ARCHIVO"].to_numpy()
     tam = np.minimum(cuenta, 5)
+    # Concordancia de la regla con las marcas explícitas de traslado, según los días entre el alta
+    # anterior y el ingreso en otro hospital. hasta_7: el tramo entra en el resumen de los primeros 7 días.
+    tramos = [("Antes del alta anterior (estadías solapadas)", dias < 0, True), ("El mismo día del alta", dias == 0, True),
+              ("Al día siguiente", dias == 1, True), ("2 días después", dias == 2, True), ("3 días después", dias == 3, True),
+              ("4 a 7 días después", dias.between(4, 7), True), ("8 a 30 días después", dias.between(8, 30), False)]
+    concordancia = []
+    for texto, en_tramo, hasta_7 in tramos:
+        m = en_tramo.to_numpy() & otro_hospital
+        concordancia.append({"tramo": texto, "hasta_7": hasta_7, "n": int(m.sum()), "marca": int((m & marca).sum()),
+                             "unidos": int((m & continua).sum()), "unidos_marca": int((m & continua & marca).sum())})
+    mismo_hospital = (dias <= 7).to_numpy() & ~otro_hospital & ~primero
     info = {
         "seguibles": int(len(s)),
         "episodios": int(len(cuenta)),
         "tamanos": {int(k): int((tam == k).sum()) for k in range(1, 6)},
         "continuaciones": {int(k): int((motivo == k).sum()) for k in (SOLAPADO, OTRO_MISMO_DIA, OTRO_DIA_SIGUIENTE, MISMA_ESTADIA)},
-        "contiguos": {"mismo_dia": int((contiguo_todos & (dias == 0).to_numpy()).sum()),
-                      "dia_siguiente": int((contiguo_todos & (dias >= 1).to_numpy()).sum()),
-                      "mismo_dia_marca": int((contiguo_todos & (dias == 0).to_numpy() & marca).sum()),
-                      "dia_siguiente_marca": int((contiguo_todos & (dias >= 1).to_numpy() & marca).sum())},
+        "concordancia": concordancia,
+        "mismo_hospital_7_dias": (int(mismo_hospital.sum()), int((mismo_hospital & marca).sum())),
         "mismo_hospital_mismo_dia": int(((dias == 0).to_numpy() & ~otro_hospital & ~primero & ~continua).sum()),
         "derivados": {a: int((deriva & (anio == a)).sum()) for a in ANIOS},
         "derivados_con_continuacion": {a: int((deriva & ~final & (anio == a)).sum()) for a in ANIOS},
@@ -291,6 +345,10 @@ def marcar_criterios(df: pd.DataFrame, genericos: np.ndarray, par: dict) -> dict
     tipoalta = df["TIPOALTA"]
     es_generico = df["ID_PACIENTE"].isin(genericos)
     cierre = df["BLOQUE_ID"].map(CIERRE_BLOQUE)
+    # Seguimiento mínimo: la ventana más corta más el margen para que el reingreso alcance a terminar (D30).
+    minimo = pd.Timedelta(days=min(par["ventanas_dias"]) + par["censura_margen_dias"])
+    sesion = (df["DIAGNOSTICO1"].str.startswith(tuple(par["diagnosticos_sesion"]), na=False)
+              if par["diagnosticos_sesion"] else pd.Series(False, index=df.index))
     marcas = {
         # Sin identificador, o con identificador pero sin persona asignable (sin fecha de nacimiento
         # en un identificador que comparten varias personas).
@@ -303,9 +361,10 @@ def marcar_criterios(df: pd.DataFrame, genericos: np.ndarray, par: dict) -> dict
         "E08": tipoalta.str.startswith(DERIVA_PRIVADO, na=False),
         "E09": df["IR_29301_COD_GRD"].isna() | (df["CDM"] == "99"),
         "E10": nacimiento.isna() | (nacimiento > ingreso) | (edad > par["edad_maxima"]) | tipoalta.isna(),
-        "E11": alta + pd.Timedelta(days=par["censura_dias"]) > cierre,
+        "E11": alta + minimo > cierre,
         "E12": tipoalta.isin(["ALTA VOLUNTARIA", "FUGA DEL PACIENTE"]),
         "E13": df["TIPO_ACTIVIDAD"].str.startswith(CMA, na=False),
+        "E14": sesion,
     }
     return {codigo: np.asarray(m, dtype=bool) for codigo, m in marcas.items()}
 
@@ -314,9 +373,12 @@ def conteo(mascara: np.ndarray, valores: pd.Series) -> dict:
     return {k: int(v) for k, v in valores[mascara].value_counts(dropna=False).items()}
 
 
-def depurar(par: dict, criterios: list[dict]) -> tuple[pd.DataFrame, np.ndarray, dict]:
-    """Devuelve las columnas nuevas (una fila por egreso conservado, en el orden de la tabla
-    integrada), la máscara de filas conservadas y las cifras del reporte."""
+def preparar(par: dict, criterios: list[dict]) -> tuple[pd.DataFrame, np.ndarray, np.ndarray, dict]:
+    """Pasos 1 y 2: carga la tabla integrada, elimina los duplicados y asigna la persona.
+
+    Devuelve los egresos conservados (el índice es la posición de la fila en la tabla integrada),
+    la máscara de filas conservadas, los identificadores genéricos y las cifras del reporte.
+    """
     activo = {c["codigo"]: c["activo"] for c in criterios}
     df = cargar()
     info = {"entrada": len(df), "entrada_anio": conteo(np.ones(len(df), dtype=bool), df["ANIO_ARCHIVO"])}
@@ -333,7 +395,9 @@ def depurar(par: dict, criterios: list[dict]) -> tuple[pd.DataFrame, np.ndarray,
     info["salida_anio"] = conteo(np.ones(len(df), dtype=bool), df["ANIO_ARCHIVO"])
 
     # 2. Personas
-    df["ID_PERSONA"], genericos, info["personas"] = asignar_personas(df, par, excluir_genericos=activo["E02"])
+    df["ID_PERSONA"], genericos, identidad, info["personas"] = asignar_personas(df, par, excluir_genericos=activo["E02"])
+    df["IDENTIDAD_AMBIGUA"] = identidad["CAMBIA"].notna().to_numpy()
+    df["QUE_CAMBIA"], df["RESULTADO_PERSONA"] = identidad["CAMBIA"], identidad["RESULTADO"]      # solo para el reporte
     completa = df[CLAVE].notna().all(axis=1)
     misma_clave = df[completa & df.duplicated(CLAVE, keep=False)]
     grupos = misma_clave.groupby(CLAVE)["ID_PERSONA"].agg(personas="nunique", sin_persona=lambda p: p.isna().any())
@@ -341,6 +405,26 @@ def depurar(par: dict, criterios: list[dict]) -> tuple[pd.DataFrame, np.ndarray,
                            "sin_persona": int(grupos["sin_persona"].sum()),
                            "distintas": int((~grupos["sin_persona"] & (grupos["personas"] > 1)).sum()),
                            "misma": int((~grupos["sin_persona"] & (grupos["personas"] == 1)).sum())}
+    info["verificaciones"] = [
+        ("Registros de salida = registros de entrada − duplicados eliminados",
+         len(df) == info["entrada"] - int(exacta.sum()) - int(repetido.sum())),
+        ("`ID_EGRESO` único en la tabla depurada", df["ID_EGRESO"].is_unique),
+        ("Ningún identificador de paciente aparece en los dos bloques",
+         int((df.dropna(subset=["ID_PACIENTE"]).groupby("ID_PACIENTE")["BLOQUE_ID"].nunique() > 1).sum()) == 0),
+    ]
+    return df, conservar, genericos, info
+
+
+def aplicar_criterios(df: pd.DataFrame, genericos: np.ndarray, par: dict, criterios: list[dict],
+                      base: dict) -> tuple[pd.DataFrame, dict]:
+    """Pasos 3 y 4: arma los episodios asistenciales y marca los criterios sobre la tabla ya preparada.
+
+    Devuelve las columnas nuevas (una fila por egreso conservado, en el orden de la tabla integrada)
+    y las cifras del reporte. No modifica `df` ni `base`: el script 11 la llama varias veces con
+    criterios distintos.
+    """
+    activo = {c["codigo"]: c["activo"] for c in criterios}
+    df, info = df.copy(deep=False), dict(base)
 
     # 3. Episodios asistenciales, sobre los egresos que se pueden seguir
     marcas = marcar_criterios(df, genericos, par)
@@ -372,8 +456,11 @@ def depurar(par: dict, criterios: list[dict]) -> tuple[pd.DataFrame, np.ndarray,
     for p in pasos:
         p["quitaria"] = int((restante & marcas[p["codigo"]]).sum())      # solo se informa en los desactivados
     reingreso = seguible & ~df["CONTINUA_EPISODIO"].to_numpy()
+    dias_al_cierre = (df["BLOQUE_ID"].map(CIERRE_BLOQUE) - df["FECHAALTA"]).dt.days.to_numpy()
+    info["casos_por_ventana"] = {v: int((restante & (dias_al_cierre >= v + par["censura_margen_dias"])).sum())
+                                 for v in par["ventanas_dias"]}
 
-    nuevo = df[["ID_EGRESO", "ID_PERSONA", "ID_EPISODIO", "N_EGRESOS_EPISODIO", "CONTINUA_EPISODIO",
+    nuevo = df[["ID_EGRESO", "ID_PERSONA", "IDENTIDAD_AMBIGUA", "ID_EPISODIO", "N_EGRESOS_EPISODIO", "CONTINUA_EPISODIO",
                 "ALTA_FINAL_EPISODIO"]].copy()
     for c in criterios:
         nuevo[c["columna"]] = marcas[c["codigo"]]
@@ -399,13 +486,36 @@ def depurar(par: dict, criterios: list[dict]) -> tuple[pd.DataFrame, np.ndarray,
                       "Sin tipo de alta": int(df["TIPOALTA"].isna().sum())},
         "sin_grd": {"Sin código GRD": int(df["IR_29301_COD_GRD"].isna().sum()), "CDM 99": int((df["CDM"] == "99").sum())},
     })
+
+    # Identidad ambigua: qué dato cambia dentro del identificador y cómo lo resolvió la regla de personas.
+    ambigua = df["IDENTIDAD_AMBIGUA"].to_numpy()
+    resumen = (pd.DataFrame({"CAMBIA": df.loc[ambigua, "QUE_CAMBIA"], "RESULTADO": df.loc[ambigua, "RESULTADO_PERSONA"],
+                             "ID": df.loc[ambigua, "ID_PACIENTE"], "CASO": restante[ambigua]})
+               .groupby(["CAMBIA", "RESULTADO"]).agg(identificadores=("ID", "nunique"), egresos=("ID", "size"), casos=("CASO", "sum")))
+    filas = []
+    for cambia in (SOLO_SEXO, SOLO_FECHA, SEXO_Y_FECHA):
+        for resultado in (UNA_PERSONA, VARIAS_PERSONAS, SIN_PERSONA):
+            if (cambia, resultado) in resumen.index:
+                f = resumen.loc[(cambia, resultado)]
+                filas.append((cambia, resultado, int(f["identificadores"]), int(f["egresos"]), int(f["casos"])))
+    numero = (df["ID_PERSONA"] % FACTOR_PERSONA).fillna(0).to_numpy(dtype="int64")      # 0: sin persona
+    info["identidad"] = {"filas": filas,
+                         "total": (int(df.loc[ambigua, "ID_PACIENTE"].nunique()), int(ambigua.sum()), int((restante & ambigua).sum())),
+                         "segunda_persona": (int((numero >= 2).sum()), int((restante & (numero >= 2)).sum()))}
+
+    # Altas por derivación, por hospital y año: la continuación solo se ve si el hospital de destino está en la base.
+    deriva = marcas["E07"] & seguible
+    info["derivaciones"] = pd.DataFrame({
+        "COD_HOSPITAL": df["COD_HOSPITAL"].to_numpy(), "ANIO": anio.to_numpy(), "EGRESOS": 1,
+        "DERIVADOS_OTRO_HOSPITAL": deriva.astype("int64"),
+        "CON_CONTINUACION_VISIBLE": (deriva & ~df["ALTA_FINAL_EPISODIO"].to_numpy()).astype("int64"),
+        "EXCLUIDOS_E07": (motivo == "E07").astype("int64"),
+        "EXCLUIDOS_E08": (motivo == "E08").astype("int64"),
+    }).groupby(["COD_HOSPITAL", "ANIO"], as_index=False).sum()
+
     episodio_persona = df.loc[seguible].groupby("ID_EPISODIO")["ID_PERSONA"].nunique()
     info["verificaciones"] = [
-        ("Registros de salida = registros de entrada − duplicados eliminados",
-         len(df) == info["entrada"] - int(exacta.sum()) - int(repetido.sum())),
-        ("`ID_EGRESO` único en la tabla depurada", df["ID_EGRESO"].is_unique),
-        ("Ningún identificador de paciente aparece en los dos bloques",
-         int((df.dropna(subset=["ID_PACIENTE"]).groupby("ID_PACIENTE")["BLOQUE_ID"].nunique() > 1).sum()) == 0),
+        *base["verificaciones"],
         ("La suma de los pasos coincide: egresos depurados − excluidos = casos de estudio",
          len(df) - sum(p["quita"] for p in pasos) == info["casos"]),
         ("Todo egreso que no es caso de estudio tiene un motivo, y ningún caso de estudio lo tiene",
@@ -416,7 +526,17 @@ def depurar(par: dict, criterios: list[dict]) -> tuple[pd.DataFrame, np.ndarray,
         ("Todo caso de estudio tiene persona, episodio y es el alta final de su episodio"
          if activo["E05"] else "Todo caso de estudio tiene persona y episodio",
          bool((df.loc[restante, "ID_EPISODIO"].notna() & (df.loc[restante, "ALTA_FINAL_EPISODIO"] | (not activo["E05"]))).all())),
+        ("Todo egreso de un identificador genérico o separado en varias personas tiene `IDENTIDAD_AMBIGUA`",
+         bool(df.loc[df["RESULTADO_PERSONA"].isin([VARIAS_PERSONAS, SIN_PERSONA]), "IDENTIDAD_AMBIGUA"].all())),
     ]
+    return nuevo, info
+
+
+def depurar(par: dict, criterios: list[dict]) -> tuple[pd.DataFrame, np.ndarray, dict]:
+    """Devuelve las columnas nuevas (una fila por egreso conservado, en el orden de la tabla
+    integrada), la máscara de filas conservadas y las cifras del reporte."""
+    df, conservar, genericos, base = preparar(par, criterios)
+    nuevo, info = aplicar_criterios(df, genericos, par, criterios, base)
     return nuevo, conservar, info
 
 
@@ -491,6 +611,14 @@ def por_anio(d: dict) -> list[str]:
     return [fmt(d.get(a, 0)) for a in ANIOS] + [f"**{fmt(sum(d.get(a, 0) for a in ANIOS))}**"]
 
 
+def nombres_hospitales() -> dict:
+    """Nombre de cada hospital según la tabla maestra del DEIS. Vacío si el archivo no está."""
+    if not TABLA_MAESTRA.exists():
+        return {}
+    hoja = pd.read_excel(TABLA_MAESTRA, sheet_name="Hospitales", dtype=str).iloc[:, :2].dropna()
+    return dict(zip(hoja.iloc[:, 0].str.strip(), hoja.iloc[:, 1].str.strip()))
+
+
 def escribir_reporte(info: dict, par: dict, criterios: list[dict]) -> None:
     anios_txt = [str(a) for a in ANIOS]
     pasos, per, ep = info["pasos"], info["personas"], info["episodios"]
@@ -500,12 +628,47 @@ def escribir_reporte(info: dict, par: dict, criterios: list[dict]) -> None:
     inactivos = [p for p in pasos if not p["activo"]]
     e02_activo = next(p["activo"] for p in pasos if p["codigo"] == "E02")
     clave = info["misma_clave"]
+    ventanas, margen = par["ventanas_dias"], par["censura_margen_dias"]
     plazo = {0: "el mismo día del alta", 1: "el mismo día del alta o al día siguiente"}.get(
         par["traslado_dias_max"], f"el mismo día del alta o hasta {par['traslado_dias_max']} días después")
-    cont, contig = ep["continuaciones"], ep["contiguos"]
+    cont = ep["continuaciones"]
     con_varios = sum(n for k, n in ep["tamanos"].items() if k > 1)
     derivados = sum(ep["derivados"].values())
     ruta = ACTIVIDAD.name
+
+    # Identidad ambigua: sumas de identificadores, egresos y casos de estudio de algunas filas de la tabla.
+    ident = info["identidad"]
+
+    def suma_identidad(condicion) -> list[int]:
+        return [sum(f[i] for f in ident["filas"] if condicion(f)) for i in (2, 3, 4)]
+
+    id_separados = suma_identidad(lambda f: f[1] == VARIAS_PERSONAS)
+    id_unidos = suma_identidad(lambda f: f[1] == UNA_PERSONA and f[0] in (SOLO_FECHA, SEXO_Y_FECHA))
+    id_dudosos = suma_identidad(lambda f: f[1] == UNA_PERSONA and f[0] == SEXO_Y_FECHA)
+
+    # Concordancia de la regla de traslado con las marcas, dentro de los primeros 7 días.
+    conc = ep["concordancia"]
+    conc_7 = [f for f in conc if f["hasta_7"]]
+    unidos_7, unidos_marca_7 = sum(f["unidos"] for f in conc_7), sum(f["unidos_marca"] for f in conc_7)
+    sueltos_7 = sum(f["n"] - f["unidos"] for f in conc_7)
+    sueltos_marca_7 = sum(f["marca"] - f["unidos_marca"] for f in conc_7)
+
+    # Derivaciones por año y por hospital.
+    der = info["derivaciones"]
+    medidas = ["EGRESOS", "DERIVADOS_OTRO_HOSPITAL", "CON_CONTINUACION_VISIBLE", "EXCLUIDOS_E07", "EXCLUIDOS_E08"]
+    der_anio = der.groupby("ANIO")[medidas].sum()
+    completos = der.groupby("COD_HOSPITAL")["ANIO"].transform("nunique") == len(ANIOS)     # hospitales presentes todos los años
+    der_completos = der[completos].groupby("ANIO")[medidas].sum()
+    der_hospital = der.groupby("COD_HOSPITAL").agg(DESDE=("ANIO", "min"), HASTA=("ANIO", "max"), **{m: (m, "sum") for m in medidas})
+    nombres = nombres_hospitales()
+
+    def fila_anio(tabla: pd.DataFrame, parte: list[str], total: str | None = None) -> list[str]:
+        """Suma de las columnas `parte` por año; como porcentaje de la columna `total` si se indica."""
+        valores = tabla[parte].sum(axis=1).reindex(ANIOS, fill_value=0)
+        if total is None:
+            return [fmt(v) for v in valores] + [f"**{fmt(valores.sum())}**"]
+        base = tabla[total].reindex(ANIOS, fill_value=0)
+        return [pct(v, b) for v, b in zip(valores, base)] + [pct(valores.sum(), base.sum())]
 
     partes = [
         "# Depuración de la tabla integrada (actividad 2.2, script 08)",
@@ -578,6 +741,24 @@ def escribir_reporte(info: dict, par: dict, criterios: list[dict]) -> None:
         "ingreso y la otra le lleva más de 12 años: es el patrón de un recién nacido registrado con el identificador de su madre."
         + (f" Quedan {fmt(per['con_id_sin_persona'])} egresos con identificador y sin persona asignable (sin fecha de nacimiento "
            "en un identificador con varias personas); se cuentan en el criterio E01." if per["con_id_sin_persona"] else ""),
+        "**Identidad ambigua.** La regla anterior es una definición operativa: cuando los registros de un identificador no "
+        "coinciden, no hay evidencia suficiente para saber con certeza si son de una persona o de varias. Por eso la columna "
+        "`IDENTIDAD_AMBIGUA` marca los egresos de todo identificador que aparece con más de un sexo o con más de una fecha de "
+        "nacimiento (sin contar los datos faltantes), para poder repetir cualquier análisis sin ellos. La tabla muestra qué "
+        "dato cambia dentro del identificador y cómo lo resolvió la regla:",
+        tabla_md(["Qué cambia dentro del identificador", "Resultado de la regla", "Identificadores", "Egresos", "Casos de estudio"], [
+            *[[cambia, resultado, fmt(n), fmt(e), fmt(c)] for cambia, resultado, n, e, c in ident["filas"]],
+            ["**Total con identidad ambigua**", "", *[f"**{fmt(v)}**" for v in ident["total"]]],
+        ]),
+        f"Es el {pct(ident['total'][0], per['identificadores'], 2)} de los identificadores y el {pct(ident['total'][2], info['casos'], 2)} "
+        f"de los casos de estudio. **Cambian de persona** bajo la regla los {fmt(id_separados[0])} identificadores que se separan "
+        f"en varias personas ({fmt(id_separados[1])} egresos; {fmt(id_separados[2])} casos de estudio): {fmt(ident['segunda_persona'][0])} "
+        f"de esos egresos ({fmt(ident['segunda_persona'][1])} casos de estudio) quedan asignados a la segunda persona o a una posterior. "
+        f"En sentido contrario, {fmt(id_unidos[0])} identificadores con más de una fecha de nacimiento se mantienen como una sola "
+        f"persona ({fmt(id_unidos[1])} egresos; {fmt(id_unidos[2])} casos de estudio). Los más dudosos son los que tienen sexo y fecha "
+        f"de nacimiento distintos a la vez y aun así quedan como una persona ({fmt(id_dudosos[0])} identificadores; "
+        f"{fmt(id_dudosos[2])} casos de estudio). El efecto de dejar fuera todos los casos con identidad ambigua está en "
+        f"`{ruta}/reportes/11_sensibilidad.md`.",
 
         "## 4. Episodios asistenciales",
         "Un traslado no es un reingreso: es la continuación de la misma hospitalización. Los egresos de una persona se unen "
@@ -596,12 +777,17 @@ def escribir_reporte(info: dict, par: dict, criterios: list[dict]) -> None:
             ["  porque ingresan en otro hospital en los días siguientes", fmt(cont[OTRO_DIA_SIGUIENTE])],
             ["  porque repiten hospital y fechas del egreso anterior", fmt(cont[MISMA_ESTADIA])],
         ]),
-        "Respaldo de la regla: proporción de los ingresos en otro hospital que además tienen una marca explícita de traslado "
-        "(el alta anterior es una derivación o el ingreso declara que procede de otro hospital).",
-        tabla_md(["Ingreso en otro hospital", "Egresos", "Con marca de traslado", "%"], [
-            ["El mismo día del alta", fmt(contig["mismo_dia"]), fmt(contig["mismo_dia_marca"]), pct(contig["mismo_dia_marca"], contig["mismo_dia"])],
-            ["En los días siguientes", fmt(contig["dia_siguiente"]), fmt(contig["dia_siguiente_marca"]), pct(contig["dia_siguiente_marca"], contig["dia_siguiente"])],
-        ]),
+        "**Validación de la regla.** La regla es una definición operacional. Se valida comparándola con las dos marcas "
+        "explícitas de traslado que trae la base: que el alta anterior sea por derivación, o que el ingreso declare que "
+        "procede de otro hospital. La tabla muestra los ingresos en un hospital distinto del que dio el alta anterior, según "
+        "los días transcurridos entre esa alta y el ingreso:",
+        tabla_md(["Ingreso en otro hospital", "Egresos", "Con marca de traslado", "%", "Los une la regla"],
+                 [[f["tramo"], fmt(f["n"]), fmt(f["marca"]), pct(f["marca"], f["n"]), fmt(f["unidos"])] for f in conc]),
+        f"Dentro de los primeros 7 días, la regla une {fmt(unidos_7)} ingresos en otro hospital, y el {pct(unidos_marca_7, unidos_7)} "
+        f"tiene marca de traslado; no une {fmt(sueltos_7)}, y el {pct(sueltos_7 - sueltos_marca_7, sueltos_7)} no la tiene. "
+        "Las marcas tampoco son exactas: como referencia, tiene marca el "
+        f"{pct(ep['mismo_hospital_7_dias'][1], ep['mismo_hospital_7_dias'][0])} de los ingresos al mismo hospital dentro de 7 días, "
+        "que no son traslados.",
         "El tipo de alta no basta para reconocer un traslado. Egresos con alta por derivación a otro hospital y cuántos "
         "tienen la continuación visible en la base (el resto fue a establecimientos que no reportan GRD):",
         tabla_md(["", *anios_txt, "Total"], [
@@ -609,7 +795,15 @@ def escribir_reporte(info: dict, par: dict, criterios: list[dict]) -> None:
             ["Con continuación visible", *por_anio(ep["derivados_con_continuacion"])],
             ["%", *[pct(ep["derivados_con_continuacion"][a], ep["derivados"][a]) for a in ANIOS],
              pct(sum(ep["derivados_con_continuacion"].values()), derivados)],
+            [f"% en los {der.loc[completos, 'COD_HOSPITAL'].nunique()} hospitales presentes todos los años",
+             *fila_anio(der_completos, ["CON_CONTINUACION_VISIBLE"], "DERIVADOS_OTRO_HOSPITAL")],
+            ["Excluidos como caso de estudio por derivación (E07 y E08)", *fila_anio(der_anio, ["EXCLUIDOS_E07", "EXCLUIDOS_E08"])],
+            ["% de los egresos del año", *fila_anio(der_anio, ["EXCLUIDOS_E07", "EXCLUIDOS_E08"], "EGRESOS")],
         ]),
+        "Los derivados cuya continuación no se ve quedan fuera como caso de estudio (criterios E07 y E08): es una censura "
+        "administrativa del seguimiento, no una característica clínica del paciente. La continuación solo se ve si el hospital "
+        "de destino está en la base, así que la tabla sirve para revisar cambios de cobertura entre años. El detalle por "
+        f"hospital está en el anexo, y por hospital y año, en `{ruta}/reportes/08_derivaciones_por_hospital.csv`.",
         f"Un ingreso en el mismo hospital el mismo día del alta no es un traslado: abre un episodio nuevo y puede contar como "
         f"reingreso ({fmt(ep['mismo_hospital_mismo_dia'])} egresos).",
 
@@ -648,6 +842,14 @@ def escribir_reporte(info: dict, par: dict, criterios: list[dict]) -> None:
         "Detalle de E09: " + "; ".join(f"{k}: {fmt(v)}" for k, v in info["sin_grd"].items())
         + ". Detalle de E10 (un egreso puede cumplir más de una condición): "
         + "; ".join(f"{k.lower()}: {fmt(v)}" for k, v in info["faltantes"].items()) + ".",
+        "**Censura (E11).** Los archivos están organizados por año de alta, así que un reingreso solo aparece en la base si "
+        f"termina antes del cierre del bloque. Por eso cada ventana exige, además de sus días, un margen de {margen} días entre "
+        f"el alta y el cierre. E11 quita los egresos que no alcanzan el seguimiento de la ventana más corta "
+        f"({min(ventanas)} + {margen} = {min(ventanas) + margen} días). Casos de estudio con seguimiento suficiente para cada ventana: "
+        + "; ".join(f"{v} días (alta al menos {v + margen} días antes del cierre), {fmt(info['casos_por_ventana'][v])}" for v in ventanas)
+        + ". Un caso que no alcanza una ventana queda sin las variables de esa ventana (reporte 09).",
+        "Justificación de cada criterio:",
+        tabla_md(["Código", "Criterio", "Justificación"], [[c["codigo"], c["criterio"], c.get("justificacion", "")] for c in criterios]),
 
         "## 6. Egresos que pueden contar como reingreso",
         "Un egreso puede contar como el reingreso de un alta anterior si se puede seguir (tiene persona y fechas, y no cumple "
@@ -670,13 +872,15 @@ def escribir_reporte(info: dict, par: dict, criterios: list[dict]) -> None:
 
         "## 8. Parámetros usados por este script",
         tabla_md(["Parámetro", "Valor", "Descripción"],
-                 [[f"`{k}`", v, d] for k, (v, d) in par["descripcion"].items()]),
+                 [[f"`{k}`", f"`{v.replace('|', ' / ')}`" if v else "(vacío)", d] for k, (v, d) in par["descripcion"].items()]),
         "Cierre de cada bloque de identificador: " + "; ".join(f"{b}, {f:%d-%m-%Y}" for b, f in CIERRE_BLOQUE.items()) + ".",
 
         "## 9. Columnas nuevas",
         tabla_md(["Columna", "Contenido"], [
             ["`ID_PERSONA`", f"Identificador de la persona: `ID_PACIENTE` × {FACTOR_PERSONA} + número de persona. Sin dato en los "
                              "egresos sin identificador o con identificador genérico."],
+            ["`IDENTIDAD_AMBIGUA`", "Verdadero si el identificador del egreso aparece con más de un sexo o con más de una fecha de "
+                                    "nacimiento (sección 3). Falso en los egresos sin identificador."],
             ["`ID_EPISODIO`", "Episodio asistencial: `ID_EGRESO` del primer egreso del episodio. Sin dato en los egresos que no se pueden seguir."],
             ["`N_EGRESOS_EPISODIO`", "Número de egresos del episodio asistencial."],
             ["`CONTINUA_EPISODIO`", "Verdadero si el egreso continúa un episodio abierto por un egreso anterior (traslado)."],
@@ -690,10 +894,29 @@ def escribir_reporte(info: dict, par: dict, criterios: list[dict]) -> None:
 
         "## 10. Verificaciones",
         "\n".join(f"- {texto}: **{'sí' if ok else 'NO'}**." for texto, ok in info["verificaciones"]),
+
+        "## Anexo. Altas por derivación, por hospital",
+        "Egresos de la tabla depurada. **Con continuación visible**: derivados a otro hospital cuyo ingreso siguiente está en "
+        "la base (sección 4). **Excluidos**: los que quedan fuera como caso de estudio por los criterios E07 (derivación a otro "
+        "hospital sin continuación visible) y E08 (derivación a una institución privada). Los nombres son los de la tabla "
+        "maestra del DEIS.",
+        tabla_md(["Hospital", "Años", "Egresos", "Derivados a otro hospital", "Con continuación visible", "%",
+                  "Excluidos por E07", "Excluidos por E08", "% de los egresos"],
+                 [[f"{cod} {nombres.get(cod, '(sin nombre en la tabla maestra)')}",
+                   "Todos" if (f["DESDE"], f["HASTA"]) == (ANIOS[0], ANIOS[-1])
+                   else str(f["DESDE"]) if f["DESDE"] == f["HASTA"] else f"{f['DESDE']} a {f['HASTA']}",
+                   fmt(f["EGRESOS"]), fmt(f["DERIVADOS_OTRO_HOSPITAL"]), fmt(f["CON_CONTINUACION_VISIBLE"]),
+                   pct(f["CON_CONTINUACION_VISIBLE"], f["DERIVADOS_OTRO_HOSPITAL"]), fmt(f["EXCLUIDOS_E07"]), fmt(f["EXCLUIDOS_E08"]),
+                   pct(f["EXCLUIDOS_E07"] + f["EXCLUIDOS_E08"], f["EGRESOS"], 2)] for cod, f in der_hospital.iterrows()]),
     ]
     salida_md = DIR_REPORTS / "08_depuracion.md"
     salida_md.write_text("\n\n".join(partes) + "\n", encoding="utf-8")
     print(f"Reporte guardado en {salida_md}")
+    # Detalle por hospital y año, con el mismo formato que las tablas de reglas (UTF-8 con BOM y punto y coma).
+    salida_csv = DIR_REPORTS / "08_derivaciones_por_hospital.csv"
+    der.assign(HOSPITAL=der["COD_HOSPITAL"].map(nombres).fillna(""))[["COD_HOSPITAL", "HOSPITAL", "ANIO", *medidas]].to_csv(
+        salida_csv, sep=";", index=False, encoding="utf-8-sig", lineterminator="\r\n")
+    print(f"Detalle por hospital guardado en {salida_csv}")
 
 
 def main() -> None:
