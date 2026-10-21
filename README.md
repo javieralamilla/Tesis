@@ -11,9 +11,9 @@ El trabajo se organiza en una carpeta por actividad de la Carta Gantt. Cada carp
 | `1.2_exploracion_calidad/` | Scripts que examinan los datos sin modificarlos, y sus reportes: identificador de paciente, cobertura de catálogos y perfil de columnas. | Sí |
 | `2.1_integracion_homogenizacion/` | Scripts que transforman los datos (conversión, homogenización, integración y diccionario), sus reportes y las tablas de reglas revisables en Excel. | Sí |
 | `2.2_depuracion_etiquetado/` | Depuración y etiquetado del reingreso: scripts, reportes, su propia `bitacora.md`, las tablas `reglas/criterios_exclusion.csv` (qué exclusiones están activas, con su justificación) y `reglas/parametros.csv` (umbrales), y `pruebas/`, con los programas que contrastan los resultados con otro método. | Sí |
-| `2.3_validacion_particion/` | Partición inicial en desarrollo (80 %) y prueba (20 %) y reserva del conjunto de prueba: script, reporte, su propia `bitacora.md`, `reglas/parametros.csv` (semilla del proyecto, tamaño de la prueba y variable principal) y `pruebas/`, con el programa que contrasta la partición. | Sí |
+| `2.3_validacion_particion/` | Partición inicial en desarrollo (80 %) y prueba (20 %), reserva del conjunto de prueba y grupos de la validación temporal: scripts, reportes, su propia `bitacora.md`, `reglas/parametros.csv` (semilla del proyecto, tamaño de la prueba, variable principal y años de la validación temporal) y `pruebas/`, con los programas que contrastan la partición y los grupos. | Sí |
 | `data/interim/` | Parquet intermedios generados por los scripts (`crudo_<año>`, `homog_<año>`, `ids_<año>`). Compartida por todas las actividades. | No |
-| `data/processed/` | Tabla integrada 2019–2024 (`grd_2019_2024.parquet`), tabla depurada (`grd_depurado.parquet`), tabla etiquetada con las variables objetivo (`grd_etiquetado.parquet`), conjunto de cada egreso (`particion.parquet`) y de cada identificador de paciente (`particion_identificadores.parquet`), y conjunto de desarrollo (`desarrollo.parquet`), que es el único que usan las etapas de modelado. | No |
+| `data/processed/` | Tabla integrada 2019–2024 (`grd_2019_2024.parquet`), tabla depurada (`grd_depurado.parquet`), tabla etiquetada con las variables objetivo (`grd_etiquetado.parquet`), conjunto de cada egreso (`particion.parquet`) y de cada identificador de paciente (`particion_identificadores.parquet`), conjunto de desarrollo (`desarrollo.parquet`), que es el único que usan las etapas de modelado, y grupos de la validación temporal de sus casos de estudio (`validacion_temporal.parquet`). | No |
 | `data/reserva/` | Conjunto de prueba (`prueba.parquet`). Está apartado, como archivo de solo lectura: no se abre hasta la evaluación final. Su hash está registrado en `docs/version_particion.csv`. | No |
 | `docs/` | Documentación transversal: `bitacora.md` (hallazgos y decisiones de las actividades 1.2 y 2.1) y su versión Word; `diccionario_datos.md` (las 136 columnas de la tabla integrada); `diccionario_conjunto_analitico.md` (las 163 columnas de la tabla etiquetada, que es la que usan las etapas siguientes); `version_conjunto_analitico.csv` (versiones registradas de esa tabla, con su hash) y `version_particion.csv` (versiones registradas de la partición, con el hash del conjunto de prueba). | Sí |
 | `herramientas/` | Utilidades que no procesan datos, como `bitacora_word/`, que genera la versión Word de la bitácora. | Sí |
@@ -36,8 +36,9 @@ El número de cada script indica el orden, aunque estén en carpetas distintas.
 | 08 | 2.2 | `2.2_depuracion_etiquetado/scripts/08_depurar.py` | Elimina los duplicados, asigna la persona (y marca la identidad ambigua) y el episodio asistencial (traslados) y marca los criterios de exclusión de `reglas/criterios_exclusion.csv`. | `data/processed/grd_depurado.parquet`, `reportes/08_depuracion.md`, `reportes/08_derivaciones_por_hospital.csv` |
 | 09 | 2.2 | `2.2_depuracion_etiquetado/scripts/09_etiquetar.py` | Calcula las cuatro variables objetivo de reingreso no planificado (7 y 30 días; por cualquier causa y misma CDM) de cada caso de estudio. | `data/processed/grd_etiquetado.parquet`, `reportes/09_etiquetado.md`, `reportes/09_tasas_por_hospital.csv` |
 | 10 | 2.3 | `2.3_validacion_particion/scripts/10_particionar.py` | Reparte los identificadores de paciente entre desarrollo (80 %) y prueba (20 %), estratificando por bloque y por las cuatro variables objetivo, y aparta el conjunto de prueba. Se ejecuta después del script 12: solo reparte la versión registrada de la tabla etiquetada. | `data/processed/particion.parquet`, `data/processed/particion_identificadores.parquet`, `data/processed/desarrollo.parquet`, `data/reserva/prueba.parquet`, `reportes/10_particion.md`, `docs/version_particion.csv` |
-| 11 | 2.2 | `2.2_depuracion_etiquetado/scripts/11_sensibilidad.py` | Análisis de sensibilidad: vuelve a calcular las cuatro variables cambiando una decisión cada vez (actividades de 2019, cirugía mayor ambulatoria, sesiones Z51, CDM 13 y 14, censura sin margen, identidad ambigua). Usa las funciones de los scripts 08 y 09 y no modifica las tablas de datos; no depende del script 10. | `reportes/11_sensibilidad.md` |
+| 11 | 2.2 | `2.2_depuracion_etiquetado/scripts/11_sensibilidad.py` | Análisis de sensibilidad: vuelve a calcular las cuatro variables cambiando una decisión cada vez (actividades de 2019, cirugía mayor ambulatoria, sesiones Z51, partos con valor 0 en las variables relacionadas, CDM 13 y 14, censura sin margen, solo traslados con marca, derivados como casos de estudio, identidad ambigua). Usa las funciones de los scripts 08 y 09 y no modifica las tablas de datos; no depende del script 10. | `reportes/11_sensibilidad.md` |
 | 12 | 2.2 | `2.2_depuracion_etiquetado/scripts/12_diccionario_version.py` | Describe las columnas de la tabla etiquetada y registra su versión: el hash SHA-256 del archivo y de lo que lo produce. Hay que ejecutarlo de nuevo cada vez que la tabla cambia; no depende del script 10. | `docs/diccionario_conjunto_analitico.md`, `docs/version_conjunto_analitico.csv` |
+| 13 | 2.3 | `2.3_validacion_particion/scripts/13_validacion_temporal.py` | Marca los grupos de la validación temporal interna: cada caso de estudio de desarrollo es de entrenamiento (2019–2022) o de evaluación (2023–2024), y en la evaluación se separan los pacientes nuevos de los ya vistos en 2021–2022. Lee solo el conjunto de desarrollo y se ejecuta después del script 10. | `data/processed/validacion_temporal.parquet`, `reportes/13_validacion_temporal.md` |
 
 Los reportes y las reglas de cada script están en la carpeta de su actividad. Para ejecutar un script, desde `Codigo`:
 
@@ -61,9 +62,15 @@ La partición de la actividad 2.3 tiene su propio contraste, que tarda cerca de 
 .venv\Scripts\python.exe 2.3_validacion_particion\pruebas\verificar_10_particion.py
 ```
 
+Los grupos de la validación temporal (script 13) se contrastan con otro programa, que tarda unos segundos y deja `2.3_validacion_particion/reportes/pruebas_validacion_temporal.md`:
+
+```
+.venv\Scripts\python.exe 2.3_validacion_particion\pruebas\verificar_13_validacion_temporal.py
+```
+
 ## Orden para regenerar todo desde la tabla integrada
 
-Los scripts 08 y 09 generan la tabla etiquetada; el 11, el análisis de sensibilidad; el 12 registra la versión; las pruebas de la 2.2 la contrastan; el 10 hace la partición sobre la versión registrada, y su prueba la contrasta.
+Los scripts 08 y 09 generan la tabla etiquetada; el 11, el análisis de sensibilidad; el 12 registra la versión; las pruebas de la 2.2 la contrastan; el 10 hace la partición sobre la versión registrada, y su prueba la contrasta; el 13 marca los grupos de la validación temporal en el conjunto de desarrollo, y su prueba los contrasta.
 
 ## Entorno
 

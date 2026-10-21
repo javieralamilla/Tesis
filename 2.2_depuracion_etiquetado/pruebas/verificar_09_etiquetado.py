@@ -3,8 +3,9 @@
 Vuelve a calcular las cuatro variables objetivo de data/processed/grd_etiquetado.parquet de dos formas
 que no usan ninguna función del script 09: (a) un recorrido caso por caso sobre todos los casos de
 estudio y (b) la unión literal de cada alta con los ingresos posteriores de la misma persona, en una
-muestra de personas. También recalcula la verificación de la censura y compara las cifras con las
-tablas del reporte 09. Solo lee.
+muestra de personas. También recalcula la verificación de la censura, comprueba que los casos sin
+dato en las variables relacionadas (CDM de `cdm_sin_relacionado`, D38) habrían tenido 0 y compara las
+cifras con las tablas del reporte 09. Solo lee.
 
 Uso (desde la carpeta Codigo):
     .venv\\Scripts\\python.exe 2.2_depuracion_etiquetado\\pruebas\\verificar_09_etiquetado.py
@@ -54,6 +55,9 @@ with open(ACTIVIDAD / "reglas" / "parametros.csv", encoding="utf-8-sig", newline
 # CDM agrupadas: cada CDM de un grupo se reemplaza por la primera del grupo antes de comparar.
 agrupadas = {c: g.split("+")[0] for g in lista(par["cdm_agrupadas"]) for c in g.split("+")}
 solo_no_planificado = par["reingreso_solo_no_planificado"].strip().upper() == "SI"
+# CDM cuyos casos quedan sin dato en las variables relacionadas (D38), salvo que cdm_agrupadas las una con otra
+# o que cuente todo ingreso (entonces un parto también es reingreso).
+sin_relacionado = [x for x in lista(par["cdm_sin_relacionado"]) if x not in agrupadas] if solo_no_planificado else []
 margen = int(par["censura_margen_dias"])
 sesiones, no_planificados, partos = lista(par["diagnosticos_sesion"]), lista(par["ingresos_no_planificados"]), lista(par["grd_parto"])
 print(f"Archivo: {ETIQUETADA}", flush=True)
@@ -74,7 +78,10 @@ caso = d["ES_CASO_ESTUDIO"].to_numpy()
 al_cierre = (d["BLOQUE_ID"].map(CIERRE) - d["FECHAALTA"]).dt.days
 for k in VARIABLES:
     esperado = caso & (al_cierre >= VENTANA[k] + margen).to_numpy()
-    comprobar(f"{k}: con dato solo en los casos de estudio con al menos {VENTANA[k] + margen} días antes del cierre; valores 0 o 1",
+    if k.endswith("_CDM"):
+        esperado &= ~d["CDM"].isin(sin_relacionado).to_numpy()
+    comprobar(f"{k}: con dato solo en los casos de estudio con al menos {VENTANA[k] + margen} días antes del cierre"
+              + (f", sin los de la CDM {' y '.join(sin_relacionado)}" if k.endswith("_CDM") and sin_relacionado else "") + "; valores 0 o 1",
               (d[k].notna().to_numpy() == esperado).all() and d[k].dropna().isin([0, 1]).all(), f"(con dato {int(esperado.sum())})")
 comprobar("DIAS_REING e ID_EGRESO_REING: sin dato fuera de los casos de estudio", d.loc[~caso, ["DIAS_REING", "ID_EGRESO_REING"]].isna().all().all())
 
@@ -125,6 +132,11 @@ for i, k in enumerate(VARIABLES):
     cifras[k] = (int(v.sum()), int(calculado[v, i].sum()))
     comprobar(f"Recorrido caso por caso: {k}", (real == calculado[v, i]).all(),
               f"(casos {cifras[k][0]}; con reingreso {cifras[k][1]}; diferencias {int((real != calculado[v, i]).sum())})")
+if sin_relacionado:
+    excluido = c["CDM"].isin(sin_relacionado).to_numpy()
+    comprobar(f"Recorrido caso por caso: los casos de la CDM {' y '.join(sin_relacionado)}, sin dato en las relacionadas, no tienen "
+              "ningún reingreso de su misma CDM (el 0 era obligatorio)", int(calculado[excluido][:, [1, 3]].sum()) == 0,
+              f"(casos {int(excluido.sum())})")
 comprobar("Recorrido caso por caso: DIAS_REING e ID_EGRESO_REING",
           (c["DIAS_REING"].fillna(-1).to_numpy(dtype="int64") == dias_primero).all() and (c["ID_EGRESO_REING"].fillna(0).to_numpy(dtype="int64") == id_primero).all(),
           f"(casos con algún reingreso posterior: {int((dias_primero >= 0).sum())})")

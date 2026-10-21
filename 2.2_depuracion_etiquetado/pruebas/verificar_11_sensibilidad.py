@@ -3,7 +3,9 @@
 Vuelve a calcular cada escenario de la tabla de sensibilidad a partir de las columnas de
 data/processed/grd_etiquetado.parquet, con recorridos simples (uno para armar los episodios y otro
 para las variables objetivo) y sin usar ninguna función de los scripts 08, 09 ni 11. Compara los
-casos de estudio y las cuatro tasas de cada escenario con la tabla del reporte 11. Solo lee.
+casos de estudio y las cuatro tasas de cada escenario con la tabla del reporte 11. En las variables
+relacionadas no cuentan las CDM de `cdm_sin_relacionado` (D38), salvo en los escenarios que las
+vuelven a incluir. Solo lee.
 
 Uso (desde la carpeta Codigo):
     .venv\\Scripts\\python.exe 2.2_depuracion_etiquetado\\pruebas\\verificar_11_sensibilidad.py
@@ -52,6 +54,9 @@ MARGEN = int(par["censura_margen_dias"])
 SESIONES, NO_PLANIFICADOS, PARTOS = lista(par["diagnosticos_sesion"]), lista(par["ingresos_no_planificados"]), lista(par["grd_parto"])
 # CDM de la sensibilidad: cada CDM de un grupo se reemplaza por la primera del grupo antes de comparar.
 AGRUPADAS = {c: g.split("+")[0] for g in lista(par["cdm_sensibilidad"]) for c in g.split("+")}
+# CDM cuyos casos quedan sin dato en las variables relacionadas (D38), salvo que la comparación las una con otra.
+# Solo se aplica cuando cuentan solo los ingresos no planificados, que es lo que recalcula este contraste.
+SIN_RELACIONADO = lista(par["cdm_sin_relacionado"]) if par["reingreso_solo_no_planificado"].strip().upper() == "SI" else ()
 DIAS_TRASLADO, EXIGE_MARCA = int(par["traslado_dias_max"]), par["traslado_exige_marca"].strip().upper() == "SI"
 
 columnas = ["ID_EGRESO", "BLOQUE_ID", "ID_PERSONA", "COD_HOSPITAL", "TIPO_PROCEDENCIA", "TIPO_INGRESO", "FECHA_INGRESO", "FECHAALTA", "TIPOALTA",
@@ -62,7 +67,7 @@ al_cierre = (d["BLOQUE_ID"].map(CIERRE) - d["FECHAALTA"]).dt.days.to_numpy()    
 print(f"Archivo: {ETIQUETADA} ({N} egresos)", flush=True)
 
 
-def armar_episodios(seguible: np.ndarray) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+def armar_episodios(seguible: np.ndarray, exige_marca: bool = EXIGE_MARCA) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     """Recorrido egreso por egreso: episodio de cada egreso, si continúa el anterior y si es el alta final."""
     s = d[seguible].sort_values(["ID_PERSONA", "FECHA_INGRESO", "FECHAALTA", "ID_EGRESO"])
     personas = s["ID_PERSONA"].to_numpy(dtype="int64").tolist()
@@ -82,7 +87,7 @@ def armar_episodios(seguible: np.ndarray) -> tuple[np.ndarray, np.ndarray, np.nd
             dias = ing - alta_mayor
             if dias < 0:
                 sigue = True
-            elif dias <= DIAS_TRASLADO and hosp != hospital_ref and (not EXIGE_MARCA or derivado_ref or viene_de_hospital[k]):
+            elif dias <= DIAS_TRASLADO and hosp != hospital_ref and (not exige_marca or derivado_ref or viene_de_hospital[k]):
                 sigue = True
             elif dias == 0 and hosp == hospital_ref and ing == ingreso_ref and alt == alta_mayor:
                 sigue = True
@@ -152,7 +157,7 @@ def etiquetar(caso: np.ndarray, puede: np.ndarray, episodio: np.ndarray, margen:
     return resultado, con_dato
 
 
-def escenario(nombre: str, cambios: dict | None = None, margen: int = MARGEN, episodios=None) -> dict:
+def escenario(nombre: str, cambios: dict | None = None, margen: int = MARGEN, episodios=None, exige_marca: bool = EXIGE_MARCA) -> dict:
     """cambios: código de criterio -> activo. episodios: los del análisis principal, si el escenario no los cambia."""
     activo = {c["codigo"]: c["activo"].strip().upper() == "SI" for c in CRITERIOS}
     activo.update(cambios or {})
@@ -160,7 +165,7 @@ def escenario(nombre: str, cambios: dict | None = None, margen: int = MARGEN, ep
     for c in CRITERIOS:
         if c["papel"] == "AMBOS" and activo[c["codigo"]]:
             seguible &= ~d[c["columna"]].to_numpy()
-    episodio, continua, final = episodios if episodios is not None else armar_episodios(seguible)
+    episodio, continua, final = episodios if episodios is not None else armar_episodios(seguible, exige_marca)
     caso = np.ones(N, dtype=bool)
     for c in CRITERIOS:
         if not activo[c["codigo"]]:
@@ -177,12 +182,16 @@ def escenario(nombre: str, cambios: dict | None = None, margen: int = MARGEN, ep
     return {"caso": caso, "resultado": resultado, "con_dato": con_dato, "episodios": (episodio, continua, final)}
 
 
-def cifras(e: dict, columnas_resultado=(0, 1, 2, 3), filtro=None) -> tuple[int, list[float]]:
-    """Casos de estudio y tasa (en %, con dos decimales) de cada variable."""
+def cifras(e: dict, columnas_resultado=(0, 1, 2, 3), filtro=None, sin_relacionado=SIN_RELACIONADO) -> tuple[int, list[float]]:
+    """Casos de estudio y tasa (en %, con dos decimales) de cada variable. En las relacionadas no cuentan los
+    casos de estudio de las CDM de `sin_relacionado`, que quedan sin dato (D38)."""
     filtro = np.ones(int(e["caso"].sum()), dtype=bool) if filtro is None else filtro
+    excluido = d.loc[e["caso"], "CDM"].isin(list(sin_relacionado)).to_numpy()
     tasas = []
-    for columna, ventana in zip(columnas_resultado, VENTANAS):
+    for variable, columna, ventana in zip(VARIABLES, columnas_resultado, VENTANAS):
         v = e["con_dato"][ventana] & filtro
+        if variable.endswith("_CDM"):
+            v = v & ~excluido
         tasas.append(round(100 * int(e["resultado"][v, columna].sum()) / int(v.sum()), 2))
     return int(filtro.sum()), tasas
 
@@ -190,11 +199,16 @@ def cifras(e: dict, columnas_resultado=(0, 1, 2, 3), filtro=None) -> tuple[int, 
 print("Recalculando los escenarios...", flush=True)
 principal = escenario("Análisis principal")
 esperado = {"Análisis principal": cifras(principal),
-            "Con las CDM": cifras(principal, (0, 4, 2, 5)),
+            "Con los partos en las variables relacionadas": cifras(principal, sin_relacionado=()),
+            # Al unir las CDM, la que la unión agrupa con otra vuelve a tener dato.
+            "Con las CDM": cifras(principal, (0, 4, 2, 5), sin_relacionado=[x for x in SIN_RELACIONADO if x not in AGRUPADAS]),
             "Sin los casos con identidad ambigua": cifras(principal, filtro=~d.loc[principal["caso"], "IDENTIDAD_AMBIGUA"].to_numpy()),
             "Con la cirugía mayor ambulatoria": cifras(escenario("Con la cirugía mayor ambulatoria", {"E13": False}, episodios=principal["episodios"])),
             "Con las sesiones de tratamiento": cifras(escenario("Con las sesiones de tratamiento", {"E14": False}, episodios=principal["episodios"])),
             "Censura sin margen": cifras(escenario("Censura sin margen", margen=0, episodios=principal["episodios"])),
+            "Solo los traslados con marca explícita": cifras(escenario("Solo los traslados con marca explícita", exige_marca=True)),
+            "Con los derivados sin continuación como casos de estudio": cifras(escenario("Con los derivados", {"E07": False, "E08": False},
+                                                                                      episodios=principal["episodios"])),
             "Con las actividades que solo existen en 2019": cifras(escenario("Con las actividades de 2019", {"E04": False}))}
 
 # ------------------------------------------------------------------ comparación con la tabla del reporte

@@ -13,14 +13,17 @@ episodio asistencial nuevo (PUEDE_SER_REINGRESO) y se cuentan los días entre el
 ese ingreso. Con reingreso_solo_no_planificado = SI solo cuentan los ingresos no planificados:
 de un tipo no programado y que no sean un parto ni una sesión de tratamiento. El reingreso
 relacionado se cumple si algún ingreso de la ventana tiene la misma CDM que el caso de estudio.
+Los casos de estudio de las CDM de cdm_sin_relacionado (la 14, que solo contiene partos) quedan sin
+dato en las variables relacionadas: un parto no cuenta como reingreso, así que con la comparación
+literal su valor sería 0 por construcción (bitácora D38).
 
 Censura: un reingreso solo aparece en la base si termina antes del cierre del bloque. Por eso
 las variables de una ventana tienen dato solo si el alta ocurre al menos ventana + margen días
 antes del cierre; si no, quedan sin dato. Tampoco tienen dato los egresos que no son caso de estudio.
 
 Los umbrales están en reglas/parametros.csv. El reporte reportes/09_etiquetado.md muestra las
-tasas por definición, por año y por hospital, la verificación de la censura y la comparación de
-las dos formas de relacionar las CDM. reportes/09_tasas_por_hospital.csv tiene las tasas por
+tasas por definición, por año y por hospital, la calidad del identificador por año, la verificación
+de la censura y la comparación de las dos formas de relacionar las CDM. reportes/09_tasas_por_hospital.csv tiene las tasas por
 hospital y año.
 
 Uso (desde la carpeta Codigo):
@@ -43,7 +46,7 @@ DIR_REPORTS = ACTIVIDAD / "reportes"
 ORIGEN = DIR_PROCESSED / "grd_depurado.parquet"
 DESTINO = DIR_PROCESSED / "grd_etiquetado.parquet"
 ARCHIVO_PARAMETROS = ACTIVIDAD / "reglas" / "parametros.csv"
-# Nombres de los hospitales: hoja Hospitales de la tabla maestra del DEIS (solo se usan en el reporte).
+# Nombres de los hospitales y de los GRD: hojas Hospitales e IR - GRD de la tabla maestra del DEIS (solo se usan en el reporte).
 TABLA_MAESTRA = RAIZ.parent / "Datos" / "Tablas auxiliares" / "Tablas maestras bases GRD.xlsx"
 ANIOS = list(range(2019, 2025))
 
@@ -52,7 +55,7 @@ CIERRE_BLOQUE = {"A": pd.Timestamp("2020-12-31"), "B": pd.Timestamp("2024-12-31"
 # Las dos formas de contar un ingreso como reingreso. Se calculan ambas; se guarda la elegida.
 FORMAS = {"NP": "Solo ingresos no planificados", "TODO": "Todo ingreso"}
 PARAMETROS = ["ventanas_dias", "censura_margen_dias", "reingreso_solo_no_planificado", "ingresos_no_planificados",
-              "grd_parto", "diagnosticos_sesion", "cdm_agrupadas", "cdm_sensibilidad"]
+              "grd_parto", "diagnosticos_sesion", "cdm_agrupadas", "cdm_sensibilidad", "cdm_sin_relacionado"]
 COLUMNAS = ["ID_EGRESO", "ANIO_ARCHIVO", "BLOQUE_ID", "ID_PERSONA", "ID_EPISODIO", "ES_CASO_ESTUDIO", "PUEDE_SER_REINGRESO",
             "COD_HOSPITAL", "TIPO_INGRESO", "FECHA_INGRESO", "FECHAALTA", "TIPOALTA", "DIAGNOSTICO1", "IR_29301_COD_GRD", "CDM"]
 TRAMOS_DIAS = [(0, 0, "El mismo día"), (1, 1, "1 día"), (2, 3, "2 a 3 días"), (4, 7, "4 a 7 días"),
@@ -88,13 +91,19 @@ def cargar_parametros(cambios: dict | None = None) -> dict:
         raise SystemExit(f"reingreso_solo_no_planificado: se esperaba SI o NO y dice '{solo_np}'.")
     agrupadas, grupos = grupos_cdm("cdm_agrupadas")
     sensibilidad, grupos_sensibilidad = grupos_cdm("cdm_sensibilidad")
+    sin_relacionado = lista("cdm_sin_relacionado")
     par = {"ventanas_dias": sorted(int(v) for v in lista("ventanas_dias")),
            "margen": int(filas["censura_margen_dias"]["valor"]),
            "forma": "NP" if solo_np == "SI" else "TODO",
            "ingresos_no_planificados": lista("ingresos_no_planificados"),
            "grd_parto": lista("grd_parto"), "sesiones": lista("diagnosticos_sesion"),
            "cdm_agrupadas": agrupadas, "grupos_cdm": grupos,
-           "cdm_sensibilidad": sensibilidad, "grupos_sensibilidad": grupos_sensibilidad}
+           "cdm_sensibilidad": sensibilidad, "grupos_sensibilidad": grupos_sensibilidad,
+           # Una CDM sin reingreso relacionado posible lo vuelve a tener si cdm_agrupadas la une con otra, o si cuenta
+           # todo ingreso: entonces un parto también es reingreso (D38).
+           "cdm_sin_relacionado_archivo": sin_relacionado,
+           "cdm_sin_relacionado_np": [x for x in sin_relacionado if x not in agrupadas]}
+    par["cdm_sin_relacionado"] = par["cdm_sin_relacionado_np"] if par["forma"] == "NP" else []
     if not par["ventanas_dias"] or par["margen"] < 0:
         raise SystemExit("Se necesita al menos una ventana y un margen de censura que no sea negativo.")
     par["descripcion"] = {nombre: (filas[nombre]["valor"].strip(), filas[nombre]["descripcion"]) for nombre in PARAMETROS}
@@ -220,7 +229,21 @@ def etiquetar(par: dict, d: pd.DataFrame | None = None) -> tuple[pd.DataFrame, d
 
     etiquetas = variables(elegida, misma_cdm)
     nombres = list(etiquetas)
-    con_dato = {k: valido[ventana_de(k)] for k in nombres}
+    # CDM sin reingreso relacionado posible (D38): sus casos quedan sin dato en las variables relacionadas.
+    # En la relación de comparación vuelve a tener dato la CDM que esa relación une con otra.
+    # Al contar todo ingreso, un parto también es reingreso: entonces no se excluye ninguna CDM.
+    def excluidas_en(forma: str) -> list[str]:
+        return par["cdm_sin_relacionado_np"] if forma == "NP" else []
+    excluidas_comp = [x for x in excluidas_en(elegida) if not (comparacion and x in comparacion["mapa"])]
+    sin_rel = c["CDM"].isin(par["cdm_sin_relacionado"]).to_numpy()
+    sin_rel_comp = c["CDM"].isin(excluidas_comp).to_numpy()
+    sin_rel_otra = c["CDM"].isin(excluidas_en(otra)).to_numpy()
+
+    def dato(k: str, excluir: np.ndarray) -> np.ndarray:
+        return valido[ventana_de(k)] & ~excluir if k.endswith("_CDM") else valido[ventana_de(k)]
+    con_dato = {k: dato(k, sin_rel) for k in nombres}
+    con_dato_comp = {k: dato(k, sin_rel_comp) for k in nombres}
+    con_dato_otra = {k: dato(k, sin_rel_otra) for k in nombres}
 
     # Columnas nuevas: con dato solo en los casos de estudio con seguimiento suficiente.
     def columna(valores: np.ndarray, tipo: str, tiene: np.ndarray | None = None) -> pd.arrays.IntegerArray:
@@ -239,14 +262,15 @@ def etiquetar(par: dict, d: pd.DataFrame | None = None) -> tuple[pd.DataFrame, d
 
     # ---------------------------------------------------------------- cifras del reporte
     anio = c["ANIO_ARCHIVO"]
-    todas = valido[larga]                                         # casos con dato en las cuatro variables
+    todas = valido[larga]                                         # casos con seguimiento para la ventana más larga
+    cuatro = todas & ~sin_rel                                     # casos con dato en las cuatro variables
 
-    def positivos(valores: dict) -> dict:
-        return {k: int((valores[k] & con_dato[k]).sum()) for k in nombres}
+    def positivos(valores: dict, dato: dict = con_dato) -> dict:
+        return {k: int((valores[k] & dato[k]).sum()) for k in nombres}
 
     en_ventana = todas & hay[elegida] & (dias[elegida] <= larga)
     con_ingreso = todas & hay["TODO"] & (dias["TODO"] <= larga)
-    combinaciones = pd.DataFrame({k: etiquetas[k][todas].astype(int) for k in nombres}).value_counts().sort_index(ascending=False)
+    combinaciones = pd.DataFrame({k: etiquetas[k][cuatro].astype(int) for k in nombres}).value_counts().sort_index(ascending=False)
     tipo = ing["TIPO_INGRESO"]
     info = {
         "egresos": len(d), "casos": nc, "pasos": paso, "comparacion": comparacion["nombre"] if comparacion else None,
@@ -254,9 +278,11 @@ def etiquetar(par: dict, d: pd.DataFrame | None = None) -> tuple[pd.DataFrame, d
         "con_dato_anio": {k: conteo(con_dato[k], anio) for k in nombres},
         "positivos": positivos(etiquetas),
         "positivos_anio": {k: conteo(etiquetas[k] & con_dato[k], anio) for k in nombres},
-        "positivos_otra": positivos(variables(otra, misma_cdm)),
-        "positivos_comparacion": positivos(variables(elegida, misma_cdm_comp)),
-        "todas": int(todas.sum()),
+        "positivos_otra": positivos(variables(otra, misma_cdm), con_dato_otra),
+        "con_dato_otra": {k: int(con_dato_otra[k].sum()) for k in nombres},
+        "positivos_comparacion": positivos(variables(elegida, misma_cdm_comp), con_dato_comp),
+        "con_dato_comparacion": {k: int(con_dato_comp[k].sum()) for k in nombres},
+        "todas": int(cuatro.sum()),
         "combinaciones": [(list(k), int(v)) for k, v in combinaciones.items()],
         "dias": {txt: int((en_ventana & (dias[elegida] >= a) & (dias[elegida] <= b)).sum()) for a, b, txt in TRAMOS_DIAS if a <= larga},
         "otro_hospital": (int((en_ventana & (hospital[primero[elegida]] != c["COD_HOSPITAL"].to_numpy())).sum()), int(en_ventana.sum())),
@@ -276,9 +302,24 @@ def etiquetar(par: dict, d: pd.DataFrame | None = None) -> tuple[pd.DataFrame, d
     cdm_caso = c["CDM"].to_numpy()
     info["cdm_involucradas"] = []
     for x in sorted(set(par["cdm_agrupadas"]) | set(par["cdm_sensibilidad"])):
-        de_la_cdm = con_dato[k_larga] & (cdm_caso == x)
+        de_la_cdm = todas & (cdm_caso == x)                       # None: la CDM no tiene dato en esa relación (D38)
         info["cdm_involucradas"].append((x, int(de_la_cdm.sum()), int((de_la_cdm & etiquetas[f"REING_{larga}D"]).sum()),
-                                         int((de_la_cdm & etiquetas[k_larga]).sum()), int((de_la_cdm & comp_larga).sum())))
+                                         None if x in par["cdm_sin_relacionado"] else int((de_la_cdm & etiquetas[k_larga]).sum()),
+                                         None if x in excluidas_comp else int((de_la_cdm & comp_larga).sum())))
+
+    # CDM sin reingreso relacionado posible (D38): qué GRD contienen y en qué CDM cae el primer reingreso
+    # no planificado de sus casos de estudio, para mostrar por qué el 0 es obligatorio.
+    excluida = d["CDM"].isin(par["cdm_sin_relacionado_archivo"])
+    info["grd_sin_relacionado"] = (d.loc[excluida].groupby("IR_29301_COD_GRD")
+                                   .agg(egresos=("ID_EGRESO", "size"), casos=("ES_CASO_ESTUDIO", "sum")).reset_index())
+    excluida_caso = c["CDM"].isin(par["cdm_sin_relacionado_archivo"]).to_numpy()
+    reingresa = excluida_caso & todas & hay[elegida] & (dias[elegida] <= larga)
+    primeros = ing.iloc[primero[elegida][reingresa]]
+    info["primer_reingreso_sin_relacionado"] = {
+        "casos": int((excluida_caso & todas).sum()), "con_reingreso": int(reingresa.sum()),
+        "cdm": primeros["CDM"].fillna("(sin dato)").value_counts(),
+        "grd": primeros["IR_29301_COD_GRD"].fillna("(sin dato)").value_counts().head(5),
+        "diagnosticos": primeros["DIAGNOSTICO1"].fillna("(sin dato)").str[:3].value_counts().head(5)}
     # Por cada caso de estudio: si tiene dato y si tiene reingreso en cada variable. Se suman por grupo.
     columnas = {"n": np.ones(nc, dtype="int64")}
     for k in nombres:
@@ -346,8 +387,11 @@ def etiquetar(par: dict, d: pd.DataFrame | None = None) -> tuple[pd.DataFrame, d
         esperado[k] = np.zeros(len(d), dtype=bool)
         esperado[k][es_caso] = con_dato[k]
     info["verificaciones"] = [
-        ("Cada variable tiene dato en los casos de estudio con seguimiento suficiente para su ventana, y solo en ellos",
+        ("Cada variable tiene dato en los casos de estudio con seguimiento suficiente para su ventana, y solo en ellos "
+         "(en las relacionadas, salvo las CDM de `cdm_sin_relacionado`)",
          all((nuevo[k].notna().to_numpy() == esperado[k]).all() for k in nombres)),
+        ("Los casos que quedan sin dato en las variables relacionadas no tienen ningún reingreso de su misma CDM: "
+         "el 0 era obligatorio", all(not (etiquetas[k] & sin_rel).any() for k in nombres if k.endswith("_CDM"))),
         ("Todo caso de estudio tiene seguimiento suficiente para la ventana más corta", bool(valido[min(ventanas)].all())),
         ("Las dos rutas de cálculo dan el mismo resultado en las variables por cualquier causa",
          all((alguno[(elegida, v)] == etiquetas[f"REING_{v}D"]).all() for v in ventanas)),
@@ -361,6 +405,30 @@ def etiquetar(par: dict, d: pd.DataFrame | None = None) -> tuple[pd.DataFrame, d
          coherente),
     ]
     return nuevo, info
+
+
+def calidad_identificador(nuevo: pd.DataFrame, variable: str) -> dict:
+    """Calidad del identificador por año del alta: egresos sin identificador, con identificador genérico o con
+    identidad ambigua, y la tasa de `variable` con y sin los casos de identidad ambigua. Sirve para revisar si el
+    aumento de 2023 y 2024 se debe a una mejora del identificador (revisión del 13 de octubre de 2026, punto 2.3).
+    Solo la usa el reporte de este script."""
+    t = pq.read_table(ORIGEN, columns=["ID_EGRESO", "ANIO_ARCHIVO", "EXC_SIN_ID", "EXC_ID_GENERICO", "IDENTIDAD_AMBIGUA",
+                                       "ES_CASO_ESTUDIO"]).to_pandas()
+    if not (t["ID_EGRESO"].to_numpy() == nuevo["ID_EGRESO"].to_numpy()).all():
+        raise SystemExit("Las columnas nuevas no están alineadas con la tabla depurada.")
+    caso, ambigua = t["ES_CASO_ESTUDIO"].to_numpy(), t["IDENTIDAD_AMBIGUA"].to_numpy()
+    valor = nuevo[variable]
+    dato, positivo = valor.notna().to_numpy(dtype=bool), (valor == 1).fillna(False).to_numpy(dtype=bool)
+    anio = t["ANIO_ARCHIVO"].to_numpy()
+    salida = {}
+    for a in [*ANIOS, None]:
+        en = np.ones(len(t), dtype=bool) if a is None else anio == a
+        salida[a] = {"egresos": int(en.sum()), "sin_id": int((en & t["EXC_SIN_ID"].to_numpy()).sum()),
+                     "generico": int((en & t["EXC_ID_GENERICO"].to_numpy()).sum()), "ambigua": int((en & ambigua).sum()),
+                     "casos": int((en & caso).sum()), "casos_ambigua": int((en & caso & ambigua).sum()),
+                     **{nombre: (int((en & dato & m).sum()), int((en & positivo & m).sum()))
+                        for nombre, m in (("todos", caso), ("sin_ambigua", caso & ~ambigua), ("solo_ambigua", caso & ambigua))}}
+    return {"variable": variable, "por_anio": salida}
 
 
 # ------------------------------------------------------------------ escritura
@@ -428,6 +496,14 @@ def nombres_hospitales() -> dict:
     return dict(zip(hoja.iloc[:, 0].str.strip(), hoja.iloc[:, 1].str.strip()))
 
 
+def descripciones_grd() -> dict:
+    """Descripción de cada código GRD (6 dígitos) según la tabla maestra del DEIS. Vacío si el archivo no está."""
+    if not TABLA_MAESTRA.exists():
+        return {}
+    hoja = pd.read_excel(TABLA_MAESTRA, sheet_name="IR - GRD", dtype=str).iloc[:, :2].dropna()
+    return dict(zip(hoja.iloc[:, 0].str.strip().str.zfill(6), hoja.iloc[:, 1].str.strip()))
+
+
 def escribir_reporte(info: dict, par: dict) -> None:
     anios_txt = [str(a) for a in ANIOS]
     ventanas, larga, margen, elegida = par["ventanas_dias"], max(par["ventanas_dias"]), par["margen"], par["forma"]
@@ -447,11 +523,34 @@ def escribir_reporte(info: dict, par: dict) -> None:
     no_planificados = " u ".join(f"`{t}`" for t in par["ingresos_no_planificados"])
     partos = " o ".join(par["grd_parto"])
     sesiones = " o ".join(par["sesiones"])
+    cdm_excluidas = " y ".join(par["cdm_sin_relacionado"])
 
     def definicion(col: str) -> str:
         return f"{ventana_de(col)} días, " + ("relacionado (misma CDM)" if col.endswith("_CDM") else "por cualquier causa")
 
     cortes = "; ".join(f"{v} días: alta al menos {v + margen} días antes del cierre" for v in ventanas)
+
+    def tabla_identificadores(q: dict) -> list[str]:
+        """Calidad del identificador por año (sección 2)."""
+        p = q["por_anio"]
+        columnas = [*ANIOS, None]
+        return [
+            "**Calidad del identificador.** Si el identificador hubiera mejorado en 2023 y 2024, con menos egresos sin "
+            "identificador o con identidad ambigua, se verían más reingresos aunque no hubiera más (revisión del profesor guía "
+            "del 13 de octubre de 2026, punto 2.3). La tabla lo revisa por año del alta. Los egresos sin identificador o con "
+            "identificador genérico no pueden ser caso de estudio ni contar como reingreso (E01 y E02); los de identidad "
+            "ambigua sí, con su marca (D34).",
+            tabla_md(["", *anios_txt, "Total"], [
+                ["Egresos de la tabla depurada", *[fmt(p[a]["egresos"]) for a in columnas]],
+                ["Sin identificador de paciente (E01)", *[pct(p[a]["sin_id"], p[a]["egresos"]) for a in columnas]],
+                ["Con identificador genérico (E02)", *[pct(p[a]["generico"], p[a]["egresos"]) for a in columnas]],
+                ["Con identidad ambigua", *[pct(p[a]["ambigua"], p[a]["egresos"]) for a in columnas]],
+                ["Casos de estudio con identidad ambigua", *[pct(p[a]["casos_ambigua"], p[a]["casos"]) for a in columnas]],
+                [f"`{q['variable']}`, todos los casos de estudio", *[pct(*p[a]["todos"][::-1]) for a in columnas]],
+                [f"`{q['variable']}`, sin los casos con identidad ambigua", *[pct(*p[a]["sin_ambigua"][::-1]) for a in columnas]],
+                [f"`{q['variable']}`, solo los casos con identidad ambigua", *[pct(*p[a]["solo_ambigua"][::-1]) for a in columnas]],
+            ]),
+        ]
     partes = [
         "# Etiquetado del reingreso (actividad 2.2, script 09)",
         f"Generado por `{ruta}/scripts/09_etiquetar.py`. Entrada: `data/processed/{ORIGEN.name}`. Salida: "
@@ -471,8 +570,11 @@ def escribir_reporte(info: dict, par: dict) -> None:
         "una ventana queda sin dato en las variables de esa ventana (sección 6).",
 
         "## 1. Las cuatro variables objetivo",
-        f"Hay {fmt(casos)} casos de estudio. Cada variable se calcula sobre los que tienen seguimiento suficiente para su ventana.",
-        tabla_md(["Variable", "Definición", "Casos con seguimiento", "Casos con reingreso", "%"],
+        f"Hay {fmt(casos)} casos de estudio. Cada variable se calcula sobre los que tienen seguimiento suficiente para su ventana."
+        + (f" En las dos variables relacionadas, además, los casos de estudio de la CDM {cdm_excluidas} quedan sin dato: con la "
+           "comparación en uso no pueden tener un reingreso de su misma CDM (sección 5; bitácora D38). Por eso tienen menos casos "
+           "que las variables por cualquier causa." if par["cdm_sin_relacionado"] else ""),
+        tabla_md(["Variable", "Definición", "Casos con dato", "Casos con reingreso", "%"],
                  [[f"`{k}`", definicion(k), fmt(con_dato[k]), fmt(pos[k]), pct(pos[k], con_dato[k])] for k in nombres]),
         "Las cuatro están contenidas unas en otras: la ventana de 30 días incluye los primeros 7, y «por cualquier causa» "
         f"incluye a los relacionados. Combinaciones de las cuatro variables en los {fmt(info['todas'])} casos de estudio que "
@@ -497,6 +599,7 @@ def escribir_reporte(info: dict, par: dict) -> None:
                   for texto, n_a, pos_a in hosp["tendencia"]]),
         "La tercera fila es una cota inferior: descuenta todo caso cuyo primer reingreso ocurre en un hospital incorporado "
         "después, aunque tenga otro reingreso dentro de la ventana.",
+        *(tabla_identificadores(info["identificadores"]) if "identificadores" in info else []),
 
         f"## 3. Días entre el alta y el primer reingreso (hasta {larga} días)",
         tabla_md(["Días", "Casos", "%"], [[txt, fmt(n), pct(n, sum(info["dias"].values()), 1)] for txt, n in info["dias"].items()]),
@@ -526,26 +629,64 @@ def escribir_reporte(info: dict, par: dict) -> None:
                    pct(v, sum(info["clase_primer_ingreso"].values()), 1), "Sí" if k in par["ingresos_no_planificados"] else "No"]
                   for k, v in sorted(info["clase_primer_ingreso"].items(), key=lambda kv: -kv[1])]),
         "Comparación de las cuatro variables según la forma de contar. La tabla de datos contiene solo la forma en uso; "
-        "para cambiarla basta modificar `reingreso_solo_no_planificado` y volver a ejecutar este script.",
+        "para cambiarla basta modificar `reingreso_solo_no_planificado` y volver a ejecutar este script."
+        + (" Al contar todo ingreso, un parto también es reingreso, así que en esa forma los partos tienen dato en las variables "
+           "relacionadas (D38): cada columna usa sus propios casos con dato." if par["cdm_sin_relacionado_np"] else ""),
         tabla_md(["Definición", f"{FORMAS[elegida]} (en uso)", "%", FORMAS[otra], "%"],
-                 [[definicion(k), fmt(pos[k]), pct(pos[k], con_dato[k]), fmt(info["positivos_otra"][k]), pct(info["positivos_otra"][k], con_dato[k])]
-                  for k in nombres]),
+                 [[definicion(k), fmt(pos[k]), pct(pos[k], con_dato[k]), fmt(info["positivos_otra"][k]),
+                   pct(info["positivos_otra"][k], info["con_dato_otra"][k])] for k in nombres]),
 
-        "## 5. Reingreso relacionado: definición en uso y análisis de sensibilidad",
+        "## 5. Reingreso relacionado: CDM sin reingreso relacionado posible y análisis de sensibilidad",
     ]
-    if info["comparacion"]:
-        comp = info["positivos_comparacion"]
-        en_uso = ("Con las CDM " + "; ".join(par["grupos_cdm"]) + " como una sola") if par["grupos_cdm"] else "Misma CDM, literal"
+    if par["cdm_sin_relacionado_archivo"]:
+        grd_txt = descripciones_grd()
+        excluidas = " y ".join(par["cdm_sin_relacionado_archivo"])
+        g, pr = info["grd_sin_relacionado"], info["primer_reingreso_sin_relacionado"]
+        principales_cdm = pr["cdm"].head(6)
+        otras_cdm = pr["con_reingreso"] - int(principales_cdm.sum())
         partes += [
-            "Como análisis de sensibilidad, la tabla compara el reingreso relacionado según la definición en uso con otra "
-            "forma de comparar las CDM (parámetros `cdm_agrupadas` y `cdm_sensibilidad`; bitácora H17 y D31).",
-            tabla_md(["Variable", f"{en_uso} (en uso)", "%", info["comparacion"], "%", "Diferencia"],
-                     [[f"`{k}`", fmt(pos[k]), pct(pos[k], con_dato[k]), fmt(comp[k]), pct(comp[k], con_dato[k]), f"{comp[k] - pos[k]:+,}".replace(",", ".")]
+            f"**CDM sin reingreso relacionado posible (bitácora H17 y D38).** La CDM {excluidas} contiene solo estos GRD "
+            "(descripciones de la hoja IR - GRD de la tabla maestra del DEIS):",
+            tabla_md(["GRD", "Descripción", "Egresos", "Casos de estudio"],
+                     [[f"`{r.IR_29301_COD_GRD}`", grd_txt.get(r.IR_29301_COD_GRD, "(sin descripción)"), fmt(r.egresos), fmt(r.casos)]
+                      for r in g.itertuples()]),
+            f"Todos comienzan con {partos}: son partos o cesáreas, y un parto no cuenta como reingreso (sección 4). Así, ningún "
+            f"reingreso puede ser de la CDM {excluidas}, y con la comparación literal sus casos de estudio tendrían 0 por construcción "
+            "en las variables relacionadas: un modelo acertaría en todos ellos sin aprender nada sobre el reingreso. Por eso quedan "
+            "sin dato en esas dos variables (parámetro `cdm_sin_relacionado`) y conservan las dos por cualquier causa"
+            + ("." if par["cdm_sin_relacionado"] else ". En esta ejecución, la agrupación de CDM en uso los vuelve a incluir.")
+            + " Las complicaciones del embarazo y del puerperio pertenecen a otras CDM"
+            + (f", sobre todo a la {principales_cdm.index[0]}" if len(principales_cdm) else "") + ". De los "
+            f"{fmt(pr['casos'])} casos de estudio de la CDM {excluidas} con seguimiento de {larga} días, {fmt(pr['con_reingreso'])} "
+            f"({pct(pr['con_reingreso'], pr['casos'])}) tienen un reingreso no planificado dentro de {larga} días. CDM de su primer reingreso:",
+            tabla_md(["CDM del primer reingreso", "Casos", "%"],
+                     [[k, fmt(v), pct(v, pr["con_reingreso"], 1)] for k, v in principales_cdm.items()]
+                     + ([["Otras", fmt(otras_cdm), pct(otras_cdm, pr["con_reingreso"], 1)]] if otras_cdm else [])),
+            "GRD y diagnósticos principales más frecuentes de esos primeros reingresos:",
+            tabla_md(["GRD", "Descripción", "Casos", "%"],
+                     [[f"`{k}`", grd_txt.get(k, "(sin descripción)"), fmt(v), pct(v, pr["con_reingreso"], 1)] for k, v in pr["grd"].items()]),
+            tabla_md(["Diagnóstico principal (3 caracteres)", "Casos", "%"],
+                     [[f"`{k}`", fmt(v), pct(v, pr["con_reingreso"], 1)] for k, v in pr["diagnosticos"].items()]),
+        ]
+    if info["comparacion"]:
+        comp, n_comp = info["positivos_comparacion"], info["con_dato_comparacion"]
+        en_uso = ("Con las CDM " + "; ".join(par["grupos_cdm"]) + " como una sola") if par["grupos_cdm"] else "Misma CDM, literal"
+
+        def celdas(valor, n) -> list[str]:
+            return ["sin dato", "—"] if valor is None else [fmt(valor), pct(valor, n)]
+        partes += [
+            "**Análisis de sensibilidad.** La tabla compara el reingreso relacionado según la definición en uso con otra "
+            "forma de comparar las CDM (parámetros `cdm_agrupadas` y `cdm_sensibilidad`; bitácora H17, D31 y D38). Una CDM sin "
+            "reingreso relacionado posible vuelve a tener dato cuando la comparación la une con otra, así que cada forma de "
+            "comparar tiene sus propios casos con dato.",
+            tabla_md(["Variable", f"{en_uso} (en uso): casos con dato", "Con reingreso", "%",
+                      f"{info['comparacion']}: casos con dato", "Con reingreso", "%"],
+                     [[f"`{k}`", fmt(con_dato[k]), fmt(pos[k]), pct(pos[k], con_dato[k]), fmt(n_comp[k]), fmt(comp[k]), pct(comp[k], n_comp[k])]
                       for k in relacionadas]),
             f"Detalle de la ventana de {larga} días en los casos de estudio de las CDM que la comparación agrupa:",
             tabla_md(["CDM del caso de estudio", "Casos con seguimiento", "Con reingreso por cualquier causa", "%",
                       f"Relacionado: {en_uso[0].lower() + en_uso[1:]} (en uso)", "%", f"Relacionado: {info['comparacion'][0].lower() + info['comparacion'][1:]}", "%"],
-                     [[x, fmt(n), fmt(todo), pct(todo, n), fmt(uso), pct(uso, n), fmt(otro), pct(otro, n)]
+                     [[x, fmt(n), fmt(todo), pct(todo, n), *celdas(uso, n), *celdas(otro, n)]
                       for x, n, todo, uso, otro in info["cdm_involucradas"]]),
         ]
     else:
@@ -587,7 +728,9 @@ def escribir_reporte(info: dict, par: dict) -> None:
         "## 9. Columnas nuevas",
         tabla_md(["Columna", "Contenido"], [
             *[[f"`{k}`", f"Reingreso dentro de {definicion(k)}. 1 = sí, 0 = no. Sin dato si el alta ocurre a menos de "
-               f"{ventana_de(k) + margen} días del cierre del bloque."] for k in nombres],
+               f"{ventana_de(k) + margen} días del cierre del bloque."
+               + (f" También sin dato en los casos de estudio de la CDM {cdm_excluidas}, que no pueden tener un reingreso "
+                  "relacionado (D38)." if k.endswith("_CDM") and par["cdm_sin_relacionado"] else "")] for k in nombres],
             ["`DIAS_REING`", "Días entre el alta y el primer ingreso posterior que cuenta como reingreso, a cualquier distancia "
                              "dentro del bloque. Sin dato si no hay ninguno."],
             ["`ID_EGRESO_REING`", "`ID_EGRESO` de ese ingreso, para poder revisar cada par."],
@@ -619,6 +762,8 @@ def escribir_reporte(info: dict, par: dict) -> None:
                           "ANIO": detalle["ANIO"], "CASOS_DE_ESTUDIO": detalle["n"]})
     for v in ventanas:
         tabla[f"CASOS_CON_SEGUIMIENTO_{v}D"] = detalle[f"n_REING_{v}D"]
+    for k in relacionadas:                     # sin las CDM de cdm_sin_relacionado (D38)
+        tabla[f"CASOS_CON_DATO_{k}"] = detalle[f"n_{k}"]
     for k in nombres:
         tabla[f"N_{k}"] = detalle[f"pos_{k}"]
         tabla[f"TASA_{k}"] = (100 * detalle[f"pos_{k}"] / detalle[f"n_{k}"]).round(2)
@@ -636,6 +781,7 @@ def main() -> None:
     larga = max(par["ventanas_dias"])
     print(f"  {info['casos']:,} casos de estudio; {info['positivos'][f'REING_{larga}D']:,} con reingreso a {larga} días "
           f"({FORMAS[par['forma']].lower()}) ({time.time() - inicio:.0f} s)", flush=True)
+    info["identificadores"] = calidad_identificador(nuevo, f"REING_{larga}D")
     print("Escribiendo...", flush=True)
     info["verificaciones"] += escribir(nuevo)
     escribir_reporte(info, par)

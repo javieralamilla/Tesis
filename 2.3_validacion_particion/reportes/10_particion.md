@@ -1,6 +1,6 @@
 # Partición inicial y reserva del conjunto de prueba (actividad 2.3, script 10)
 
-Generado por `2.3_validacion_particion/scripts/10_particionar.py`. Entrada: `data/processed/grd_etiquetado.parquet`, versión 1 del conjunto analítico. Parámetros: `2.3_validacion_particion/reglas/parametros.csv`. Las decisiones están en `2.3_validacion_particion/bitacora.md`.
+Generado por `2.3_validacion_particion/scripts/10_particionar.py`. Entrada: `data/processed/grd_etiquetado.parquet`, versión 2 del conjunto analítico. Parámetros: `2.3_validacion_particion/reglas/parametros.csv`. Las decisiones están en `2.3_validacion_particion/bitacora.md`.
 
 El conjunto de prueba se aparta aquí y no se vuelve a abrir hasta la evaluación final: todo lo que sigue (ingeniería de variables, filtro, entrenamiento y ajuste) se hace solo con `desarrollo.parquet`. Las cifras del conjunto de prueba que aparecen en este reporte son las necesarias para comprobar que la partición quedó equilibrada.
 
@@ -34,9 +34,9 @@ Porcentaje de los casos de estudio con seguimiento suficiente para cada variable
 | Variable | Definición | Casos en desarrollo | Tasa | Casos en prueba | Tasa | Diferencia |
 |---|---|---|---|---|---|---|
 | `REING_7D` | 7 días, por cualquier causa | 3.354.118 | 2,066 % | 838.292 | 2,065 % | -0,001 |
-| `REING_7D_CDM` | 7 días, relacionado (misma CDM) | 3.354.118 | 1,079 % | 838.292 | 1,073 % | -0,006 |
+| `REING_7D_CDM` | 7 días, relacionado (misma CDM) | 2.861.785 | 1,265 % | 715.458 | 1,257 % | -0,008 |
 | `REING_30D` | 30 días, por cualquier causa | 3.281.764 | 5,899 % | 820.119 | 5,897 % | -0,002 |
-| `REING_30D_CDM` | 30 días, relacionado (misma CDM) | 3.281.764 | 3,030 % | 820.119 | 3,025 % | -0,005 |
+| `REING_30D_CDM` | 30 días, relacionado (misma CDM) | 2.798.814 | 3,553 % | 699.646 | 3,546 % | -0,007 |
 
 `REING_30D` por año del alta:
 
@@ -160,14 +160,14 @@ Identificadores de cada estrato y cuántos van al conjunto de prueba. Las column
 | `data/processed/desarrollo.parquet` | Egresos del conjunto de desarrollo, con todas las columnas del conjunto analítico. Es el único archivo que usan las etapas siguientes. |
 | `data/reserva/prueba.parquet` | Egresos del conjunto de prueba, con las mismas columnas. Es de solo lectura y no se abre hasta la evaluación final. |
 
-Versión 1 de la partición, registrada el 2026-10-08 en `docs/version_particion.csv`, sobre la versión 1 del conjunto analítico.
+Versión 2 de la partición, registrada el 2026-10-20 en `docs/version_particion.csv`, sobre la versión 2 del conjunto analítico.
 
 | Archivo | SHA-256 |
 |---|---|
-| `grd_etiquetado.parquet` | `b4016246501d73a6bafa3fde20ab8b8c58e7482cbc259da8730f5b6dd70cbfe5` |
+| `grd_etiquetado.parquet` | `f9b8be4065bad16dfe27a46a95db4f742024b1e817046d1d9b26e0a893b900dc` |
 | `particion_identificadores.parquet` | `5bdb99e4f7d9d9a7a9004545ce9e93c85fc172de6e93d2ff111577a42ac5f28b` |
-| `desarrollo.parquet` | `af0aa3be59df3b4b3ec36ed0a81cee53f536d8954c51a36d33ad7661038de132` |
-| `prueba.parquet` | `8b568766715af5df011cffa05e07f35484c4ac0970c5ad3fcca4b92e00dd9a17` |
+| `desarrollo.parquet` | `9546c8c7e80f634295e7c0538173661884aa6ce602e201a3cbd8ae615912abbb` |
+| `prueba.parquet` | `3b34135288309a40463f23cd509b3d113f6a32c94c03a88a3bbbc6386338d2b2` |
 
 El identificador de paciente (`ID_PACIENTE`) es también el grupo que debe usar la validación cruzada agrupada dentro del conjunto de desarrollo.
 

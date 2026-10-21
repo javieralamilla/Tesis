@@ -2,3 +2,6 @@
 semilla;2026;Semilla fija del proyecto para todo componente aleatorio: la partición inicial y, en las etapas siguientes, la validación cruzada y los modelos (D28)
 prueba_una_de_cada;5;Tamaño del conjunto de prueba: uno de cada N identificadores de paciente de cada estrato. 5 = 20 % para prueba y 80 % para desarrollo (D28)
 variable_principal;REING_30D;Variable objetivo principal. Dentro de cada estrato, los identificadores se ordenan por su número de casos de estudio con reingreso en esta variable antes de tomar uno de cada N (D28)
+anios_entrenamiento_temporal;2019|2020|2021|2022;Años del alta de los casos de estudio de desarrollo con que se entrena el modelo en la validación temporal interna, separados por una barra vertical (D37, D40)
+anios_evaluacion_temporal;2023|2024;Años del alta de los casos de estudio de desarrollo con que se evalúa ese modelo (D37, D40)
+paciente_visto_egresos;TODOS;Un caso de evaluación es de un paciente ya visto si su identificador tiene un egreso en un año de entrenamiento de su mismo bloque. TODOS = cualquier egreso, sea o no caso de estudio, como pide la revisión del profesor guía del 13 de octubre de 2026; CASOS = solo un caso de estudio (D40)

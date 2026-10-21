@@ -1,16 +1,16 @@
 # Pruebas independientes de la actividad 2.2
 
-Generado por `2.2_depuracion_etiquetado/pruebas/ejecutar_pruebas.py` el 08-10-2026. Cada programa vuelve a calcular con otro método lo que dejaron los scripts 08, 09 y 11, sin usar sus funciones, y compara el resultado con los archivos y con las tablas de los reportes.
+Generado por `2.2_depuracion_etiquetado/pruebas/ejecutar_pruebas.py` el 20-10-2026. Cada programa vuelve a calcular con otro método lo que dejaron los scripts 08, 09 y 11, sin usar sus funciones, y compara el resultado con los archivos y con las tablas de los reportes.
 
-Conjunto analítico probado: `data/processed/grd_etiquetado.parquet`, SHA-256 `b4016246501d73a6bafa3fde20ab8b8c58e7482cbc259da8730f5b6dd70cbfe5`. Coincide con la versión 1 registrada el 2026-10-08 en `docs/version_conjunto_analitico.csv`: **sí**.
+Conjunto analítico probado: `data/processed/grd_etiquetado.parquet`, SHA-256 `f9b8be4065bad16dfe27a46a95db4f742024b1e817046d1d9b26e0a893b900dc`. Coincide con la versión 2 registrada el 2026-10-20 en `docs/version_conjunto_analitico.csv`: **sí**.
 
 **Resultado: todas las comprobaciones se cumplen.**
 
 | Programa | Qué contrasta | Comprobaciones | Fallas | Segundos |
 |---|---|---|---|---|
-| `verificar_08_depuracion.py` | Duplicados, personas, identidad ambigua, criterios, episodios y papeles de `grd_depurado.parquet`, y la tabla «paso a paso» del reporte 08. | 43 | 0 | 97 |
-| `verificar_09_etiquetado.py` | Las cuatro variables objetivo de `grd_etiquetado.parquet`, de dos formas distintas, y las tablas del reporte 09. | 19 | 0 | 44 |
-| `verificar_11_sensibilidad.py` | Casos de estudio y tasas de cada escenario de la tabla del reporte 11. | 8 | 0 | 145 |
+| `verificar_08_depuracion.py` | Duplicados, personas, identidad ambigua, criterios, episodios y papeles de `grd_depurado.parquet`, y la tabla «paso a paso» del reporte 08. | 43 | 0 | 193 |
+| `verificar_09_etiquetado.py` | Las cuatro variables objetivo de `grd_etiquetado.parquet`, de dos formas distintas, y las tablas del reporte 09. | 20 | 0 | 76 |
+| `verificar_11_sensibilidad.py` | Casos de estudio y tasas de cada escenario de la tabla del reporte 11. | 11 | 0 | 362 |
 
 ## Depuración (script 08)
 
@@ -64,29 +64,33 @@ Conjunto analítico probado: `data/processed/grd_etiquetado.parquet`, SHA-256 `b
 - Las 157 columnas de la tabla depurada son idénticas celda a celda: **sí**.
 - Las columnas nuevas son las esperadas ['REING_7D', 'REING_7D_CDM', 'REING_30D', 'REING_30D_CDM', 'DIAS_REING', 'ID_EGRESO_REING']: **sí**.
 - REING_7D: con dato solo en los casos de estudio con al menos 37 días antes del cierre; valores 0 o 1 (con dato 4192410): **sí**.
-- REING_7D_CDM: con dato solo en los casos de estudio con al menos 37 días antes del cierre; valores 0 o 1 (con dato 4192410): **sí**.
+- REING_7D_CDM: con dato solo en los casos de estudio con al menos 37 días antes del cierre, sin los de la CDM 14; valores 0 o 1 (con dato 3577243): **sí**.
 - REING_30D: con dato solo en los casos de estudio con al menos 60 días antes del cierre; valores 0 o 1 (con dato 4101883): **sí**.
-- REING_30D_CDM: con dato solo en los casos de estudio con al menos 60 días antes del cierre; valores 0 o 1 (con dato 4101883): **sí**.
+- REING_30D_CDM: con dato solo en los casos de estudio con al menos 60 días antes del cierre, sin los de la CDM 14; valores 0 o 1 (con dato 3498460): **sí**.
 - DIAS_REING e ID_EGRESO_REING: sin dato fuera de los casos de estudio: **sí**.
 - Recorrido caso por caso: REING_7D (casos 4192410; con reingreso 86609; diferencias 0): **sí**.
-- Recorrido caso por caso: REING_7D_CDM (casos 4192410; con reingreso 45195; diferencias 0): **sí**.
+- Recorrido caso por caso: REING_7D_CDM (casos 3577243; con reingreso 45195; diferencias 0): **sí**.
 - Recorrido caso por caso: REING_30D (casos 4101883; con reingreso 241953; diferencias 0): **sí**.
-- Recorrido caso por caso: REING_30D_CDM (casos 4101883; con reingreso 124256; diferencias 0): **sí**.
+- Recorrido caso por caso: REING_30D_CDM (casos 3498460; con reingreso 124256; diferencias 0): **sí**.
+- Recorrido caso por caso: los casos de la CDM 14, sin dato en las relacionadas, no tienen ningún reingreso de su misma CDM (el 0 era obligatorio) (casos 615167): **sí**.
 - Recorrido caso por caso: DIAS_REING e ID_EGRESO_REING (casos con algún reingreso posterior: 834693): **sí**.
 - Unión literal en la muestra: REING_7D (casos 167627; con reingreso 3523; solo en el archivo 0; solo en la unión 0): **sí**.
-- Unión literal en la muestra: REING_7D_CDM (casos 167627; con reingreso 1830; solo en el archivo 0; solo en la unión 0): **sí**.
+- Unión literal en la muestra: REING_7D_CDM (casos 142830; con reingreso 1830; solo en el archivo 0; solo en la unión 0): **sí**.
 - Unión literal en la muestra: REING_30D (casos 164065; con reingreso 9748; solo en el archivo 0; solo en la unión 0): **sí**.
-- Unión literal en la muestra: REING_30D_CDM (casos 164065; con reingreso 5049; solo en el archivo 0; solo en la unión 0): **sí**.
+- Unión literal en la muestra: REING_30D_CDM (casos 139722; con reingreso 5049; solo en el archivo 0; solo en la unión 0): **sí**.
 - La tabla de las cuatro variables de 09_etiquetado.md coincide con el recorrido caso por caso: **sí**.
 - La tabla de verificación de la censura de 09_etiquetado.md coincide con el recálculo (7 tramos): **sí**.
 
 ## Análisis de sensibilidad (script 11)
 
-- Análisis principal: casos de estudio y las cuatro tasas iguales a los de 11_sensibilidad.md (4192410 casos; tasas [2.07, 1.08, 5.9, 3.03]): **sí**.
+- Análisis principal: casos de estudio y las cuatro tasas iguales a los de 11_sensibilidad.md (4192410 casos; tasas [2.07, 1.26, 5.9, 3.55]): **sí**.
+- Con los partos en las variables relacionadas: casos de estudio y las cuatro tasas iguales a los de 11_sensibilidad.md (4192410 casos; tasas [2.07, 1.08, 5.9, 3.03]): **sí**.
 - Con las CDM: casos de estudio y las cuatro tasas iguales a los de 11_sensibilidad.md (4192410 casos; tasas [2.07, 1.17, 5.9, 3.19]): **sí**.
-- Sin los casos con identidad ambigua: casos de estudio y las cuatro tasas iguales a los de 11_sensibilidad.md (4129132 casos; tasas [2.03, 1.06, 5.79, 2.97]): **sí**.
-- Con la cirugía mayor ambulatoria: casos de estudio y las cuatro tasas iguales a los de 11_sensibilidad.md (5036703 casos; tasas [1.79, 0.92, 5.1, 2.58]): **sí**.
-- Con las sesiones de tratamiento: casos de estudio y las cuatro tasas iguales a los de 11_sensibilidad.md (4274335 casos; tasas [2.08, 1.06, 5.94, 2.99]): **sí**.
-- Censura sin margen: casos de estudio y las cuatro tasas iguales a los de 11_sensibilidad.md (4313289 casos; tasas [2.06, 1.07, 5.89, 3.02]): **sí**.
-- Con las actividades que solo existen en 2019: casos de estudio y las cuatro tasas iguales a los de 11_sensibilidad.md (4275385 casos; tasas [2.11, 1.1, 5.99, 3.07]): **sí**.
-- Todas las filas de la tabla del reporte fueron contrastadas (7 filas): **sí**.
+- Sin los casos con identidad ambigua: casos de estudio y las cuatro tasas iguales a los de 11_sensibilidad.md (4129132 casos; tasas [2.03, 1.25, 5.79, 3.49]): **sí**.
+- Con la cirugía mayor ambulatoria: casos de estudio y las cuatro tasas iguales a los de 11_sensibilidad.md (5036703 casos; tasas [1.79, 1.05, 5.1, 2.94]): **sí**.
+- Con las sesiones de tratamiento: casos de estudio y las cuatro tasas iguales a los de 11_sensibilidad.md (4274335 casos; tasas [2.08, 1.24, 5.94, 3.5]): **sí**.
+- Censura sin margen: casos de estudio y las cuatro tasas iguales a los de 11_sensibilidad.md (4313289 casos; tasas [2.06, 1.26, 5.89, 3.54]): **sí**.
+- Solo los traslados con marca explícita: casos de estudio y las cuatro tasas iguales a los de 11_sensibilidad.md (4195786 casos; tasas [2.12, 1.3, 5.95, 3.59]): **sí**.
+- Con los derivados sin continuación como casos de estudio: casos de estudio y las cuatro tasas iguales a los de 11_sensibilidad.md (4286199 casos; tasas [2.12, 1.3, 5.98, 3.59]): **sí**.
+- Con las actividades que solo existen en 2019: casos de estudio y las cuatro tasas iguales a los de 11_sensibilidad.md (4275385 casos; tasas [2.11, 1.29, 5.99, 3.59]): **sí**.
+- Todas las filas de la tabla del reporte fueron contrastadas (10 filas): **sí**.

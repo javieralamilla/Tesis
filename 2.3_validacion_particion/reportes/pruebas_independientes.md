@@ -1,12 +1,12 @@
 # Prueba independiente de la actividad 2.3
 
-Generado por `2.3_validacion_particion/pruebas/verificar_10_particion.py` el 08-10-2026. El programa comprueba la partición sin usar ninguna función del script 10: que ningún paciente esté en los dos conjuntos, que los archivos sean el conjunto analítico repartido sin cambios, que la partición se reproduzca a partir de la semilla y que los archivos tengan el hash registrado.
+Generado por `2.3_validacion_particion/pruebas/verificar_10_particion.py` el 20-10-2026. El programa comprueba la partición sin usar ninguna función del script 10: que ningún paciente esté en los dos conjuntos, que los archivos sean el conjunto analítico repartido sin cambios, que la partición se reproduzca a partir de la semilla y que los archivos tengan el hash registrado.
 
-Partición probada: versión 1, registrada el 2026-10-08 en `docs/version_particion.csv`, sobre la versión 1 del conjunto analítico. SHA-256 del conjunto de prueba: `8b568766715af5df011cffa05e07f35484c4ac0970c5ad3fcca4b92e00dd9a17`.
+Partición probada: versión 2, registrada el 2026-10-20 en `docs/version_particion.csv`, sobre la versión 2 del conjunto analítico. SHA-256 del conjunto de prueba: `3b34135288309a40463f23cd509b3d113f6a32c94c03a88a3bbbc6386338d2b2`.
 
 **Resultado: todas las comprobaciones se cumplen** (21 comprobaciones, 0 fallas).
 
-- El conjunto analítico es el de la última versión registrada (versión 1): **sí**.
+- El conjunto analítico es el de la última versión registrada (versión 2): **sí**.
 - La partición se hizo sobre esa versión del conjunto analítico: **sí**.
 - El conjunto de prueba tiene el hash registrado: no cambió desde que se apartó: **sí**.
 - El conjunto de desarrollo y la lista de identificadores tienen el hash registrado: **sí**.
@@ -25,5 +25,5 @@ Partición probada: versión 1, registrada el 2026-10-08 en `docs/version_partic
 - particion.parquet indica el mismo conjunto que los archivos para cada egreso: **sí**.
 - La partición se reproduce con la semilla 2026: el recálculo asigna cada identificador al mismo conjunto (14 estratos; 807153 identificadores a prueba): **sí**.
 - El conjunto de prueba tiene cerca del 20 % de los casos de estudio (3354118 en desarrollo y 838292 en prueba: 19,995 %): **sí**.
-- La tasa de cada variable objetivo difiere en menos de 0,05 puntos porcentuales entre los dos conjuntos (REING_7D -0,001; REING_7D_CDM -0,006; REING_30D -0,002; REING_30D_CDM -0,005): **sí**.
+- La tasa de cada variable objetivo difiere en menos de 0,05 puntos porcentuales entre los dos conjuntos (REING_7D -0,001; REING_7D_CDM -0,008; REING_30D -0,002; REING_30D_CDM -0,007): **sí**.
 - La tabla de tasas de 10_particion.md coincide con el recálculo: **sí**.

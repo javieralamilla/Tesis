@@ -6,8 +6,10 @@ funciones de los scripts 08 y 09, con el cambio aplicado solo en memoria: no mod
 de reglas ni las tablas de datos. El análisis principal sigue siendo el de grd_etiquetado.parquet.
 
 Escenarios: con las actividades que solo existen en 2019 (E04), con la cirugía mayor ambulatoria
-(E13), con las sesiones de tratamiento (E14), con las CDM de `cdm_sensibilidad` como una sola, con
-la censura sin margen y sin los casos de identidad ambigua.
+(E13), con las sesiones de tratamiento (E14), con los partos en las variables relacionadas (valor 0),
+con las CDM de `cdm_sensibilidad` como una sola, con la censura sin margen, solo con los traslados
+que tienen marca explícita, con los derivados sin continuación como casos de estudio (E07 y E08) y
+sin los casos de identidad ambigua.
 
 Deja reportes/11_sensibilidad.md.
 
@@ -53,21 +55,34 @@ def definir_escenarios(m08, m09) -> list[dict]:
 
     criterios: código -> SI o NO. parametros: nombre -> valor. sin: columna que marca los casos que se dejan fuera.
     """
-    criterio = {c["codigo"]: c["criterio"] for c in m08.cargar_criterios()}
-    par9 = m09.cargar_parametros()
+    lista_criterios = m08.cargar_criterios()
+    criterio = {c["codigo"]: c["criterio"] for c in lista_criterios}
+    activo = {c["codigo"]: c["activo"] for c in lista_criterios}
+    par8, par9 = m08.cargar_parametros(), m09.cargar_parametros()
     escenarios = [
         {"clave": PRINCIPAL, "nombre": "Análisis principal", "cambio": "Ninguno"},
         {"clave": "actividad_2019", "nombre": "Con las actividades que solo existen en 2019", "cambio": "E04 desactivado", "criterios": {"E04": "NO"}},
         {"clave": "cma", "nombre": "Con la cirugía mayor ambulatoria", "cambio": "E13 desactivado", "criterios": {"E13": "NO"}},
         {"clave": "sesiones", "nombre": "Con las sesiones de tratamiento", "cambio": "E14 desactivado", "criterios": {"E14": "NO"}},
     ]
+    if par9["cdm_sin_relacionado"]:
+        escenarios.append({"clave": "partos", "nombre": "Con los partos en las variables relacionadas, con valor 0",
+                           "cambio": "`cdm_sin_relacionado` vacío", "parametros": {"cdm_sin_relacionado": ""}})
     if par9["grupos_sensibilidad"] and not par9["grupos_cdm"]:
         valor = par9["descripcion"]["cdm_sensibilidad"][0]
+        vuelven = [x for x in par9["cdm_sin_relacionado"] if x in par9["cdm_sensibilidad"]]
         escenarios.append({"clave": "cdm", "nombre": "Con las CDM " + "; ".join(par9["grupos_sensibilidad"]) + " como una sola",
-                           "cambio": f"`cdm_agrupadas` = {valor}", "parametros": {"cdm_agrupadas": valor}})
+                           "cambio": f"`cdm_agrupadas` = {valor}" + (f" (la CDM {' y '.join(vuelven)} vuelve a tener dato)" if vuelven else ""),
+                           "parametros": {"cdm_agrupadas": valor}})
     if par9["margen"] > 0:
         escenarios.append({"clave": "censura", "nombre": "Censura sin margen: solo los días de la ventana",
                            "cambio": "`censura_margen_dias` = 0", "parametros": {"censura_margen_dias": "0"}})
+    if not par8["traslado_exige_marca"]:
+        escenarios.append({"clave": "traslados", "nombre": "Solo los traslados con marca explícita",
+                           "cambio": "`traslado_exige_marca` = SI", "parametros": {"traslado_exige_marca": "SI"}})
+    if activo["E07"] and activo["E08"]:
+        escenarios.append({"clave": "derivados", "nombre": "Con los derivados sin continuación como casos de estudio",
+                           "cambio": "E07 y E08 desactivados", "criterios": {"E07": "NO", "E08": "NO"}})
     escenarios.append({"clave": "identidad", "nombre": "Sin los casos con identidad ambigua",
                        "cambio": "Se quitan los casos con `IDENTIDAD_AMBIGUA`", "sin": "IDENTIDAD_AMBIGUA"})
     for e in escenarios:
@@ -191,6 +206,13 @@ def escribir_reporte(escenarios: list[dict], res: dict, variables: list[str], la
         diferencia = round(100 * r[k][1] / r[k][0], 2) - round(100 * principal[k][1] / principal[k][0], 2)
         return f"{pct(r[k][1], r[k][0])} ({puntos(diferencia)})"
 
+    def tabla_relacionadas(r: dict, columnas: list[str], nombre: str) -> str:
+        """Variables relacionadas: casos con dato, con reingreso y tasa, en el análisis principal y en el escenario."""
+        return tabla_md(["Variable", "Análisis principal: casos con dato", "Con reingreso", "%", f"{nombre}: casos con dato",
+                         "Con reingreso", "%"],
+                        [[f"`{k}`", fmt(principal[k][0]), fmt(principal[k][1]), pct(principal[k][1], principal[k][0]),
+                          fmt(r[k][0]), fmt(r[k][1]), pct(r[k][1], r[k][0])] for k in columnas])
+
     def tabla_grupos(titulo: str, grupos: dict) -> str:
         total = sum(r["casos"] for r in grupos.values())
         return tabla_md([titulo, "Casos de estudio", "%", *[f"`{k}`" for k in variables]],
@@ -205,7 +227,10 @@ def escribir_reporte(escenarios: list[dict], res: dict, variables: list[str], la
 
         "## 1. Tabla de sensibilidad",
         "Cada tasa usa los casos de estudio con seguimiento suficiente para su ventana. Entre paréntesis, la diferencia con el "
-        "análisis principal en puntos porcentuales.",
+        "análisis principal en puntos porcentuales."
+        + (" En las dos variables relacionadas, además, los partos (CDM sin reingreso relacionado posible) quedan sin dato "
+           "(bitácora D38), salvo en las filas que los vuelven a incluir: la de los partos con valor 0 y la de las CDM unidas."
+           if any(e["clave"] == "partos" for e in escenarios) else ""),
         tabla_md(["Escenario", "Qué cambia", "Casos de estudio", *[f"`{k}`" for k in variables]],
                  [[e["nombre"], e["cambio"], fmt(res[e["clave"]]["resumen"]["casos"]),
                    *[pct(principal[k][1], principal[k][0]) if e["clave"] == PRINCIPAL else con_diferencia(res[e["clave"]]["resumen"], k)
@@ -261,11 +286,52 @@ def escribir_reporte(escenarios: list[dict], res: dict, variables: list[str], la
         elif e["clave"] == "cdm":
             r = res[e["clave"]]["resumen"]
             partes += [
-                "Cambia solo el reingreso relacionado: los casos de estudio y el reingreso por cualquier causa son los mismos.",
-                tabla_md(["Variable", "Análisis principal", "%", "Con esas CDM como una sola", "%", "Diferencia"],
-                         [[f"`{k}`", fmt(principal[k][1]), pct(principal[k][1], principal[k][0]), fmt(r[k][1]), pct(r[k][1], r[k][0]),
-                           f"{r[k][1] - principal[k][1]:+,}".replace(",", ".")] for k in d]),
+                "Cambia solo el reingreso relacionado: los casos de estudio y el reingreso por cualquier causa son los mismos. Al "
+                "unir las CDM, la que no tenía reingreso relacionado posible (bitácora D38) vuelve a tener dato, así que cada "
+                "columna tiene sus propios casos con dato.",
+                tabla_relacionadas(r, d, "Con esas CDM como una sola"),
                 "El detalle por CDM del caso de estudio está en la sección 5 del reporte 09.",
+            ]
+        elif e["clave"] == "partos":
+            r = res[e["clave"]]["resumen"]
+            partes += [
+                "Es la forma de cálculo anterior a la revisión del profesor guía del 13 de octubre de 2026: los partos se quedan en "
+                "las variables relacionadas con valor 0. Ese 0 es obligatorio, porque ningún reingreso puede ser de su CDM "
+                "(reporte 09, sección 5; bitácora D38). Los casos de estudio y el reingreso por cualquier causa no cambian.",
+                tabla_relacionadas(r, d, "Con los partos, con valor 0"),
+            ]
+        elif e["clave"] == "traslados":
+            r = res[e["clave"]]["resumen"]
+
+            def cambio(k: str) -> str:
+                dif = r[k][1] - principal[k][1]
+                return (f"{fmt(principal[k][1])} → {fmt(r[k][1])} ({'+' if dif >= 0 else '−'}{fmt(abs(dif))} casos, "
+                        f"{pct(abs(dif), principal[k][1], 1)} {'más' if dif >= 0 else 'menos'})")
+            partes += [
+                "La regla del análisis principal (bitácora D19) une al mismo episodio asistencial un ingreso en otro hospital el "
+                "mismo día del alta o al día siguiente, aunque no conste el traslado. En este escenario solo los une si consta: alta "
+                "por derivación en el egreso anterior o procedencia desde otro hospital en el ingreso. Los ingresos que comienzan "
+                "antes del alta anterior (estadías solapadas) siguen unidos, porque la persona todavía no había salido y no pueden "
+                "ser un reingreso con ninguna regla. Un ingreso que deja de unirse abre un episodio nuevo: el egreso anterior "
+                "puede pasar a ser caso de estudio, y el ingreso, a contar como su reingreso si no es planificado.",
+                tabla_md(["", "Cantidad"], [
+                    ["Ingresos que dejan de unirse y pasan a abrir un episodio", fmt(d["nuevos_episodios"])],
+                    *[[f"Casos de estudio con `{k}` (análisis principal → escenario)", cambio(k)] for k in variables],
+                ]),
+            ]
+        elif e["clave"] == "derivados":
+            a = d["agregados"]
+            partes += [
+                "En el análisis principal, los egresos con alta por derivación a otro hospital cuya continuación no aparece en la "
+                "base (E07) y los derivados a una institución privada (E08) no son casos de estudio: la atención siguió donde la "
+                "base no la ve, así que no se puede saber si hubo reingreso (censura administrativa del seguimiento). No tienen "
+                "valor en las variables objetivo, y sí pueden contar como reingreso de un alta anterior. Este escenario los deja "
+                "como casos de estudio y les calcula las variables con lo que la base sí ve: un reingreso ocurrido fuera de la base "
+                "queda como 0.",
+                "Casos de estudio que el escenario agrega (los derivados) y sus tasas:",
+                tabla_md(["", "Casos de estudio", *[f"`{k}`" for k in variables]],
+                         [["Análisis principal", fmt(principal["casos"]), *tasas(principal, variables)],
+                          ["Derivados que se agregan", fmt(a["casos"]), *tasas(a, variables)]]),
             ]
         elif e["clave"] == "censura":
             partes += [
@@ -324,10 +390,16 @@ def main() -> None:
             fallidas += [f"{e['nombre']} (todo ingreso): {texto}" for texto in mal]
             r["detalle"] = detalle_sesiones(principal, casos, todo_ingreso, variables, larga)
             del todo_ingreso
-        elif e["clave"] == "cdm":
+        elif e["clave"] in ("cdm", "partos"):
             r["detalle"] = [k for k in variables if k.endswith("_CDM")]      # las variables que cambian
         elif e["clave"] == "censura":
             r["detalle"] = detalle_censura(principal, casos, variables)
+        elif e["clave"] == "traslados":
+            # Exigir la marca solo separa episodios: los ingresos que dejan de continuar uno pasan a abrir otro.
+            r["detalle"] = {"nuevos_episodios": int((todos["PUEDE_SER_REINGRESO"].to_numpy()
+                                                     & ~todos_principal["PUEDE_SER_REINGRESO"].to_numpy()).sum())}
+        elif e["clave"] == "derivados":
+            r["detalle"] = {"agregados": resumen(casos[~casos["ID_EGRESO"].isin(principal["ID_EGRESO"])], variables)}
         if e.get("criterios") and not e.get("parametros"):
             # Un criterio que solo afecta al papel de caso de estudio no puede cambiar las variables de los demás casos.
             papel = {c["codigo"]: c["papel"] for c in m08.cargar_criterios()}

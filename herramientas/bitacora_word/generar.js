@@ -196,7 +196,10 @@ function anchosColumnas(filas, total, tamFuente) {
     palabra.push(Math.min(Math.max(...textos.flatMap((t) => t.split(/\s+/)).map((w) => w.length), 3), 18));
   }
   const natural = largo.map((l) => l * car + 2 * PAD);
-  const minimo = palabra.map((l) => l * car * 1.2 + 2 * PAD);
+  let minimo = palabra.map((l) => l * car * 1.2 + 2 * PAD);
+  // Si los mínimos no caben en el ancho disponible (tablas con muchas columnas), se reducen en proporción.
+  const sumaMinimos = minimo.reduce((a, b) => a + b, 0);
+  if (sumaMinimos > total) minimo = minimo.map((x) => (x * total) / sumaMinimos);
   const suma = natural.reduce((a, b) => a + b, 0);
   let w = natural.map((x) => (x * total) / suma);
   let deficit = 0;

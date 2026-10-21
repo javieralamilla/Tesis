@@ -2,7 +2,7 @@
 
 Registro de los hallazgos y decisiones de la actividad 2.3 de la Carta Gantt. Continúa la numeración
 de las bitácoras anteriores (`docs/bitacora.md` y `2.2_depuracion_etiquetado/bitacora.md`): aquí están
-el hallazgo H19 y las decisiones D27 a D29 y D37. Una entrada no se borra: si una decisión cambia,
+el hallazgo H19 y las decisiones D27 a D29, D37 y D40 a D42. Una entrada no se borra: si una decisión cambia,
 se agrega una nueva entrada que la reemplaza y se indica en el campo **Estado**.
 
 Esta bitácora se reescribió el 8 de octubre de 2026. La versión del 6 de octubre no llegó a
@@ -10,6 +10,13 @@ presentarse y describía una partición que unía identificadores de paciente po
 sexo; el profesor guía pidió, en su revisión del 7 de octubre, no enlazar pacientes entre los dos
 sistemas de identificador sin una llave válida. Esa alternativa queda registrada como descartada en
 D27. Los parámetros de la partición están en `reglas/parametros.csv`.
+
+El profesor guía revisó la partición y el esquema de validación el 13 de octubre de 2026: considera
+que la partición por paciente está bien construida, y aprueba D27 a D29 y D37 a condición de
+incorporar dos puntos de su revisión: la validación temporal informada en tres grupos (punto 2.2) y
+las métricas y la calibración (punto 2.3). Los dos quedaron incorporados el 20 de octubre (D40 y
+D41). Ese día la partición también se volvió a ejecutar sobre la versión 2 del conjunto analítico
+(D38 de la bitácora de la 2.2), con el mismo reparto de identificadores (versión 2 de la partición, D29).
 
 **Tipos de entrada:** `H` = hallazgo (algo que se observó en los datos),
 `D` = decisión (algo que se resolvió hacer).
@@ -26,6 +33,9 @@ D27. Los parámetros de la partición están en `reglas/parametros.csv`.
 | Estratificación, proporción y semilla | D28 | Uno de cada cinco identificadores va a prueba, dentro de estratos por bloque y por patrón de las cuatro variables objetivo. Semilla del proyecto: 2026. |
 | Reserva | D29 | El conjunto de prueba queda en `data/reserva/`, como archivo de solo lectura y con su hash registrado. No se abre hasta la evaluación final. |
 | Esquema de validación | D37 | Validación cruzada estratificada de cinco particiones, agrupada por paciente, dentro del conjunto de desarrollo; validación temporal interna; una sola evaluación final en el conjunto de prueba. |
+| Validación temporal en tres grupos | D40 | Se informa con todos los casos de 2023 y 2024, solo con los de pacientes nuevos (sin ningún egreso en 2021 ni 2022) y solo con los de pacientes ya vistos. Los grupos quedan fijados en `validacion_temporal.parquet` (script 13). |
+| Métricas | D41 | Área bajo la curva de precisión y exhaustividad junto a la prevalencia, área bajo la curva ROC, puntaje de Brier junto al de referencia y calibración (intercepto y pendiente), con intervalos al 95 % por remuestreo de pacientes; recalibración de Platt si se equilibran las clases. |
+| Variables de historia (Etapa 3) | D42 | Solo egresos anteriores al ingreso índice, en una ventana de 12 meses. Se marcan los casos cuya ventana empieza antes del inicio de su bloque (todo 2019 y todo 2021). |
 
 ---
 
@@ -45,7 +55,7 @@ D27. Los parámetros de la partición están en `reglas/parametros.csv`.
 - **Alternativas descartadas:** (1) Repartir por `ID_PERSONA`: permitiría que dos personas de un mismo identificador quedaran en conjuntos distintos, y en esos identificadores la identidad es ambigua (H21 de la bitácora de la 2.2). (2) Unir los identificadores con la misma fecha de nacimiento y el mismo sexo, para mantener junta a una persona con un identificador en cada bloque: se ensayó el 6 de octubre de 2026 (76.183 unidades de reparto) y se descartó por ser un emparejamiento heurístico.
 - **Limitación:** Una persona con un identificador en cada bloque puede quedar en los dos conjuntos (H19).
 - **Consecuencia:** `ID_PACIENTE` es también el grupo que debe usar la validación cruzada agrupada dentro del conjunto de desarrollo (D37).
-- **Estado:** Adoptada. Pendiente de validar con profesor guía.
+- **Estado:** Adoptada. Aprobada por el profesor guía el 13 de octubre de 2026 a condición de incorporar los puntos 2.2 y 2.3 de su revisión (validación temporal en tres grupos; métricas y calibración), incorporados el 20 de octubre (D40 y D41).
 
 ### D28 · 2026-10-08 · Estratificación, proporción y semilla
 - **Actividad:** 2.3
@@ -70,22 +80,24 @@ D27. Los parámetros de la partición están en `reglas/parametros.csv`.
   | `REING_30D` | 30 días, por cualquier causa | 5,899 % | 5,897 % |
   | `REING_30D_CDM` | 30 días, relacionado (misma CDM) | 3,030 % | 3,025 % |
 
-- **Composición:** La mayor diferencia entre las cuatro tasas es de 0,006 puntos porcentuales. En la composición de los casos de estudio, la mayor diferencia entre los dos conjuntos es de 0,08 puntos en el año del alta, 0,08 en el hospital, 0,02 en el sexo, 0,07 en la edad, 0,06 en la CDM y 0,12 en el tipo de ingreso. La tasa a 30 días por año del alta es casi igual en los dos conjuntos (en 2024, 6,45 % en ambos).
+- **Con la versión 2 del conjunto analítico (20 de octubre de 2026):** El reparto no cambió: cada identificador y cada egreso quedó en el mismo conjunto, porque los estratos y el orden dependen de los reingresos positivos, y los partos no tenían ninguno en las variables relacionadas. Esas dos variables ya no incluyen los partos (D38 de la bitácora de la 2.2): `REING_7D_CDM` tiene 1,265 % en desarrollo (2.861.785 casos con dato) y 1,257 % en prueba (715.458), y `REING_30D_CDM`, 3,553 % (2.798.814) y 3,546 % (699.646). Las de cualquier causa no cambian.
+- **Composición:** La mayor diferencia entre las cuatro tasas es de 0,006 puntos porcentuales (0,008 con la versión 2). En la composición de los casos de estudio, la mayor diferencia entre los dos conjuntos es de 0,08 puntos en el año del alta, 0,08 en el hospital, 0,02 en el sexo, 0,07 en la edad, 0,06 en la CDM y 0,12 en el tipo de ingreso. La tasa a 30 días por año del alta es casi igual en los dos conjuntos (en 2024, 6,45 % en ambos).
 - **Reproducibilidad:** Con la misma tabla y la misma semilla, la partición es siempre la misma. Un segundo programa, escrito de otra forma, vuelve a calcularla y asigna cada identificador al mismo conjunto. La lista de identificadores de cada conjunto queda guardada (D29).
 - **Fundamento:** La propuesta pide una partición única, común a las cuatro definiciones, agrupada por paciente y estratificada por la variable objetivo, con prevalencias comparables y con una semilla fija. El profesor guía pidió preservar la prevalencia, definir la variable principal o usar una estratificación para varias etiquetas, y comprobar después la distribución por año, hospital, sexo, edad y CDM.
 - **Parámetros:** `semilla` (2026), `prueba_una_de_cada` (5) y `variable_principal` (`REING_30D`).
 - **Evidencia:** `2.3_validacion_particion/scripts/10_particionar.py` → `2.3_validacion_particion/reportes/10_particion.md`, secciones 2 a 5 y anexo.
-- **Estado:** Adoptada. Pendiente de validar con profesor guía.
+- **Estado:** Adoptada. Aprobada por el profesor guía el 13 de octubre de 2026 a condición de incorporar los puntos 2.2 y 2.3 de su revisión (validación temporal en tres grupos; métricas y calibración), incorporados el 20 de octubre (D40 y D41).
 
 ### D29 · 2026-10-08 · Reserva del conjunto de prueba
 - **Actividad:** 2.3
 - **Decisión:** El conjunto de prueba se guarda en `data/reserva/prueba.parquet`, separado de `data/processed/desarrollo.parquet`, como archivo de solo lectura. Las etapas siguientes (ingeniería de variables, filtro de dimensionalidad, entrenamiento, ajuste de hiperparámetros y extracción del subconjunto) leen solo `desarrollo.parquet`. El conjunto de prueba se usa una sola vez, en la evaluación final.
-- **Sello:** El hash SHA-256 de los archivos queda registrado en `docs/version_particion.csv`. Versión 1, del 8 de octubre de 2026, sobre la versión 1 del conjunto analítico (D36 de la bitácora de la 2.2); conjunto de prueba, `8b568766715af5df011cffa05e07f35484c4ac0970c5ad3fcca4b92e00dd9a17`. Antes de la evaluación final hay que comprobar que el archivo conserva ese hash.
+- **Sello:** El hash SHA-256 de los archivos queda registrado en `docs/version_particion.csv`. Versión 1, del 8 de octubre de 2026, sobre la versión 1 del conjunto analítico (D36 de la bitácora de la 2.2); conjunto de prueba, `8b568766715af5df011cffa05e07f35484c4ac0970c5ad3fcca4b92e00dd9a17`.
+- **Versión 2 (vigente):** Del 20 de octubre de 2026, sobre la versión 2 del conjunto analítico (D38 de la bitácora de la 2.2). Conjunto de prueba, `3b34135288309a40463f23cd509b3d113f6a32c94c03a88a3bbbc6386338d2b2`; conjunto de desarrollo, `9546c8c7e80f634295e7c0538173661884aa6ce602e201a3cbd8ae615912abbb`. La lista de identificadores conserva el hash de la versión 1 (`5bdb99e4f7d9d9a7a9004545ce9e93c85fc172de6e93d2ff111577a42ac5f28b`): el reparto es idéntico y dentro de los archivos solo cambiaron las dos variables relacionadas de los partos. El conjunto de prueba no se abrió para nada más que regenerarlo. Antes de la evaluación final hay que comprobar que el archivo conserva el hash de la versión 2.
 - **Contenido:** Los dos archivos tienen las 163 columnas del conjunto analítico, sin ningún cambio. `data/processed/particion.parquet` indica el conjunto de cada egreso y `data/processed/particion_identificadores.parquet`, el de cada identificador; ninguno de los dos contiene nada que dependa de las variables objetivo.
 - **Antes de repartir:** El script comprueba que la tabla que lee sea la última versión registrada del conjunto analítico, y se detiene si no lo es.
 - **Qué se miró del conjunto de prueba:** Solo las cifras agregadas necesarias para comprobar la partición (tamaño, tasas y composición), que están en el reporte 10.
-- **Advertencia para la etapa siguiente:** `DIAS_REING` e `ID_EGRESO_REING` describen lo que ocurre después del alta y no son variables predictoras. Toda variable que cuente hospitalizaciones de una persona debe limitarse a las anteriores al alta del caso de estudio (H18 de la bitácora de la 2.2).
-- **Estado:** Adoptada. Pendiente de validar con profesor guía.
+- **Advertencia para la etapa siguiente:** `DIAS_REING` e `ID_EGRESO_REING` describen lo que ocurre después del alta y no son variables predictoras. Toda variable que cuente hospitalizaciones de una persona debe limitarse a las anteriores al alta del caso de estudio (H18 de la bitácora de la 2.2). **Precisada por D42:** a las anteriores al ingreso índice, en una ventana de 12 meses.
+- **Estado:** Adoptada. Aprobada por el profesor guía el 13 de octubre de 2026 a condición de incorporar los puntos 2.2 y 2.3 de su revisión (validación temporal en tres grupos; métricas y calibración), incorporados el 20 de octubre (D40 y D41).
 
 ### D37 · 2026-10-08 · Esquema de validación
 - **Actividad:** 2.3
@@ -96,7 +108,66 @@ D27. Los parámetros de la partición están en `reglas/parametros.csv`.
 - **Alcance de cada esquema:** La validación cruzada agrupada mide cómo generaliza el modelo a pacientes que no vio. La validación temporal mide cómo generaliza a un período posterior; en ella, un paciente del bloque B puede estar en los dos períodos.
 - **Fundamento:** Es el esquema de la propuesta de tesis (etapas 4 y 7). El profesor guía pidió indicar la metodología y considerar una evaluación temporal complementaria, y la tasa de reingreso sube en 2023 y 2024 (H24 de la bitácora de la 2.2), de modo que una partición al azar no mide por sí sola el efecto de ese cambio.
 - **Semilla:** Las particiones de la validación cruzada usan la semilla del proyecto, 2026.
-- **Estado:** Adoptada. Pendiente de validar con profesor guía.
+- **Completada por:** D40 (la validación temporal se informa en tres grupos) y D41 (métricas, intervalos y recalibración).
+- **Estado:** Adoptada. Aprobada por el profesor guía el 13 de octubre de 2026 a condición de incorporar los puntos 2.2 y 2.3 de su revisión (validación temporal en tres grupos; métricas y calibración), incorporados el 20 de octubre (D40 y D41).
+
+### D40 · 2026-10-20 · La validación temporal se informa en tres grupos
+- **Actividad:** 2.3
+- **Decisión:** La validación temporal interna (D37) se informa de tres maneras: con todos los casos de estudio de evaluación (2023 y 2024), solo con los de pacientes nuevos, cuyo identificador no tiene ningún egreso en 2021 ni en 2022, y solo con los de pacientes ya vistos, que sí lo tienen. Cuenta cualquier egreso, sea o no caso de estudio (parámetro `paciente_visto_egresos` = TODOS). El script 13 deja los grupos fijados en `data/processed/validacion_temporal.parquet`, para que todos los modelos se evalúen con los mismos; lee solo el conjunto de desarrollo.
+- **Fundamento:** Revisión del profesor guía del 13 de octubre de 2026 (punto 2.2). La validación cruzada agrupada por paciente mide el desempeño en pacientes que el modelo no vio. La temporal no: un paciente del bloque B con egresos en 2021 o 2022 y también en 2023 o 2024 está a la vez en el entrenamiento y en la evaluación. No es un error, porque al aplicar el modelo también llegarán pacientes que ya estuvieron hospitalizados, pero mezcla dos preguntas: como el reingreso depende mucho de cada paciente, en los ya vistos el desempeño será mejor por razones que no se trasladan a pacientes nuevos.
+- **Resultado:**
+
+  | Grupo (conjunto de desarrollo) | Casos de estudio | Pacientes | `REING_7D` | `REING_7D_CDM` | `REING_30D` | `REING_30D_CDM` |
+  |---|---|---|---|---|---|---|
+  | Entrenamiento (2019–2022) | 2.168.337 | 1.732.822 | 2,00 % | 1,23 % | 5,69 % | 3,45 % |
+  | Evaluación (2023–2024): todos los casos | 1.185.781 | 915.896 | 2,18 % | 1,32 % | 6,28 % | 3,74 % |
+  | Evaluación: pacientes nuevos | 943.588 (79,6 %) | 758.487 | 1,96 % | 1,22 % | 5,42 % | 3,30 % |
+  | Evaluación: pacientes ya vistos | 242.193 (20,4 %) | 157.409 | 3,05 % | 1,70 % | 9,65 % | 5,34 % |
+
+- **Interpretación:** Los pacientes ya vistos reingresan casi el doble que los nuevos (9,65 % frente a 5,42 % a 30 días), así que el resultado de la validación temporal depende de cuántos haya: separarlos permite distinguir el desempeño en pacientes nuevos del desempeño en pacientes conocidos. En 2023 son el 22,6 % de los casos de evaluación y en 2024, el 18,1 %.
+- **Alcance:** La separación vale dentro del bloque 2021–2024. Los egresos de 2019 y 2020 tienen otro identificador (H19): un paciente «nuevo» pudo estar hospitalizado en esos años, y los 1.093.656 casos de entrenamiento del bloque A no hacen visto a nadie.
+- **Alternativa:** Contar solo los casos de estudio de 2021 y 2022 (`paciente_visto_egresos` = CASOS): serían 218.041 casos de pacientes ya vistos (18,4 %).
+- **Visto bueno:** La persona a cargo de la tesis lo aprobó el 20 de octubre de 2026, por ser lo que indica la revisión.
+- **Evidencia:** `2.3_validacion_particion/scripts/13_validacion_temporal.py` → `2.3_validacion_particion/reportes/13_validacion_temporal.md`; contraste independiente en `pruebas/verificar_13_validacion_temporal.py` (9 comprobaciones, sin fallas).
+- **Estado:** Adoptada, por recomendación del profesor guía.
+
+### D41 · 2026-10-20 · Métricas de evaluación, intervalos y recalibración
+- **Actividad:** 2.3
+- **Decisión:** Las métricas se fijan antes de modelar, para cada una de las cuatro variables objetivo:
+  - Área bajo la curva de precisión y exhaustividad, informada junto a la prevalencia, que es lo que obtiene un modelo al azar, y como cociente entre ambas.
+  - Área bajo la curva ROC.
+  - Puntaje de Brier, junto al de referencia: el que se obtiene al asignar a todos los casos la prevalencia, p(1 − p).
+  - Calibración, con su intercepto (si el nivel general del riesgo es correcto; ideal 0) y su pendiente (si las probabilidades se separan en la medida justa; ideal 1), estimados con una regresión logística del resultado sobre el logit de la probabilidad predicha.
+  - La exactitud no se usa: con tasas de 1 % a 6 %, un modelo que diga siempre «no reingresa» acierta más del 94 % de las veces.
+- **Intervalos de confianza:** Al 95 %, por remuestreo de pacientes (`ID_PACIENTE`) con reposición: 1.000 repeticiones con la semilla del proyecto (2026) y los percentiles 2,5 y 97,5. Se remuestrean pacientes y no casos porque los casos de una misma persona no son independientes. Se calculan sobre las predicciones fuera de partición de la validación cruzada, sobre las de la validación temporal (en cada uno de sus tres grupos, D40) y sobre las del conjunto de prueba.
+- **Recalibración:** Si al entrenar se equilibran las clases (submuestreo, sobremuestreo o pesos), las probabilidades quedan desplazadas hacia arriba y no se pueden leer como riesgo. Antes de evaluar la calibración se recalibran con el método de Platt (una regresión logística sobre el logit de la probabilidad), ajustada con datos que el modelo no usó para entrenar: en la validación cruzada, con una parte de las particiones de entrenamiento separada por paciente; para la evaluación final, con las predicciones fuera de partición del conjunto de desarrollo. Nunca con el conjunto de prueba. Las dos áreas no cambian con la recalibración, porque no cambia el orden de los casos.
+- **Referencias en el conjunto de desarrollo:**
+
+  | Variable | Prevalencia (área de precisión y exhaustividad de un modelo al azar) | Brier de referencia |
+  |---|---|---|
+  | `REING_7D` | 0,021 | 0,0202 |
+  | `REING_7D_CDM` | 0,013 | 0,0125 |
+  | `REING_30D` | 0,059 | 0,0555 |
+  | `REING_30D_CDM` | 0,036 | 0,0343 |
+
+- **Fundamento:** Revisión del profesor guía del 13 de octubre de 2026 (punto 2.3): con tasas tan bajas la exactitud no sirve y una sola métrica de discriminación no alcanza; la tasa sube en 2023 y 2024, así que un modelo entrenado con 2019–2022 tenderá a subestimar el riesgo en la validación temporal, lo que mide el intercepto; y equilibrar las clases desplaza las probabilidades. El profesor indicó las métricas, los intervalos por remuestreo de pacientes y la recalibración con datos de validación; las 1.000 repeticiones y el método de Platt son la forma concreta de aplicarlos.
+- **Visto bueno:** La persona a cargo de la tesis lo aprobó el 20 de octubre de 2026, por ser lo que indica la revisión.
+- **Completa a:** D37. La revisión de la calidad del identificador por año que pide el mismo punto está en H28 de la bitácora de la 2.2.
+- **Estado:** Adoptada, por recomendación del profesor guía.
+
+### D42 · 2026-10-20 · Variables de historia: solo el pasado, ventana de 12 meses y marca de ventana cortada
+- **Actividad:** 2.3 (se aplica en la Etapa 3 del procedimiento de la propuesta, actividad 3.1 de la Carta Gantt)
+- **Decisión:** Las variables que se construyan con la historia del paciente, como el número de hospitalizaciones previas que lista la propuesta, siguen tres reglas:
+  - Solo usan egresos del mismo identificador de paciente cuya alta es anterior al ingreso índice: el ingreso que abre el episodio asistencial del caso de estudio. Nunca egresos posteriores, ni los tramos de traslado del propio episodio.
+  - La ventana es de 12 meses antes del ingreso índice.
+  - Se marcan los casos cuya ventana empieza antes del inicio de su bloque de identificador: los que tienen el ingreso índice antes del 1 de enero de 2020 en el bloque A, o antes del 1 de enero de 2022 en el bloque B. En ellos, un 0 puede significar falta de datos y no ausencia de hospitalizaciones. La marca no excluye casos.
+- **Fundamento:** Revisión del profesor guía del 13 de octubre de 2026 (punto 2.5). Una variable de historia que usara egresos posteriores al ingreso le daría al modelo información del futuro. Además, la historia está cortada al comienzo de cada bloque: la base parte en 2019, y los egresos de 2019 y 2020 tienen otro identificador que los de 2021 en adelante (H19). Por eso, en el conjunto de desarrollo, el porcentaje de casos con alguna hospitalización en los 12 meses previos es de 5,9 % en enero de 2019 y de 25,9 % en diciembre de 2019; de 4,4 % en enero de 2021 y de 22,9 % en diciembre de 2021, y de 23 % a 28 % entre 2022 y 2024. Los pacientes no cambian: cambia lo que se puede ver.
+- **Magnitud:** Con 12 meses quedan marcados 1.465.830 de los 4.192.410 casos de estudio (34,96 %) y 1.173.474 de los 3.354.118 del conjunto de desarrollo (34,99 %): todos los de 2019 y 2021, y cerca del 2 % de los de 2020 y 2022, cuyo episodio comenzó el año anterior. En 59.557 casos de estudio el ingreso índice es anterior al ingreso de su propio egreso, porque el episodio incluye un traslado.
+- **Alternativa:** Una ventana de 6 meses marcaría cerca de la mitad de los casos de 2019 y de 2021 (17,6 % del total), pero miraría menos pasado. Se adopta la de 12 meses que sugiere el profesor guía; es también la de la variable de hospitalizaciones previas del puntaje HOSPITAL de predicción de reingreso.
+- **Aplicación:** En la Etapa 3 (actividad 3.1), junto con las variables de historia. La marca depende solo de la fecha del ingreso índice y del bloque, así que no hace falta cambiar ahora el conjunto analítico ni el conjunto de prueba sellado.
+- **Visto bueno:** La persona a cargo de la tesis lo aprobó el 20 de octubre de 2026 («sí, hazlo como lo sugiere el profesor»).
+- **Precisa a:** la advertencia de D29 y la de H18 de la bitácora de la 2.2, que hablaban de los egresos anteriores al alta.
+- **Estado:** Adoptada, por recomendación del profesor guía.
 
 ---
 
@@ -116,11 +187,35 @@ El contraste independiente está en `2.3_validacion_particion/pruebas/verificar_
 - Los archivos tienen el hash registrado y el del conjunto de prueba es de solo lectura.
 - Las tasas del reporte 10 coinciden con el recálculo.
 
+El 20 de octubre de 2026 el script se volvió a ejecutar sobre la versión 2 del conjunto analítico.
+Antes se guardó una copia de la lista de identificadores y del conjunto de cada egreso de la versión 1:
+la comparación no encontró ningún identificador (de 4.035.768) ni ningún egreso (de 5.780.628) en un
+conjunto distinto, y la lista de identificadores quedó con el mismo hash. El contraste independiente
+volvió a cumplir sus 21 comprobaciones sobre la versión 2.
+
+## Verificación del script 13
+
+El script se ejecutó el 20 de octubre de 2026 sobre el conjunto de desarrollo de la versión 2 de la
+partición, sin abrir el conjunto de prueba. El contraste independiente está en
+`2.3_validacion_particion/pruebas/verificar_13_validacion_temporal.py` y deja
+`reportes/pruebas_validacion_temporal.md`. Vuelve a calcular los grupos por otro camino (el año sale
+de la fecha de alta y los pacientes ya vistos, de agrupar por identificador con pyarrow) y se cumplen
+sus 9 comprobaciones: el archivo tiene exactamente los 3.354.118 casos de estudio de desarrollo, el
+período y la marca de paciente ya visto coinciden caso por caso, el archivo no contiene nada que
+dependa de las variables objetivo y la tabla del reporte 13 coincide con el recálculo.
+
 ---
 
 ## Pendientes
 
-- [ ] Presentar al profesor guía, el 9 de octubre de 2026, las decisiones D27 a D29 y D37.
+- [x] Presentar al profesor guía las decisiones D27 a D29 y D37. Las revisó el 13 de octubre de 2026 y las aprobó a condición de incorporar los puntos 2.2 y 2.3 de su revisión.
+- [x] Punto 2.2 de la revisión: informar la validación temporal de tres maneras. Hecho el 20 de octubre de 2026 (D40, script 13).
+- [x] Punto 2.3 de la revisión: fijar antes de modelar las métricas, los intervalos y la recalibración (D41) y revisar por año los identificadores faltantes o ambiguos (H28 de la bitácora de la 2.2). Hecho el 20 de octubre de 2026.
+- [ ] Presentar al profesor guía, en el próximo avance, D40 y D41.
+- [ ] En las etapas de modelado, evaluar con los grupos de `data/processed/validacion_temporal.parquet` y con las métricas de D41.
+- [x] Punto 2.5 de la revisión: fijar la ventana de historia. Hecho el 20 de octubre de 2026: 12 meses (D42).
+- [ ] En la Etapa 3 (actividad 3.1), construir las variables de historia y la marca de ventana cortada según D42.
+- [ ] Presentar al profesor guía D42 en el próximo avance.
 - [ ] Declarar en el informe la limitación descrita en H19.
 - [ ] En las etapas siguientes, leer solo `desarrollo.parquet`, usar `ID_PACIENTE` como grupo de la validación cruzada y la semilla 2026.
 - [ ] Antes de la evaluación final, comprobar el hash del conjunto de prueba con `pruebas/verificar_10_particion.py`.

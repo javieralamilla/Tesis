@@ -4,17 +4,20 @@ Generado por `2.2_depuracion_etiquetado/scripts/11_sensibilidad.py`. Cada escena
 
 ## 1. Tabla de sensibilidad
 
-Cada tasa usa los casos de estudio con seguimiento suficiente para su ventana. Entre paréntesis, la diferencia con el análisis principal en puntos porcentuales.
+Cada tasa usa los casos de estudio con seguimiento suficiente para su ventana. Entre paréntesis, la diferencia con el análisis principal en puntos porcentuales. En las dos variables relacionadas, además, los partos (CDM sin reingreso relacionado posible) quedan sin dato (bitácora D38), salvo en las filas que los vuelven a incluir: la de los partos con valor 0 y la de las CDM unidas.
 
 | Escenario | Qué cambia | Casos de estudio | `REING_7D` | `REING_7D_CDM` | `REING_30D` | `REING_30D_CDM` |
 |---|---|---|---|---|---|---|
-| Análisis principal | Ninguno | 4.192.410 | 2,07 % | 1,08 % | 5,90 % | 3,03 % |
-| Con las actividades que solo existen en 2019 | E04 desactivado | 4.275.385 | 2,11 % (+0,04) | 1,10 % (+0,02) | 5,99 % (+0,09) | 3,07 % (+0,04) |
-| Con la cirugía mayor ambulatoria | E13 desactivado | 5.036.703 | 1,79 % (-0,28) | 0,92 % (-0,16) | 5,10 % (-0,80) | 2,58 % (-0,45) |
-| Con las sesiones de tratamiento | E14 desactivado | 4.274.335 | 2,08 % (+0,01) | 1,06 % (-0,02) | 5,94 % (+0,04) | 2,99 % (-0,04) |
-| Con las CDM 13 y 14 como una sola | `cdm_agrupadas` = 13+14 | 4.192.410 | 2,07 % (+0,00) | 1,17 % (+0,09) | 5,90 % (+0,00) | 3,19 % (+0,16) |
-| Censura sin margen: solo los días de la ventana | `censura_margen_dias` = 0 | 4.313.289 | 2,06 % (-0,01) | 1,07 % (-0,01) | 5,89 % (-0,01) | 3,02 % (-0,01) |
-| Sin los casos con identidad ambigua | Se quitan los casos con `IDENTIDAD_AMBIGUA` | 4.129.132 | 2,03 % (-0,04) | 1,06 % (-0,02) | 5,79 % (-0,11) | 2,97 % (-0,06) |
+| Análisis principal | Ninguno | 4.192.410 | 2,07 % | 1,26 % | 5,90 % | 3,55 % |
+| Con las actividades que solo existen en 2019 | E04 desactivado | 4.275.385 | 2,11 % (+0,04) | 1,29 % (+0,03) | 5,99 % (+0,09) | 3,59 % (+0,04) |
+| Con la cirugía mayor ambulatoria | E13 desactivado | 5.036.703 | 1,79 % (-0,28) | 1,05 % (-0,21) | 5,10 % (-0,80) | 2,94 % (-0,61) |
+| Con las sesiones de tratamiento | E14 desactivado | 4.274.335 | 2,08 % (+0,01) | 1,24 % (-0,02) | 5,94 % (+0,04) | 3,50 % (-0,05) |
+| Con los partos en las variables relacionadas, con valor 0 | `cdm_sin_relacionado` vacío | 4.192.410 | 2,07 % (+0,00) | 1,08 % (-0,18) | 5,90 % (+0,00) | 3,03 % (-0,52) |
+| Con las CDM 13 y 14 como una sola | `cdm_agrupadas` = 13+14 (la CDM 14 vuelve a tener dato) | 4.192.410 | 2,07 % (+0,00) | 1,17 % (-0,09) | 5,90 % (+0,00) | 3,19 % (-0,36) |
+| Censura sin margen: solo los días de la ventana | `censura_margen_dias` = 0 | 4.313.289 | 2,06 % (-0,01) | 1,26 % (+0,00) | 5,89 % (-0,01) | 3,54 % (-0,01) |
+| Solo los traslados con marca explícita | `traslado_exige_marca` = SI | 4.195.786 | 2,12 % (+0,05) | 1,30 % (+0,04) | 5,95 % (+0,05) | 3,59 % (+0,04) |
+| Con los derivados sin continuación como casos de estudio | E07 y E08 desactivados | 4.286.199 | 2,12 % (+0,05) | 1,30 % (+0,04) | 5,98 % (+0,08) | 3,59 % (+0,04) |
+| Sin los casos con identidad ambigua | Se quitan los casos con `IDENTIDAD_AMBIGUA` | 4.129.132 | 2,03 % (-0,04) | 1,25 % (-0,01) | 5,79 % (-0,11) | 3,49 % (-0,06) |
 
 Casos de estudio que cada escenario agrega o quita, y casos comunes que cambian en alguna de las variables:
 
@@ -23,8 +26,11 @@ Casos de estudio que cada escenario agrega o quita, y casos comunes que cambian 
 | Con las actividades que solo existen en 2019 | 83.073 | 98 | 3.083 |
 | Con la cirugía mayor ambulatoria | 844.293 | 0 | 0 |
 | Con las sesiones de tratamiento | 81.925 | 0 | 0 |
-| Con las CDM 13 y 14 como una sola | 0 | 0 | 6.489 |
+| Con los partos en las variables relacionadas, con valor 0 | 0 | 0 | 0 |
+| Con las CDM 13 y 14 como una sola | 0 | 0 | 0 |
 | Censura sin margen: solo los días de la ventana | 120.879 | 0 | 0 |
+| Solo los traslados con marca explícita | 3.376 | 0 | 75 |
+| Con los derivados sin continuación como casos de estudio | 93.789 | 0 | 0 |
 | Sin los casos con identidad ambigua | 0 | 63.278 | 0 |
 
 ## 2. Con las actividades que solo existen en 2019
@@ -35,14 +41,14 @@ El criterio deja fuera, en los dos papeles, los tipos de actividad que solo se r
 
 |  | Casos de estudio | `REING_7D` | `REING_7D_CDM` | `REING_30D` | `REING_30D_CDM` |
 |---|---|---|---|---|---|
-| Análisis principal | 807.143 | 2,05 % | 1,05 % | 5,70 % | 2,96 % |
-| Con esas actividades | 890.118 | 2,27 % | 1,17 % | 6,15 % | 3,15 % |
+| Análisis principal | 807.143 | 2,05 % | 1,25 % | 5,70 % | 3,49 % |
+| Con esas actividades | 890.118 | 2,27 % | 1,36 % | 6,15 % | 3,66 % |
 
 Composición de los casos de estudio de 2019 en el escenario, por tipo de actividad:
 
 | Tipo de actividad | Casos de estudio | % | `REING_7D` | `REING_7D_CDM` | `REING_30D` | `REING_30D_CDM` |
 |---|---|---|---|---|---|---|
-| HOSPITALIZACIÓN | 807.046 | 90,7 % | 2,18 % | 1,11 % | 6,05 % | 3,11 % |
+| HOSPITALIZACIÓN | 807.046 | 90,7 % | 2,18 % | 1,31 % | 6,05 % | 3,68 % |
 | HOSPITALIZACIÓN EN URGENCIA | 43.217 | 4,9 % | 4,75 % | 2,84 % | 10,06 % | 5,59 % |
 | HOSPITALIZACIÓN DIURNA | 39.855 | 4,5 % | 1,43 % | 0,53 % | 4,02 % | 1,32 % |
 
@@ -65,7 +71,7 @@ Casos de estudio del escenario por tipo de actividad:
 
 | Tipo de actividad | Casos de estudio | % | `REING_7D` | `REING_7D_CDM` | `REING_30D` | `REING_30D_CDM` |
 |---|---|---|---|---|---|---|
-| HOSPITALIZACIÓN | 4.192.410 | 83,2 % | 2,07 % | 1,08 % | 5,90 % | 3,03 % |
+| HOSPITALIZACIÓN | 4.192.410 | 83,2 % | 2,07 % | 1,26 % | 5,90 % | 3,55 % |
 | CIRUGÍA MAYOR AMBULATORIA (CMA) | 844.293 | 16,8 % | 0,41 % | 0,14 % | 1,14 % | 0,33 % |
 
 ## 4. Con las sesiones de tratamiento
@@ -98,40 +104,76 @@ Caracterización de los egresos que el criterio deja fuera como caso de estudio 
 
 En cualquier escenario, un ingreso con diagnóstico principal de sesión no cuenta como reingreso no planificado.
 
-## 5. Con las CDM 13 y 14 como una sola
+## 5. Con los partos en las variables relacionadas, con valor 0
 
-Cambia solo el reingreso relacionado: los casos de estudio y el reingreso por cualquier causa son los mismos.
+Es la forma de cálculo anterior a la revisión del profesor guía del 13 de octubre de 2026: los partos se quedan en las variables relacionadas con valor 0. Ese 0 es obligatorio, porque ningún reingreso puede ser de su CDM (reporte 09, sección 5; bitácora D38). Los casos de estudio y el reingreso por cualquier causa no cambian.
 
-| Variable | Análisis principal | % | Con esas CDM como una sola | % | Diferencia |
-|---|---|---|---|---|---|
-| `REING_7D_CDM` | 45.195 | 1,08 % | 49.087 | 1,17 % | +3.892 |
-| `REING_30D_CDM` | 124.256 | 3,03 % | 130.654 | 3,19 % | +6.398 |
+| Variable | Análisis principal: casos con dato | Con reingreso | % | Con los partos, con valor 0: casos con dato | Con reingreso | % |
+|---|---|---|---|---|---|---|
+| `REING_7D_CDM` | 3.577.243 | 45.195 | 1,26 % | 4.192.410 | 45.195 | 1,08 % |
+| `REING_30D_CDM` | 3.498.460 | 124.256 | 3,55 % | 4.101.883 | 124.256 | 3,03 % |
+
+## 6. Con las CDM 13 y 14 como una sola
+
+Cambia solo el reingreso relacionado: los casos de estudio y el reingreso por cualquier causa son los mismos. Al unir las CDM, la que no tenía reingreso relacionado posible (bitácora D38) vuelve a tener dato, así que cada columna tiene sus propios casos con dato.
+
+| Variable | Análisis principal: casos con dato | Con reingreso | % | Con esas CDM como una sola: casos con dato | Con reingreso | % |
+|---|---|---|---|---|---|---|
+| `REING_7D_CDM` | 3.577.243 | 45.195 | 1,26 % | 4.192.410 | 49.087 | 1,17 % |
+| `REING_30D_CDM` | 3.498.460 | 124.256 | 3,55 % | 4.101.883 | 130.654 | 3,19 % |
 
 El detalle por CDM del caso de estudio está en la sección 5 del reporte 09.
 
-## 6. Censura sin margen: solo los días de la ventana
+## 7. Censura sin margen: solo los días de la ventana
 
 Sin el margen, una ventana se considera observada si cabe entera antes del cierre del bloque. Los casos que así ganan dato son las altas más cercanas al cierre, y parte de sus reingresos no se ve porque termina después del cierre (reporte 09, sección 6). La tabla compara su tasa observada con la del análisis principal:
 
 | Variable | Casos que ganan dato | Con reingreso observado | % | Tasa del análisis principal |
 |---|---|---|---|---|
 | `REING_7D` | 120.879 | 2.093 | 1,73 % | 2,07 % |
-| `REING_7D_CDM` | 120.879 | 1.080 | 0,89 % | 1,08 % |
+| `REING_7D_CDM` | 105.217 | 1.080 | 1,03 % | 1,26 % |
 | `REING_30D` | 118.298 | 6.623 | 5,60 % | 5,90 % |
-| `REING_30D_CDM` | 118.298 | 3.302 | 2,79 % | 3,03 % |
+| `REING_30D_CDM` | 102.840 | 3.302 | 3,21 % | 3,55 % |
 
-## 7. Sin los casos con identidad ambigua
+## 8. Solo los traslados con marca explícita
+
+La regla del análisis principal (bitácora D19) une al mismo episodio asistencial un ingreso en otro hospital el mismo día del alta o al día siguiente, aunque no conste el traslado. En este escenario solo los une si consta: alta por derivación en el egreso anterior o procedencia desde otro hospital en el ingreso. Los ingresos que comienzan antes del alta anterior (estadías solapadas) siguen unidos, porque la persona todavía no había salido y no pueden ser un reingreso con ninguna regla. Un ingreso que deja de unirse abre un episodio nuevo: el egreso anterior puede pasar a ser caso de estudio, y el ingreso, a contar como su reingreso si no es planificado.
+
+|  | Cantidad |
+|---|---|
+| Ingresos que dejan de unirse y pasan a abrir un episodio | 3.755 |
+| Casos de estudio con `REING_7D` (análisis principal → escenario) | 86.609 → 88.742 (+2.133 casos, 2,5 % más) |
+| Casos de estudio con `REING_7D_CDM` (análisis principal → escenario) | 45.195 → 46.496 (+1.301 casos, 2,9 % más) |
+| Casos de estudio con `REING_30D` (análisis principal → escenario) | 241.953 → 244.119 (+2.166 casos, 0,9 % más) |
+| Casos de estudio con `REING_30D_CDM` (análisis principal → escenario) | 124.256 → 125.606 (+1.350 casos, 1,1 % más) |
+
+## 9. Con los derivados sin continuación como casos de estudio
+
+Criterio E07: Alta por derivación a otro hospital.
+
+Criterio E08: Alta por derivación a una institución privada.
+
+En el análisis principal, los egresos con alta por derivación a otro hospital cuya continuación no aparece en la base (E07) y los derivados a una institución privada (E08) no son casos de estudio: la atención siguió donde la base no la ve, así que no se puede saber si hubo reingreso (censura administrativa del seguimiento). No tienen valor en las variables objetivo, y sí pueden contar como reingreso de un alta anterior. Este escenario los deja como casos de estudio y les calcula las variables con lo que la base sí ve: un reingreso ocurrido fuera de la base queda como 0.
+
+Casos de estudio que el escenario agrega (los derivados) y sus tasas:
+
+|  | Casos de estudio | `REING_7D` | `REING_7D_CDM` | `REING_30D` | `REING_30D_CDM` |
+|---|---|---|---|---|---|
+| Análisis principal | 4.192.410 | 2,07 % | 1,26 % | 5,90 % | 3,55 % |
+| Derivados que se agregan | 93.789 | 4,38 % | 2,66 % | 9,42 % | 5,20 % |
+
+## 10. Sin los casos con identidad ambigua
 
 Casos de estudio del análisis principal según la columna `IDENTIDAD_AMBIGUA` (reporte 08, sección 3):
 
 | Identidad | Casos de estudio | % | `REING_7D` | `REING_7D_CDM` | `REING_30D` | `REING_30D_CDM` |
 |---|---|---|---|---|---|---|
-| Ambigua | 63.278 | 1,5 % | 4,18 % | 2,17 % | 12,88 % | 6,61 % |
-| Sin inconsistencias | 4.129.132 | 98,5 % | 2,03 % | 1,06 % | 5,79 % | 2,97 % |
+| Ambigua | 63.278 | 1,5 % | 4,18 % | 2,34 % | 12,88 % | 7,12 % |
+| Sin inconsistencias | 4.129.132 | 98,5 % | 2,03 % | 1,25 % | 5,79 % | 3,49 % |
 
 Una diferencia entre los dos grupos no prueba por sí sola que haya reingresos falsos: un identificador con más egresos tiene más oportunidades de registrar un dato distinto, y también más reingresos. El efecto de dejar fuera estos casos es el de la última fila de la tabla de la sección 1.
 
-## 8. Verificaciones
+## 11. Verificaciones
 
 - El escenario principal reproduce exactamente las columnas de `grd_etiquetado.parquet` (caso de estudio, episodio y las variables objetivo): **sí**.
 - Las verificaciones del etiquetado (script 09) se cumplen en todos los escenarios: **sí**.

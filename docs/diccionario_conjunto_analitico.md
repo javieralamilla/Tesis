@@ -6,15 +6,15 @@ Conjunto analítico: `data/processed/grd_etiquetado.parquet`. Es la tabla que us
 
 | Dato | Valor |
 |---|---|
-| Versión | 1 |
-| Fecha de registro | 2026-10-08 |
+| Versión | 2 |
+| Fecha de registro | 2026-10-20 |
 | Registros, columnas y casos de estudio | 5.800.973, 163 y 4.192.410 |
-| SHA-256 del archivo | `b4016246501d73a6bafa3fde20ab8b8c58e7482cbc259da8730f5b6dd70cbfe5` |
+| SHA-256 del archivo | `f9b8be4065bad16dfe27a46a95db4f742024b1e817046d1d9b26e0a893b900dc` |
 | SHA-256 de la tabla integrada (`grd_2019_2024.parquet`) | `805f4dbac473b150130a5f50b1af5a895cfe4f2b498630ac58dd1148120cf684` |
 | SHA-256 de `criterios_exclusion.csv` | `1d8bc19ad058d4a69d5bb21d89fe7e7cfd1e95cdb3060c8e66157c70738e1426` |
-| SHA-256 de `parametros.csv` | `bb0616c680e80697d2a358780981a6a8cc72a4f58f4235d28a944a5c83ca71c6` |
+| SHA-256 de `parametros.csv` | `b97db71394bee5b0d24de8f6a84848d38def4d1e367e1c173f2336de7dd0661b` |
 | SHA-256 de `08_depurar.py` | `d864ce0cdd0bae868990507ee23a4767d53a11f2de92752461a4229549dec076` |
-| SHA-256 de `09_etiquetar.py` | `0972c3199f3d3363347d76a54508072867b46bdab6c1d46b8e2fda94c3b969ce` |
+| SHA-256 de `09_etiquetar.py` | `dfbe07b74c5638aa3325ee635e806b8bf542e9543ef512586564c504cb23138a` |
 | Bibliotecas | Python 3.14.5, pandas 3.0.3, pyarrow 25.0.1 |
 
 El historial de versiones está en `docs/version_conjunto_analitico.csv`. El hash identifica el archivo exacto: la partición (actividad 2.3) debe comprobar que el archivo que lee es el de la última versión registrada. Si se vuelven a ejecutar los scripts 08 o 09 y el archivo cambia, hay que ejecutar de nuevo este script para registrar la nueva versión. Con otras versiones de las bibliotecas el archivo puede tener otro hash aunque su contenido sea el mismo.
@@ -142,8 +142,8 @@ El historial de versiones está en `docs/version_conjunto_analitico.csv`. El has
 | Columna | Tipo | Descripción | Valores | % con dato | Origen |
 |---|---|---|---|---|---|
 | `REING_7D` | Entero | Variable objetivo. Reingreso no planificado dentro de 7 días del alta, por cualquier causa: 1 = sí, 0 = no (bitácora D20, D26 y D33). Con dato solo en los casos de estudio con seguimiento suficiente para la ventana (D30). | `0` 97,93 % · `1` 2,07 % | 72,27 (65,53 a 77,92 según el año) | Creada (script 09) |
-| `REING_7D_CDM` | Entero | Variable objetivo. Reingreso no planificado dentro de 7 días, relacionado con el diagnóstico: algún ingreso de la ventana tiene la misma CDM que el caso de estudio (D31). 1 = sí, 0 = no. Con dato en los mismos casos que `REING_7D`. | `0` 98,92 % · `1` 1,08 % | 72,27 (65,53 a 77,92 según el año) | Creada (script 09) |
+| `REING_7D_CDM` | Entero | Variable objetivo. Reingreso no planificado dentro de 7 días, relacionado con el diagnóstico: algún ingreso de la ventana tiene la misma CDM que el caso de estudio (D31). 1 = sí, 0 = no. Con dato en los mismos casos que `REING_7D`, salvo los partos (casos de estudio de la CDM 14), que quedan sin dato porque con la comparación literal no pueden tener un reingreso relacionado (D38). | `0` 98,74 % · `1` 1,26 % | 61,67 (57,52 a 66,37 según el año) | Creada (script 09) |
 | `REING_30D` | Entero | Variable objetivo. Reingreso no planificado dentro de 30 días del alta, por cualquier causa: 1 = sí, 0 = no. Incluye a los de 7 días. Con dato solo en los casos de estudio con seguimiento suficiente para la ventana (D30). | `0` 94,10 % · `1` 5,90 % | 70,71 (61,06 a 77,92 según el año) | Creada (script 09) |
-| `REING_30D_CDM` | Entero | Variable objetivo. Reingreso no planificado dentro de 30 días, relacionado con el diagnóstico (misma CDM, D31). 1 = sí, 0 = no. Con dato en los mismos casos que `REING_30D`. | `0` 96,97 % · `1` 3,03 % | 70,71 (61,06 a 77,92 según el año) | Creada (script 09) |
+| `REING_30D_CDM` | Entero | Variable objetivo. Reingreso no planificado dentro de 30 días, relacionado con el diagnóstico (misma CDM, D31). 1 = sí, 0 = no. Con dato en los mismos casos que `REING_30D`, salvo los partos (casos de estudio de la CDM 14), que quedan sin dato porque con la comparación literal no pueden tener un reingreso relacionado (D38). | `0` 96,45 % · `1` 3,55 % | 60,31 (53,57 a 66,37 según el año) | Creada (script 09) |
 | `DIAS_REING` | Entero | Trazabilidad. Días entre el alta del caso de estudio y el primer ingreso posterior que cuenta como reingreso, a cualquier distancia dentro del bloque. Sin dato si no hay ninguno. Describe lo que ocurre después del alta: no debe usarse como variable predictora. | De 0 a 1.454 | 14,39 (7,97 a 21,75 según el año) | Creada (script 09) |
 | `ID_EGRESO_REING` | Entero | Trazabilidad. `ID_EGRESO` de ese primer ingreso posterior, para poder revisar cada par. No debe usarse como variable predictora. | Identificador | 14,39 (7,97 a 21,75 según el año) | Creada (script 09) |

@@ -9,8 +9,13 @@ que la reemplaza y se indica en el campo **Estado**.
 Las decisiones del 6 de octubre de 2026 (D18 a D26) se aplicaron como provisionales. El profesor guía
 las revisó el 7 de octubre («satisfactorio, con correcciones metodológicas antes de congelar el
 conjunto de prueba») y las entradas del 8 de octubre (H20 a H25 y D30 a D36) recogen sus correcciones.
-Cada exclusión se puede activar o desactivar en `reglas/criterios_exclusion.csv` y cada umbral se
-puede cambiar en `reglas/parametros.csv`, sin modificar el código.
+En su revisión del 13 de octubre aprobó D30 y D34, y aprobó la tabla de criterios (D35) a condición de
+incorporar dos puntos: los partos en las variables relacionadas (punto 2.1 de esa revisión) y la
+sensibilidad de las reglas de traslado y de derivación (punto 2.4). Las entradas del 20 de octubre
+(H26, H27, D38 y D39) los incorporan; H28 responde a otro punto de la misma revisión (2.3), sobre la
+calidad del identificador por año. Cada exclusión se puede activar o desactivar en
+`reglas/criterios_exclusion.csv` y cada umbral se puede cambiar en `reglas/parametros.csv`, sin
+modificar el código.
 
 **Tipos de entrada:** `H` = hallazgo (algo que se observó en los datos),
 `D` = decisión (algo que se resolvió hacer).
@@ -21,14 +26,14 @@ puede cambiar en `reglas/parametros.csv`, sin modificar el código.
 
 ## Resumen de las definiciones
 
-Definiciones vigentes desde el 8 de octubre de 2026.
+Definiciones vigentes desde el 20 de octubre de 2026.
 
 | Tema | Entrada | Definición |
 |---|---|---|
 | Misma persona | D18, D34 | Mismo identificador y fechas de nacimiento que no difieran en más de un año (o que coincidan en día y mes). Los identificadores con datos que no coinciden llevan la marca `IDENTIDAD_AMBIGUA`. |
 | Traslado | D19, H22 | Ingreso en otro hospital el mismo día del alta o al día siguiente, o ingreso anterior al alta: continúa el mismo episodio asistencial. |
 | Reingreso | D20, D26, D33 | Ingreso no planificado (no programado y que no sea un parto ni una sesión de tratamiento) dentro de 7 o 30 días del alta final del episodio. Son las cuatro variables de la propuesta. |
-| Reingreso relacionado | D31 | Algún ingreso de la ventana con la misma CDM que el caso de estudio, sin agrupar CDM. La unión de las CDM 13 y 14 queda como análisis de sensibilidad. |
+| Reingreso relacionado | D31, D38 | Algún ingreso de la ventana con la misma CDM que el caso de estudio, sin agrupar CDM. Los partos (CDM 14) quedan sin dato en estas dos variables, porque no pueden tener un reingreso de su misma CDM. La unión de las CDM 13 y 14 queda como análisis de sensibilidad. |
 | Sin identificador o sin fechas | D21 | Fuera como caso de estudio y como reingreso. |
 | Censura | D30 | Cada ventana exige sus días más 30 de margen antes del cierre del bloque: 37 días para las variables de 7 días y 60 para las de 30 días. |
 | Exclusiones | D23, D32, D33, D35 | Catorce criterios en una tabla, con su justificación; trece activos y uno desactivado. La cirugía mayor ambulatoria y las sesiones de tratamiento no son caso de estudio. |
@@ -36,14 +41,14 @@ Definiciones vigentes desde el 8 de octubre de 2026.
 | Versión de los datos | D36 | El conjunto analítico es `grd_etiquetado.parquet`; su versión y su hash están registrados. |
 
 Resultado vigente: 4.192.410 casos de estudio. Las variables de 30 días se calculan sobre los 4.101.883
-que tienen 60 días de seguimiento.
+que tienen 60 días de seguimiento, y las dos relacionadas no incluyen los partos (D38).
 
-| Variable | Definición | Casos con seguimiento | Casos con reingreso | % |
+| Variable | Definición | Casos con dato | Casos con reingreso | % |
 |---|---|---|---|---|
 | `REING_7D` | 7 días, por cualquier causa | 4.192.410 | 86.609 | 2,07 % |
-| `REING_7D_CDM` | 7 días, relacionado (misma CDM) | 4.192.410 | 45.195 | 1,08 % |
+| `REING_7D_CDM` | 7 días, relacionado (misma CDM) | 3.577.243 | 45.195 | 1,26 % |
 | `REING_30D` | 30 días, por cualquier causa | 4.101.883 | 241.953 | 5,90 % |
-| `REING_30D_CDM` | 30 días, relacionado (misma CDM) | 4.101.883 | 124.256 | 3,03 % |
+| `REING_30D_CDM` | 30 días, relacionado (misma CDM) | 3.498.460 | 124.256 | 3,55 % |
 
 ---
 
@@ -213,6 +218,7 @@ que tienen 60 días de seguimiento.
 - **Advertencia para la ingeniería de variables:** Las personas con un solo caso de estudio casi nunca tienen reingreso (0,5 %, frente a 9,6 % con 2 a 5 casos), porque un reingreso es otro egreso de la misma persona. Toda variable que cuente egresos de una persona debe limitarse a los anteriores al alta del caso.
 - **Evidencia:** exploración del 6 de octubre de 2026 sobre la tabla etiquetada.
 - **Resuelto por:** D33, que deja las sesiones de tratamiento fuera como caso de estudio.
+- **Advertencia precisada por:** D42 de la bitácora de la 2.3, del 20 de octubre de 2026: las variables de historia usan los egresos anteriores al ingreso índice, en una ventana de 12 meses, y se marcan los casos cuya ventana empieza antes del inicio de su bloque.
 
 ### H20 · 2026-10-08 · Cuántos reingresos se pierden junto al cierre del bloque
 - **Actividad:** 2.2
@@ -244,7 +250,7 @@ que tienen 60 días de seguimiento.
 - **Parámetros:** `ventanas_dias` (7 y 30) y `censura_margen_dias` (30).
 - **Reemplaza a:** D22.
 - **Evidencia:** `2.2_depuracion_etiquetado/reportes/08_depuracion.md`, sección 5; `2.2_depuracion_etiquetado/reportes/11_sensibilidad.md`, sección 6.
-- **Estado:** Adoptada. La censura diferenciada responde a la revisión del profesor guía; el margen de 30 días está pendiente de validar con profesor guía.
+- **Estado:** Adoptada. Aprobada por el profesor guía el 13 de octubre de 2026, con el margen de 30 días: lo considera bien respaldado, porque baja la pérdida de reingresos junto al cierre a 2,4 % (7 días) y 1,5 % (30 días) y casi no cambia las tasas.
 
 ### D31 · 2026-10-08 · El reingreso relacionado se mide con la misma CDM, sin agrupar
 - **Actividad:** 2.2
@@ -253,6 +259,7 @@ que tienen 60 días de seguimiento.
 - **Resultado:** `REING_7D_CDM` tiene 45.195 casos (1,08 %) y `REING_30D_CDM`, 124.256 (3,03 %). Con las CDM 13 y 14 unidas serían 49.087 (1,17 %) y 130.654 (3,19 %): 3.892 y 6.398 casos más.
 - **Consecuencia:** Con la comparación literal, ninguno de los 603.423 partos con seguimiento de 30 días (CDM 14) tiene reingreso relacionado, porque la CDM 14 solo contiene partos y un parto no cuenta como reingreso (H17). Con la unión serían 6.398. Debe declararse como limitación: en las variables relacionadas, el valor 0 de los partos es un efecto de la clasificación.
 - **Reemplaza a:** D25.
+- **Completada por:** D38, del 20 de octubre de 2026: los partos quedan sin dato en las dos variables relacionadas, en vez de 0.
 - **Evidencia:** `2.2_depuracion_etiquetado/reportes/09_etiquetado.md`, sección 5.
 - **Estado:** Adoptada, por recomendación del profesor guía.
 
@@ -302,7 +309,7 @@ que tienen 60 días de seguimiento.
 - **Fundamento:** Revisión del profesor guía del 7 de octubre de 2026: no conviene transformar una inconsistencia administrativa en una identidad individual con certeza aparente.
 - **Sensibilidad:** Sin los casos con identidad ambigua quedarían 4.129.132 casos de estudio, con tasas de 2,03 %, 1,06 %, 5,79 % y 2,97 %.
 - **Completa a:** D18.
-- **Estado:** Adoptada. Pendiente de validar con profesor guía.
+- **Estado:** Adoptada. Aprobada por el profesor guía el 13 de octubre de 2026: excluir esos casos casi no cambia las tasas (a 30 días, de 5,90 % a 5,79 %) y la marca permite repetir el análisis sin ellos.
 
 ### H22 · 2026-10-08 · La regla de traslado coincide con las marcas explícitas
 - **Actividad:** 2.2
@@ -345,6 +352,7 @@ que tienen 60 días de seguimiento.
 - **Composición:** Entre 2019 y 2024, los casos de estudio de 65 años o más pasan de 22,1 % a 25,8 % y los de ingreso obstétrico, de 21,7 % a 18,2 %. La tasa sube además dentro de cada tipo de ingreso: en urgencia, de 7,39 % a 7,85 % (exploración del 8 de octubre de 2026).
 - **Consecuencia:** Es un cambio real en el tiempo. Una partición aleatoria no mide por sí sola cómo generaliza un modelo frente a ese cambio: respalda la evaluación temporal complementaria que pide el profesor guía.
 - **Completa a:** H05 de `docs/bitacora.md`.
+- **Completado por:** H28, del 20 de octubre de 2026: la calidad del identificador tampoco explica el aumento.
 - **Evidencia:** `2.2_depuracion_etiquetado/reportes/09_etiquetado.md`, secciones 2 y 7 y anexo; `2.2_depuracion_etiquetado/reportes/09_tasas_por_hospital.csv`.
 
 ### H25 · 2026-10-08 · Análisis de sensibilidad de las decisiones
@@ -364,6 +372,7 @@ que tienen 60 días de seguimiento.
 - **Actividades de 2019:** Al incluirlas, la tasa a 30 días de 2019 pasaría de 5,70 % a 6,15 % y ese año dejaría de ser comparable con los demás. Se agregarían 43.217 casos de hospitalización en urgencia (10,06 % de reingreso a 30 días) y 39.855 de hospitalización diurna (4,02 %), y cambiaría la composición clínica: la CDM 14 bajaría de 15,4 % a 14,0 % de los casos de 2019 y la CDM 11 subiría de 4,8 % a 5,9 %. Respalda mantener E04 (H09).
 - **Conclusión:** La única decisión que cambia mucho las tasas es la cirugía mayor ambulatoria. Las demás las mueven menos de 0,2 puntos.
 - **Evidencia:** `2.2_depuracion_etiquetado/scripts/11_sensibilidad.py` → `2.2_depuracion_etiquetado/reportes/11_sensibilidad.md`.
+- **Actualizado por:** H27, del 20 de octubre de 2026, con las variables relacionadas sin los partos (D38) y dos filas nuevas (traslados y derivados).
 
 ### D35 · 2026-10-08 · Tabla final de criterios de exclusión
 - **Actividad:** 2.2
@@ -390,16 +399,92 @@ que tienen 60 días de seguimiento.
 - **Criterio desactivado:** El alta voluntaria y la fuga se conservan: son 69.296 casos de estudio con más reingreso que el resto (12,69 % y 20,08 % a 30 días, frente a 5,57 % del alta a domicilio), y dejarlos fuera quitaría un grupo de mayor riesgo.
 - **Reemplaza a:** la tabla de D23.
 - **Evidencia:** `2.2_depuracion_etiquetado/reportes/08_depuracion.md`, sección 5.
-- **Estado:** Adoptada. Pendiente de validar con profesor guía.
+- **Estado:** Adoptada. El profesor guía la aprobó el 13 de octubre de 2026 a condición de incorporar los puntos 2.1 y 2.4 de su revisión, incorporados el 20 de octubre (H26, H27, D38 y D39). Los catorce criterios no cambiaron.
 
 ### D36 · 2026-10-08 · Versión del conjunto analítico, diccionario y pruebas independientes
 - **Actividad:** 2.2
 - **Decisión:** El conjunto analítico es `data/processed/grd_etiquetado.parquet`. Su versión se registra en `docs/version_conjunto_analitico.csv` con el hash SHA-256 del archivo y de lo que lo produce (tabla integrada, tablas de reglas y scripts 08 y 09). El diccionario de sus 163 columnas está en `docs/diccionario_conjunto_analitico.md`. Ambos los genera el script 12.
 - **Versión 1:** Registrada el 8 de octubre de 2026. SHA-256 `b4016246501d73a6bafa3fde20ab8b8c58e7482cbc259da8730f5b6dd70cbfe5`; 5.800.973 registros, 163 columnas y 4.192.410 casos de estudio.
+- **Versión 2:** Registrada el 20 de octubre de 2026, con D38. SHA-256 `f9b8be4065bad16dfe27a46a95db4f742024b1e817046d1d9b26e0a893b900dc`; mismos registros, columnas y casos de estudio. Respecto de la versión 1 solo cambian `REING_7D_CDM` y `REING_30D_CDM` de los partos (615.167 y 603.423 celdas, todas de 0 a sin dato).
 - **Uso:** La partición (actividad 2.3) debe comprobar que el archivo que lee tiene el hash de la última versión registrada. Si se vuelven a ejecutar los scripts 08 o 09 y el archivo cambia, hay que registrar una versión nueva.
 - **Pruebas independientes:** Los tres programas que contrastan los resultados con otro método quedan en `2.2_depuracion_etiquetado/pruebas/`. `ejecutar_pruebas.py` los ejecuta y deja `reportes/pruebas_independientes.md`.
 - **Fundamento:** Revisión del profesor guía del 7 de octubre de 2026: mantener pruebas automáticas y el versionado del conjunto analítico, y entregar el diccionario final con la versión o el hash del conjunto que se usará en la partición.
 - **Estado:** Adoptada.
+
+### H26 · 2026-10-20 · La CDM 14 solo contiene partos y las complicaciones del puerperio están en la CDM 13
+- **Actividad:** 2.2
+- **Contexto:** En su revisión del 13 de octubre de 2026 (punto 2.1), el profesor guía pidió verificar qué GRD agrupa la CDM 14 en la base: en los sistemas GRD, la categoría de embarazo, parto y puerperio suele incluir también los ingresos antes y después del parto, y si estuvieran en la CDM 14, que ninguno cuente como reingreso relacionado de un parto apuntaría a un error en la regla.
+- **Hallazgo:** En esta base, la CDM 14 tiene solo 15 GRD y todos son partos o cesáreas: los 12 hospitalarios 146101 a 146133 (cesárea; parto vaginal con esterilización o legrado; parto vaginal con otros procedimientos; parto vaginal; cada uno en tres niveles de severidad), con 640.199 egresos y los 615.167 casos de estudio de la CDM, y tres ambulatorios (147100, 147120 y 147130) con 46 egresos y ningún caso de estudio. Los ingresos del embarazo y del puerperio que no son partos están en la CDM 13: «Trastornos del postparto» (134171 a 134173, 7.433 egresos), «Trastornos del anteparto», aborto, amenaza de aborto y falso trabajo de parto.
+- **Por qué el 0:** Un parto no cuenta como reingreso (D20, D33), así que ningún reingreso puede ser de la CDM 14; y una complicación del puerperio es de la CDM 13, que con la comparación literal (D31) no coincide con la 14. No es un error de la regla: es la clasificación GRD combinada con la comparación literal.
+- **Magnitud:** De los 603.423 partos con seguimiento de 30 días, 8.686 (1,44 %) tienen un reingreso no planificado dentro de 30 días. El primero es de la CDM 13 en el 73,4 % (6.379), sobre todo «Trastornos del postparto» (134171 y 134172: 43,4 %) y «Trastornos del anteparto» (134161: 9,1 %); los diagnósticos más frecuentes son O86, O90 y O85 (infecciones y complicaciones del puerperio). Ejemplo: el egreso `20230009620` (parto vaginal, GRD 146131) reingresa a los 5 días por una sepsis puerperal (`20230594946`, O85, GRD 134171, CDM 13): vale 1 en `REING_7D` y `REING_30D` y 0 en las dos variables relacionadas.
+- **Solo la CDM 14:** Ninguna otra CDM tiene una tasa de reingreso relacionado igual a 0. La siguiente más baja es la CDM 22 (quemaduras), con 0,82 % a 30 días.
+- **Completa a:** H17, con las cifras de la cohorte final.
+- **Evidencia:** `2.2_depuracion_etiquetado/reportes/09_etiquetado.md`, sección 5 (GRD de la CDM 14 con las descripciones de la tabla maestra del DEIS, y CDM, GRD y diagnóstico del primer reingreso de los partos).
+
+### D38 · 2026-10-20 · Los partos quedan sin dato en las dos variables relacionadas
+- **Actividad:** 2.2
+- **Decisión:** Los casos de estudio de la CDM 14 (partos) quedan sin dato en `REING_7D_CDM` y `REING_30D_CDM`, igual que un caso sin seguimiento suficiente queda sin dato en las variables de 30 días. Conservan las dos variables por cualquier causa, en las que sí tienen reingresos reales (0,77 % a 7 días y 1,44 % a 30 días). Se aplica con el parámetro `cdm_sin_relacionado` = 14. Si `cdm_agrupadas` une la CDM 14 con otra, los partos vuelven a tener dato, porque entonces sí pueden tener un reingreso relacionado.
+- **Fundamento:** Revisión del profesor guía del 13 de octubre de 2026 (punto 2.1). Con la comparación literal, los partos son un cero estructural: el 14,7 % de los casos de estudio tendría 0 por construcción, un modelo acertaría en todos ellos sin aprender nada sobre el reingreso, lo que infla las métricas, y en la selección de variables la CDM 14 y los diagnósticos del parto aparecerían como importantes por esa razón. Pidió excluir los partos de la cohorte de las dos variables relacionadas, o modelarlos aparte, y reportar sus tasas sin partos.
+- **Resultado:** `REING_7D_CDM`: 45.195 de 3.577.243 casos (1,26 %); `REING_30D_CDM`: 124.256 de 3.498.460 (3,55 %). Los reingresos no cambian: solo baja el número de casos con dato. Las variables por cualquier causa, `DIAS_REING` e `ID_EGRESO_REING` quedan idénticas.
+- **Alternativa descartada:** Modelar los partos aparte. En las dos variables relacionadas no tienen ningún caso positivo (0 de 615.167), así que no hay nada que modelar.
+- **Sensibilidad:** Con los partos con valor 0, como antes, las tasas serían 1,08 % y 3,03 %. Con las CDM 13 y 14 unidas, los partos tienen dato y las tasas son 1,17 % y 3,19 % (6.398 partos con reingreso relacionado a 30 días). Ambas filas están en el reporte 11.
+- **Visto bueno:** La persona a cargo de la tesis lo aprobó el 20 de octubre de 2026 («si esto es lo que recomienda el profesor, sí»).
+- **Completa a:** D31 y H17. Se fundamenta en H26.
+- **Alcance:** Solo se aplica cuando cuentan únicamente los ingresos no planificados (`reingreso_solo_no_planificado` = SI). Si se cuenta todo ingreso, un parto también es reingreso y los partos sí pueden tener un reingreso relacionado.
+- **Evidencia:** `2.2_depuracion_etiquetado/reportes/09_etiquetado.md`, secciones 1 y 5; `2.2_depuracion_etiquetado/reportes/11_sensibilidad.md`.
+- **Estado:** Adoptada, por recomendación del profesor guía.
+
+### H27 · 2026-10-20 · Tabla de sensibilidad actualizada: partos, traslados y derivados
+- **Actividad:** 2.2
+- **Contexto:** En su revisión del 13 de octubre de 2026 (punto 2.4), el profesor guía pidió dos filas nuevas en la tabla de sensibilidad: una que una solo los traslados con marca explícita, para ver cuánto cambia la tasa a 7 días, y otra para los derivados sin continuación (D39). Con D38, además, cambian las tasas de las variables relacionadas del análisis principal.
+- **Hallazgo:** Cada fila cambia una sola decisión y vuelve a calcular las cuatro variables con las mismas funciones de los scripts 08 y 09. En las dos variables relacionadas, los partos quedan sin dato salvo en las filas que los vuelven a incluir (la de los partos con valor 0 y la de las CDM 13 y 14 unidas).
+
+  | Escenario | Casos de estudio | `REING_7D` | `REING_7D_CDM` | `REING_30D` | `REING_30D_CDM` |
+  |---|---|---|---|---|---|
+  | Análisis principal | 4.192.410 | 2,07 % | 1,26 % | 5,90 % | 3,55 % |
+  | Con las actividades que solo existen en 2019 (E04) | 4.275.385 | 2,11 % | 1,29 % | 5,99 % | 3,59 % |
+  | Con la cirugía mayor ambulatoria (E13) | 5.036.703 | 1,79 % | 1,05 % | 5,10 % | 2,94 % |
+  | Con las sesiones de tratamiento (E14) | 4.274.335 | 2,08 % | 1,24 % | 5,94 % | 3,50 % |
+  | Con los partos en las variables relacionadas, con valor 0 | 4.192.410 | 2,07 % | 1,08 % | 5,90 % | 3,03 % |
+  | Con las CDM 13 y 14 como una sola | 4.192.410 | 2,07 % | 1,17 % | 5,90 % | 3,19 % |
+  | Censura sin margen | 4.313.289 | 2,06 % | 1,26 % | 5,89 % | 3,54 % |
+  | Solo los traslados con marca explícita | 4.195.786 | 2,12 % | 1,30 % | 5,95 % | 3,59 % |
+  | Con los derivados sin continuación como casos de estudio (E07 y E08) | 4.286.199 | 2,12 % | 1,30 % | 5,98 % | 3,59 % |
+  | Sin los casos con identidad ambigua | 4.129.132 | 2,03 % | 1,25 % | 5,79 % | 3,49 % |
+
+- **Traslados:** De los 96.998 ingresos en otro hospital que la regla D19 une dentro de 7 días, 6.916 (7,1 %) no tienen marca de traslado. De ellos, 3.161 comienzan antes del alta anterior (estadías solapadas): la persona todavía no había salido, no pueden ser un reingreso con ninguna regla y siguen unidos. Exigir la marca separa los otros 3.755 (2.244 del mismo día del alta y 1.511 del día siguiente). Resultado: 3.376 casos de estudio más y 75 casos comunes con alguna variable distinta; los casos con `REING_7D` pasan de 86.609 a 88.742 (2.133 más, un 2,5 %) y la tasa, de 2,07 % a 2,12 %. El peor caso estimado en la revisión (cerca del 8 % de los reingresos a 7 días) incluía las estadías solapadas; el efecto medido es de 2,5 % y ninguna tasa cambia más de 0,05 puntos. Se mantiene la regla D19.
+- **Conclusión:** La única decisión que cambia mucho las tasas sigue siendo la cirugía mayor ambulatoria. Dejar los partos sin dato sube las tasas de las variables relacionadas (1,08 % y 3,03 % pasan a 1,26 % y 3,55 %) solo porque baja el número de casos con dato: los reingresos son los mismos. Los traslados y los derivados mueven las tasas 0,08 puntos o menos.
+- **Actualiza a:** H25.
+- **Evidencia:** `2.2_depuracion_etiquetado/scripts/11_sensibilidad.py` → `2.2_depuracion_etiquetado/reportes/11_sensibilidad.md`, secciones 1, 5, 6, 8 y 9.
+
+### D39 · 2026-10-20 · Regla de los derivados sin continuación, declarada
+- **Actividad:** 2.2
+- **Decisión:** Se declara la regla vigente desde D19 y D23. Los egresos con alta por derivación a otro hospital cuya continuación no aparece en la base (E07, 76.605) y los derivados a una institución privada (E08, 22.968) no son casos de estudio: no tienen valor en ninguna de las cuatro variables objetivo, de modo que no quedan como «sin reingreso». Sí pueden contar como reingreso de un alta anterior (95.720 de los 99.573). Un derivado cuya continuación sí aparece en la base es un tramo de traslado (E05) y su episodio sigue en el hospital de destino.
+- **Contexto:** En su revisión del 13 de octubre de 2026 (punto 2.4), el profesor guía señaló que el informe describía a estos egresos como una censura administrativa del seguimiento, pero no decía cómo entraban a las variables objetivo: si quedaran como casos de estudio con valor 0, serían falsos negativos, porque la persona siguió su atención donde la base no la ve. Pidió declarar la regla y agregar una fila que los excluya como casos de estudio. Como el análisis principal ya los excluye, la fila de sensibilidad es la inversa: los incluye.
+- **Sensibilidad:** Con E07 y E08 desactivados se agregan 93.789 casos de estudio (los demás derivados quedan fuera por criterios posteriores de la tabla). Tienen más reingreso observado que el resto (4,38 % a 7 días y 9,42 % a 30 días, frente a 2,07 % y 5,90 %), aunque parte de su seguimiento ocurre fuera de la base. Las tasas totales suben 0,05 puntos a 7 días y 0,08 a 30 días (H27).
+- **Visto bueno:** La persona a cargo de la tesis aprobó el 20 de octubre de 2026 la fila de traslados con marca y la de derivados al revés.
+- **Reafirma a:** D19 y D23 (criterios E07 y E08). Completa a H23.
+- **Evidencia:** `2.2_depuracion_etiquetado/reportes/08_depuracion.md`, sección 4; `2.2_depuracion_etiquetado/reportes/11_sensibilidad.md`, sección 9.
+- **Estado:** Adoptada.
+
+### H28 · 2026-10-20 · La calidad del identificador no explica el aumento de 2023 y 2024
+- **Actividad:** 2.2
+- **Contexto:** En su revisión del 13 de octubre de 2026 (punto 2.3), el profesor guía pidió revisar por año la proporción de identificadores ambiguos o faltantes antes de tratar el aumento de la tasa en 2023 y 2024 (H24) como un cambio real: una mejora en la calidad del identificador también hace visibles más reingresos.
+- **Hallazgo:** Por año del alta, en la tabla depurada:
+
+  | | 2019 | 2020 | 2021 | 2022 | 2023 | 2024 |
+  |---|---|---|---|---|---|---|
+  | Egresos sin identificador de paciente (E01) | 0,72 % | 0,24 % | 0,25 % | 0,32 % | 0,16 % | 0,10 % |
+  | Egresos con identificador genérico (E02) | 0,02 % | 0,10 % | 0,04 % | 0,07 % | 0,04 % | 0,01 % |
+  | Egresos con identidad ambigua | 1,61 % | 1,53 % | 1,65 % | 1,84 % | 1,67 % | 1,69 % |
+  | Casos de estudio con identidad ambigua | 1,32 % | 1,27 % | 1,52 % | 1,70 % | 1,59 % | 1,63 % |
+  | `REING_30D`, todos los casos | 5,70 % | 5,66 % | 5,62 % | 5,77 % | 6,14 % | 6,45 % |
+  | `REING_30D`, sin identidad ambigua | 5,58 % | 5,52 % | 5,53 % | 5,67 % | 6,05 % | 6,35 % |
+
+- **Interpretación:** Los egresos sin identificador bajan de 0,32 % en 2022 a 0,16 % en 2023 y 0,10 % en 2024. Si se reparten como el resto de los egresos, esa diferencia haría visibles cerca de un 0,2 % más de reingresos, del orden de 0,01 puntos de tasa, mientras la subida es de 0,37 puntos en 2023 y 0,68 en 2024. La identidad ambigua no tiene tendencia (entre 1,5 % y 1,8 % de los egresos), y sin esos casos la tasa sube igual: 5,67 %, 6,05 % y 6,35 %. En 2019, con más egresos sin identificador (0,72 %), la tasa es igual a la de 2020 a 2022.
+- **Consecuencia:** El aumento de 2023 y 2024 no se explica por cambios en la calidad del identificador. Junto con H24 (no se debe a los hospitales incorporados y ocurre dentro de cada tipo de ingreso), se trata como un cambio real en el tiempo, que es lo que mide la validación temporal (D37 y D40 de la bitácora de la 2.3).
+- **Completa a:** H24.
+- **Evidencia:** `2.2_depuracion_etiquetado/reportes/09_etiquetado.md`, sección 2 («Calidad del identificador»).
 
 ---
 
@@ -443,16 +528,38 @@ un solo comando (D36). Sobre la versión 1 del conjunto analítico se cumplen la
 - Etiquetado (19): las cuatro variables recalculadas caso por caso en los 4.192.410 casos de estudio y, como unión literal de cada alta con los ingresos posteriores, en una muestra del 4 % de los identificadores (167.627 casos de estudio); además, la tabla de las variables y la de verificación de la censura del reporte 09.
 - Análisis de sensibilidad (8): los casos de estudio y las tasas de los siete escenarios, recalculados desde las columnas del archivo sin usar las funciones de los scripts.
 
+## Verificación de las ejecuciones del 20 de octubre de 2026
+
+Los scripts 09, 11 y 12 se ejecutaron el 20 de octubre de 2026 con D38 y las dos filas nuevas de
+sensibilidad (H27 y D39); el script 08 y la tabla depurada no cambiaron. Antes de escribir, el script 09
+se probó en memoria y se comparó celda por celda con la versión 1: solo cambiaron `REING_7D_CDM` y
+`REING_30D_CDM` de los partos (615.167 y 603.423 celdas, todas de 0 a sin dato); las demás columnas
+quedaron idénticas. El script 12 registró la versión 2 del conjunto analítico (D36).
+
+En la primera ejecución del script 11, una verificación nueva falló en la pasada que cuenta todo ingreso
+(solo se usa para describir las sesiones de tratamiento): al contar todo ingreso, un parto también es
+reingreso y la exclusión de D38 no corresponde. Se corrigió para que D38 se aplique solo cuando cuentan
+únicamente los ingresos no planificados; la tabla de datos quedó idéntica byte a byte y el script 11 se
+volvió a ejecutar sin fallas.
+
+Sobre la versión 2 se cumplen las 74 comprobaciones de los contrastes independientes
+(`reportes/pruebas_independientes.md`): depuración (43), etiquetado (20; ahora incluye que los partos
+tengan dato solo donde corresponde y que su 0 haya sido obligatorio) y análisis de sensibilidad (11; los
+diez escenarios, incluidos los partos con valor 0, los traslados con marca y los derivados).
+
 ---
 
 ## Pendientes
 
 - [x] Validar con profesor guía las decisiones D18 a D26 y las de `docs/bitacora.md` que se aplican aquí (D03, D07, D08, D15 y H09). Las revisó el 7 de octubre de 2026; sus correcciones están en D30 a D36.
-- [ ] Presentar al profesor guía, el 9 de octubre de 2026, las entradas del 8 de octubre: el margen de la censura (D30), la marca de identidad ambigua (D34), la tabla final de criterios (D35) y el análisis de sensibilidad (H25).
+- [x] Presentar al profesor guía las entradas del 8 de octubre: el margen de la censura (D30), la marca de identidad ambigua (D34), la tabla final de criterios (D35) y el análisis de sensibilidad (H25). Las revisó el 13 de octubre de 2026: aprobó D30 y D34, y D35 a condición de incorporar los puntos 2.1 y 2.4 de su revisión.
+- [x] Incorporar los puntos 2.1 (partos) y 2.4 (traslados y derivados) de la revisión del 13 de octubre. Hecho el 20 de octubre de 2026: H26, H27, D38 y D39.
+- [x] Punto 2.3 de la revisión, en lo que toca a esta actividad: revisar por año los identificadores faltantes o ambiguos antes de tratar el aumento de 2023 y 2024 como un cambio real (H24). Hecho el 20 de octubre de 2026: H28 y reporte 09, sección 2.
+- [ ] Presentar al profesor guía, en el próximo avance, H26, H27, H28, D38 y D39.
 - [x] Ejecutar el script 08 sobre la carpeta de datos y confirmar las cifras de esta bitácora con su reporte. Hecho el 6 de octubre de 2026 y repetido el 8 de octubre.
 - [x] Script 09: etiquetado del reingreso (D20, D25 y D26) y tasas por año y por definición. Hecho el 6 de octubre de 2026 y repetido el 8 de octubre.
 - [x] Decidir con profesor guía si la cirugía mayor ambulatoria es caso de estudio (D23). Resuelto el 8 de octubre de 2026: no lo es (D32).
 - [x] Decidir con profesor guía si las sesiones de tratamiento son caso de estudio (H18). Resuelto el 8 de octubre de 2026: no lo son (D33).
 - [x] Confirmar con profesor guía la agrupación de las CDM 13 y 14 en el reingreso relacionado (D25). Resuelto el 8 de octubre de 2026: no se agrupan (D31).
 - [ ] Respaldar con bibliografía la regla de traslado del mismo día o el día siguiente (D19). La validación con los datos está en H22.
-- [ ] Declarar en el informe las limitaciones: los reingresos que no se ven junto al cierre del bloque (H20), los partos sin reingreso relacionado (D31), la identidad ambigua (H21), el cambio de cobertura en las derivaciones (H23) y el aumento de la tasa en 2023 y 2024 (H24).
+- [ ] Declarar en el informe las limitaciones: los reingresos que no se ven junto al cierre del bloque (H20), que las variables relacionadas no incluyen los partos (D38), la identidad ambigua (H21), el cambio de cobertura en las derivaciones (H23) y el aumento de la tasa en 2023 y 2024 (H24).
