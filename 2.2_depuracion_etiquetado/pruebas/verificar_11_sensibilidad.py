@@ -5,7 +5,10 @@ data/processed/grd_etiquetado.parquet, con recorridos simples (uno para armar lo
 para las variables objetivo) y sin usar ninguna función de los scripts 08, 09 ni 11. Compara los
 casos de estudio y las cuatro tasas de cada escenario con la tabla del reporte 11. En las variables
 relacionadas no cuentan las CDM de `cdm_sin_relacionado` (D38), salvo en los escenarios que las
-vuelven a incluir. Solo lee.
+vuelven a incluir. También contrasta los desgloses que pidió la revisión del profesor guía del 24 de
+octubre de 2026: los ingresos que deja de unir el escenario de traslados, sus altas anteriores y el
+aumento de casos con `REING_7D` (sección 8), y el criterio que deja fuera a los derivados que el
+escenario de derivados no agrega (sección 9). Solo lee.
 
 Uso (desde la carpeta Codigo):
     .venv\\Scripts\\python.exe 2.2_depuracion_etiquetado\\pruebas\\verificar_11_sensibilidad.py
@@ -179,7 +182,44 @@ def escenario(nombre: str, cambios: dict | None = None, margen: int = MARGEN, ep
         caso &= ~cumple
     resultado, con_dato = etiquetar(caso, seguible & ~continua, episodio, margen)
     print(f"  {nombre}: {int(caso.sum())} casos de estudio ({time.time() - inicio:.0f} s)", flush=True)
-    return {"caso": caso, "resultado": resultado, "con_dato": con_dato, "episodios": (episodio, continua, final)}
+    return {"caso": caso, "resultado": resultado, "con_dato": con_dato, "episodios": (episodio, continua, final),
+            "puede": seguible & ~continua, "seguible": seguible, "activo": activo, "margen": margen}
+
+
+def primer_criterio(e: dict, filas: np.ndarray, desde: str | None = None) -> np.ndarray:
+    """Primer criterio activo de la tabla (o el primero desde `desde`) que cumple cada egreso de `filas`; '' si ninguno."""
+    final = e["episodios"][2]
+    motivo = np.full(len(filas), "", dtype=object)
+    pendiente = np.ones(len(filas), dtype=bool)
+    codigos = [c["codigo"] for c in CRITERIOS]
+    for c in CRITERIOS[codigos.index(desde) if desde else 0:]:
+        if not e["activo"][c["codigo"]]:
+            continue
+        if c["codigo"] == "E05":
+            cumple = (e["seguible"] & ~final)[filas]
+        elif c["codigo"] == "E11":
+            cumple = np.nan_to_num(al_cierre[filas], nan=np.inf) < min(VENTANAS) + e["margen"]
+        else:
+            cumple = d[c["columna"]].to_numpy()[filas]
+        motivo[pendiente & cumple] = c["codigo"]
+        pendiente &= ~cumple
+    return motivo
+
+
+def filas_de_seccion(titulo: str) -> dict:
+    """Filas «| texto | valor |» de una subsección del reporte, con el valor como entero (el que va tras «=», si hay)."""
+    texto = REPORTE.read_text(encoding="utf-8")
+    if titulo not in texto:
+        return {}
+    bloque = texto.split(titulo, 1)[1].split("\n#", 1)[0]
+    filas = {}
+    for linea in bloque.splitlines():
+        celdas = [x.strip().replace("*", "") for x in linea.strip().strip("|").split("|")]
+        if len(celdas) >= 2 and re.search(r"\d", celdas[-1]) and not celdas[0].startswith("---"):
+            valor = celdas[-1].split("=")[-1].replace("−", "").replace(".", "").strip()
+            if re.fullmatch(r"\d+", valor):
+                filas[celdas[0]] = int(valor)
+    return filas
 
 
 def cifras(e: dict, columnas_resultado=(0, 1, 2, 3), filtro=None, sin_relacionado=SIN_RELACIONADO) -> tuple[int, list[float]]:
@@ -206,7 +246,7 @@ esperado = {"Análisis principal": cifras(principal),
             "Con la cirugía mayor ambulatoria": cifras(escenario("Con la cirugía mayor ambulatoria", {"E13": False}, episodios=principal["episodios"])),
             "Con las sesiones de tratamiento": cifras(escenario("Con las sesiones de tratamiento", {"E14": False}, episodios=principal["episodios"])),
             "Censura sin margen": cifras(escenario("Censura sin margen", margen=0, episodios=principal["episodios"])),
-            "Solo los traslados con marca explícita": cifras(escenario("Solo los traslados con marca explícita", exige_marca=True)),
+            "Solo los traslados con marca explícita": cifras(traslados := escenario("Solo los traslados con marca explícita", exige_marca=True)),
             "Con los derivados sin continuación como casos de estudio": cifras(escenario("Con los derivados", {"E07": False, "E08": False},
                                                                                       episodios=principal["episodios"])),
             "Con las actividades que solo existen en 2019": cifras(escenario("Con las actividades de 2019", {"E04": False}))}
@@ -225,6 +265,48 @@ for clave, (casos, tasas) in esperado.items():
     comprobar(f"{clave}: casos de estudio y las cuatro tasas iguales a los de {REPORTE.name}",
               fila[0] == casos and all(abs(x - y) < 0.0051 for x, y in zip(fila[1], tasas)), f"({casos} casos; tasas {tasas})")
 comprobar("Todas las filas de la tabla del reporte fueron contrastadas", len(del_reporte) == len(esperado), f"({len(del_reporte)} filas)")
+
+# ------------------------------------------------------------------ desgloses pedidos en la revisión del 24-10-2026
+# O3, traslados: ingresos que dejan de unirse, sus altas anteriores y el aumento de casos con REING_7D.
+p_caso, t_caso = principal["caso"], traslados["caso"]
+separados = traslados["puede"] & ~principal["puede"]
+nueva_alta = traslados["episodios"][2] & ~principal["episodios"][2]
+r7_p, r7_t = np.full(N, -1, dtype="int8"), np.full(N, -1, dtype="int8")
+r7_p[p_caso], r7_t[t_caso] = principal["resultado"][:, 0], traslados["resultado"][:, 0]
+agregados = t_caso & ~p_caso
+excluidas = pd.Series(primer_criterio(traslados, np.flatnonzero(nueva_alta & ~t_caso))).value_counts()
+sube = int((p_caso & t_caso & (r7_p == 0) & (r7_t == 1)).sum())
+esperado_t = {"separados": int(separados.sum()), "agregados": int(agregados.sum()), "uno": int((agregados & (r7_t == 1)).sum()),
+              "cero": int((agregados & (r7_t == 0)).sum()), "sube": sube,
+              "aumento": int((t_caso & (r7_t == 1)).sum()) - int((p_caso & (r7_p == 1)).sum()),
+              **{f"excluida {k}": int(v) for k, v in excluidas.items()}}
+comprobar("Traslados: cada ingreso separado deja una nueva alta final y los casos agregados son altas anteriores",
+          int(nueva_alta.sum()) == int(separados.sum()) and bool((nueva_alta[agregados]).all()) and not (p_caso & ~t_caso).any(),
+          f"({esperado_t['separados']} ingresos separados)")
+filas = filas_de_seccion("### Por qué los casos con `REING_7D`")
+del_reporte_t = {"separados": next((v for k, v in filas.items() if k.startswith("Ingresos que dejan de unirse")), None),
+                 "agregados": next((v for k, v in filas.items() if k.startswith("Casos de estudio que se agregan")), None),
+                 "uno": sum(v for k, v in filas.items() if k.startswith("… con `REING_7D` = 1")),
+                 "cero": sum(v for k, v in filas.items() if k.startswith("… con `REING_7D` = 0")),
+                 "sube": next((v for k, v in filas.items() if k.startswith("Casos que ya eran de estudio y pasan de 0 a 1")), None),
+                 "aumento": next((v for k, v in filas.items() if k.startswith("Aumento de casos")), None),
+                 **{f"excluida {re.search(r'criterio (E\d+)', k).group(1)}": v for k, v in filas.items() if k.startswith("Alta anterior que no es")}}
+comprobar(f"Traslados: el desglose de {REPORTE.name} (ingresos separados, altas excluidas por criterio, casos agregados con y sin "
+          "reingreso a 7 días, casos comunes que pasan de 0 a 1 y aumento) coincide con el recálculo",
+          del_reporte_t == esperado_t, f"({esperado_t})")
+
+# O4, derivados: criterio posterior que deja fuera a los derivados que el escenario no agrega.
+codigos = [c["codigo"] for c in CRITERIOS]
+filas_der = np.flatnonzero(np.isin(primer_criterio(principal, np.arange(N)), ["E07", "E08"]))
+siguiente = codigos[codigos.index("E08") + 1]
+fuera = pd.Series(primer_criterio(principal, filas_der, desde=siguiente)).value_counts()
+esperado_d = {"derivados": len(filas_der), "agregados": int(fuera.get("", 0)), **{k: int(v) for k, v in fuera.items() if k}}
+filas = filas_de_seccion("### Derivados que el escenario no agrega")
+del_reporte_d = {"derivados": next((v for k, v in filas.items() if k.startswith("Derivados excluidos")), None),
+                 "agregados": next((v for k, v in filas.items() if k.startswith("Se agregan")), None),
+                 **{re.search(r"por (E\d+)", k).group(1): v for k, v in filas.items() if k.startswith("Quedan fuera por")}}
+comprobar(f"Derivados: el criterio posterior que deja fuera a cada derivado no agregado, y los agregados, coinciden con {REPORTE.name}",
+          del_reporte_d == esperado_d, f"({esperado_d})")
 
 print(f"\nRESULTADO: {'todas las comprobaciones se cumplen' if todo_bien else 'HAY FALLAS'} ({time.time() - inicio:.0f} s)")
 sys.exit(0 if todo_bien else 1)

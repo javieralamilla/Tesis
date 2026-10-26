@@ -30,7 +30,7 @@ PRUEBAS = [
     ("verificar_09_etiquetado.py", "Etiquetado (script 09)",
      "Las cuatro variables objetivo de `grd_etiquetado.parquet`, de dos formas distintas, y las tablas del reporte 09."),
     ("verificar_11_sensibilidad.py", "Análisis de sensibilidad (script 11)",
-     "Casos de estudio y tasas de cada escenario de la tabla del reporte 11."),
+     "Casos de estudio y tasas de cada escenario de la tabla del reporte 11, y los desgloses de traslados y derivados de sus secciones 8 y 9."),
 ]
 
 

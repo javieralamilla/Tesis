@@ -11,6 +11,10 @@ con las CDM de `cdm_sensibilidad` como una sola, con la censura sin margen, solo
 que tienen marca explícita, con los derivados sin continuación como casos de estudio (E07 y E08) y
 sin los casos de identidad ambigua.
 
+En los escenarios de traslados y derivados, además, desglosa las cifras que la revisión del profesor
+guía del 24 de octubre de 2026 pidió explicar: por qué separar episodios suma menos reingresos que
+episodios separados (O3) y qué criterio deja fuera a los derivados que no se agregan (O4).
+
 Deja reportes/11_sensibilidad.md.
 
 Uso (desde la carpeta Codigo):
@@ -104,7 +108,8 @@ def calcular(m08, m09, originales: pd.DataFrame, df: pd.DataFrame, genericos: np
     variables = etiquetas.drop(columns="ID_EGRESO")
     caso = d["ES_CASO_ESTUDIO"].to_numpy()
     casos = pd.concat([d.loc[caso, ATRIBUTOS], variables.loc[caso]], axis=1).reset_index(drop=True)
-    todos = pd.concat([d[["ID_EGRESO", "ID_EPISODIO", "ES_CASO_ESTUDIO", "PUEDE_SER_REINGRESO"]], variables], axis=1)
+    todos = pd.concat([d[["ID_EGRESO", "ID_PERSONA", "ID_EPISODIO", "ES_CASO_ESTUDIO", "PUEDE_SER_REINGRESO"]],
+                       nuevo[["ALTA_FINAL_EPISODIO", "MOTIVO_EXCLUSION"]].reset_index(drop=True), variables], axis=1)
     return casos, todos, [texto for texto, ok in info["verificaciones"] if not ok]
 
 
@@ -172,6 +177,113 @@ def detalle_censura(principal: pd.DataFrame, casos: pd.DataFrame, variables: lis
 
 
 # ------------------------------------------------------------------ reporte
+def detalle_traslados(originales: pd.DataFrame, p: pd.DataFrame, e: pd.DataFrame, variables: list[str], par9: dict) -> dict:
+    """Desglose de los ingresos que dejan de unirse al exigir la marca de traslado (revisión del 24-10-2026, O3).
+
+    p y e: columnas de todos los egresos en el análisis principal y en el escenario, en el mismo orden.
+    Cada ingreso que deja de unirse abre un episodio; el egreso que cierra el episodio anterior (el «alta anterior»)
+    pasa a ser alta final y puede volverse caso de estudio, con el ingreso separado como su reingreso.
+    """
+    separado = e["PUEDE_SER_REINGRESO"].to_numpy() & ~p["PUEDE_SER_REINGRESO"].to_numpy()
+    nueva_alta = e["ALTA_FINAL_EPISODIO"].to_numpy() & ~p["ALTA_FINAL_EPISODIO"].to_numpy()
+    filas_b = np.flatnonzero(separado)
+    # Separaciones por episodio del análisis principal: una cadena de varios tramos puede separarse más de una vez.
+    por_episodio = pd.Series(p["ID_EPISODIO"].to_numpy()[filas_b]).value_counts().value_counts().sort_index()
+
+    # Alta anterior de cada ingreso separado: el alta final del episodio que lo precede, en el orden del script 08.
+    s = pd.DataFrame({"ID_PERSONA": e["ID_PERSONA"], "ID_EPISODIO": e["ID_EPISODIO"], "FECHA_INGRESO": originales["FECHA_INGRESO"],
+                      "FECHAALTA": originales["FECHAALTA"], "ID_EGRESO": originales["ID_EGRESO"]})
+    s = s[s["ID_EPISODIO"].notna()].sort_values(["ID_PERSONA", "FECHA_INGRESO", "FECHAALTA", "ID_EGRESO"])
+    misma_persona = s["ID_PERSONA"].shift(1).eq(s["ID_PERSONA"]).to_numpy(dtype=bool, na_value=False)
+    previo = pd.Series(np.where(misma_persona, s["ID_EPISODIO"].shift(1).to_numpy(dtype="float64", na_value=np.nan), np.nan), index=s.index)
+    episodio_previo = previo.reindex(filas_b).to_numpy()
+    final = e["ALTA_FINAL_EPISODIO"].to_numpy()
+    fila_de_final = pd.Series(np.flatnonzero(final), index=e["ID_EPISODIO"].to_numpy(dtype="float64", na_value=np.nan)[final])
+    filas_a = fila_de_final.reindex(episodio_previo).to_numpy()
+    emparejados = not np.isnan(filas_a).any()
+    filas_a = np.nan_to_num(filas_a, nan=0).astype("int64")
+
+    # El ingreso separado, ¿cuenta como reingreso no planificado? Misma regla y precedencia que el script 09 (D20, D33).
+    b = originales.iloc[filas_b]
+    parto = (b["IR_29301_COD_GRD"].str.startswith(tuple(par9["grd_parto"]), na=False).to_numpy() if par9["grd_parto"]
+             else np.zeros(len(b), dtype=bool))
+    sesion = (b["DIAGNOSTICO1"].str.startswith(tuple(par9["sesiones"]), na=False).to_numpy() if par9["sesiones"]
+              else np.zeros(len(b), dtype=bool))
+    tipo = b["TIPO_INGRESO"]
+    cuenta = tipo.isin(par9["ingresos_no_planificados"]).to_numpy() & ~parto & ~sesion
+    clase = np.select([parto, sesion, tipo.isna().to_numpy()],
+                      ["es un parto o una cesárea (GRD " + " o ".join(par9["grd_parto"]) + ")", "es una sesión de tratamiento",
+                       "no tiene tipo de ingreso"], default="es de tipo " + tipo.fillna("").astype(str).to_numpy())
+
+    corta = variables[0]                                   # la variable de la ventana más corta por cualquier causa
+    a_caso = e["ES_CASO_ESTUDIO"].to_numpy()[filas_a]
+    motivo_a = e["MOTIVO_EXCLUSION"].astype("object").to_numpy()[filas_a]
+    valor_a = e[corta].to_numpy(dtype="float64", na_value=np.nan)[filas_a]
+    con_uno = a_caso & (valor_a == 1)
+    con_cero = a_caso & (valor_a == 0)
+
+    p_caso, e_caso = p["ES_CASO_ESTUDIO"].to_numpy(), e["ES_CASO_ESTUDIO"].to_numpy()
+    agregado, comun = e_caso & ~p_caso, e_caso & p_caso
+    por_variable = {}
+    for k in variables:
+        vp = p[k].to_numpy(dtype="float64", na_value=np.nan)
+        ve = e[k].to_numpy(dtype="float64", na_value=np.nan)
+        por_variable[k] = {"agregados": int((agregado & (ve == 1)).sum()), "sube": int((comun & (vp == 0) & (ve == 1)).sum()),
+                           "baja": int((comun & (vp == 1) & (ve == 0)).sum()),
+                           "aumento": int((e_caso & (ve == 1)).sum()) - int((p_caso & (vp == 1)).sum())}
+    motivos = pd.Series(motivo_a[~a_caso]).value_counts()
+    return {
+        "separados": int(separado.sum()), "por_episodio": {int(k): int(v) for k, v in por_episodio.items()},
+        "excluidas": {str(k): int(v) for k, v in motivos.items()}, "agregados": int(a_caso.sum()), "corta": corta,
+        "uno_por_separado": int((con_uno & cuenta).sum()), "uno_por_otro": int((con_uno & ~cuenta).sum()),
+        "cero": {str(k): int(v) for k, v in pd.Series(clase[con_cero]).value_counts().items()},
+        "cero_cuenta": int((con_cero & cuenta).sum()), "sin_dato": int((a_caso & np.isnan(valor_a)).sum()),
+        "por_variable": por_variable,
+        "verificaciones": [
+            ("Desglose de traslados: cada ingreso separado tiene su propia alta anterior, y esas altas son exactamente las que "
+             "pasan a cerrar un episodio", emparejados and len(set(filas_a.tolist())) == len(filas_a)
+             and set(filas_a.tolist()) == set(np.flatnonzero(nueva_alta).tolist())),
+            ("Desglose de traslados: los casos de estudio que se agregan son exactamente las altas anteriores que no quedan "
+             "fuera por otro criterio, y ningún caso deja de serlo", int(agregado.sum()) == int(a_caso.sum())
+             and bool(agregado[filas_a[a_caso]].all()) and not (p_caso & ~e_caso).any()),
+            ("Desglose de traslados: en cada variable, los casos agregados con reingreso más los casos comunes que pasan de 0 a 1, "
+             "menos los que pasan de 1 a 0, igualan el aumento", all(v["agregados"] + v["sube"] - v["baja"] == v["aumento"]
+                                                                     for v in por_variable.values())),
+        ],
+    }
+
+
+def detalle_derivados(originales: pd.DataFrame, p: pd.DataFrame, e: pd.DataFrame, codigos: list[str], nombres: dict) -> dict:
+    """Qué criterio posterior deja fuera a los derivados que el escenario no agrega (revisión del 24-10-2026, O4).
+
+    En el escenario E07 y E08 están desactivados, así que el motivo de exclusión de cada derivado es el primer criterio
+    posterior de la tabla que cumple; los que no cumplen ninguno se agregan como casos de estudio.
+    """
+    motivo_p = p["MOTIVO_EXCLUSION"].astype("object")
+    derivado = motivo_p.isin(codigos).to_numpy()
+    motivo_e = e["MOTIVO_EXCLUSION"].astype("object")[derivado]
+    caso_e = e["ES_CASO_ESTUDIO"].to_numpy()[derivado]
+    anio = originales["ANIO_ARCHIVO"].to_numpy()[derivado]
+    fuera = {}
+    for cod in sorted(set(motivo_e.dropna())):
+        m = (motivo_e == cod).to_numpy()
+        fuera[cod] = {"nombre": nombres[cod], "total": int(m.sum()),
+                      "por_codigo": {c: int((m & (motivo_p[derivado] == c).to_numpy()).sum()) for c in codigos},
+                      "por_anio": {int(a): int(v) for a, v in pd.Series(anio[m]).value_counts().sort_index().items()}}
+    return {"derivados": int(derivado.sum()), "por_codigo": {c: int((motivo_p == c).sum()) for c in codigos},
+            "fuera": fuera, "agregados": int(caso_e.sum()),
+            "agregados_por_codigo": {c: int((caso_e & (motivo_p[derivado] == c).to_numpy()).sum()) for c in codigos},
+            "verificaciones": [("Desglose de derivados: los que quedan fuera por un criterio posterior más los que se agregan suman "
+                                "todos los derivados excluidos por " + " y ".join(codigos),
+                                sum(f["total"] for f in fuera.values()) + int(caso_e.sum()) == int(derivado.sum())
+                                and bool(motivo_e[caso_e].isna().all()) and bool(motivo_e[~caso_e].notna().all()))]}
+
+
+def inicial_minuscula(texto: str) -> str:
+    """Nombre de un criterio dentro de una frase: solo la primera letra en minúscula, para conservar siglas como GRD o Z51."""
+    return texto[:1].lower() + texto[1:]
+
+
 def fmt(n) -> str:
     return f"{int(n):,}".replace(",", ".")
 
@@ -194,7 +306,8 @@ def tasas(r: dict, variables: list[str]) -> list[str]:
     return [pct(r[k][1], r[k][0]) for k in variables]
 
 
-def escribir_reporte(escenarios: list[dict], res: dict, variables: list[str], larga: int, verificaciones: list[tuple[str, bool]]) -> None:
+def escribir_reporte(escenarios: list[dict], res: dict, variables: list[str], larga: int, verificaciones: list[tuple[str, bool]],
+                     nombre_criterio: dict) -> None:
     ruta = ACTIVIDAD.name
     principal = res[PRINCIPAL]["resumen"]
 
@@ -319,6 +432,40 @@ def escribir_reporte(escenarios: list[dict], res: dict, variables: list[str], la
                     *[[f"Casos de estudio con `{k}` (análisis principal → escenario)", cambio(k)] for k in variables],
                 ]),
             ]
+            g = d["desglose"]
+            k = g["corta"]
+            v = g["por_variable"][k]
+            suma = f"{fmt(v['agregados'])} + {fmt(v['sube'])}" + (f" − {fmt(v['baja'])}" if v["baja"] else "")
+            cadenas = "; ".join(f"{fmt(n)} con {x} {'separación' if x == 1 else 'separaciones'}" for x, n in g["por_episodio"].items())
+            partes += [
+                f"### Por qué los casos con `{k}` no aumentan tanto como los ingresos que dejan de unirse",
+                "Lo pidió explicar la revisión del profesor guía del 24 de octubre de 2026 (observación O3). Cada ingreso que deja de "
+                "unirse comienza el mismo día del alta anterior o al día siguiente, así que podría darle a esa alta un reingreso a "
+                f"{k.split('_')[1].rstrip('D')} días. No lo hace en dos situaciones: cuando el alta anterior no es caso de estudio por "
+                "otro criterio de la tabla, y cuando el ingreso separado no cuenta como reingreso no planificado (bitácora D20 y D33). "
+                "Además, unos pocos casos que ya eran de estudio ganan un reingreso: el ingreso separado cae dentro de su ventana y "
+                "antes, como continuación de un traslado, no contaba.",
+                tabla_md(["", "Cantidad"], [
+                    ["Ingresos que dejan de unirse (cada uno con su propia alta anterior)", fmt(g["separados"])],
+                    *[[f"Alta anterior que no es caso de estudio por el criterio {cod} ({inicial_minuscula(nombre_criterio[cod])})", f"−{fmt(n)}"]
+                      for cod, n in g["excluidas"].items()],
+                    ["**Casos de estudio que se agregan** (las altas anteriores)", f"**{fmt(g['agregados'])}**"],
+                    [f"… con `{k}` = 1, porque el ingreso separado es un reingreso no planificado", fmt(g["uno_por_separado"])],
+                    [f"… con `{k}` = 1 por otro ingreso no planificado dentro de la ventana (el separado no cuenta)", fmt(g["uno_por_otro"])],
+                    *[[f"… con `{k}` = 0, porque el ingreso separado {clase}", fmt(n)] for clase, n in g["cero"].items()],
+                    *([[f"… sin dato en `{k}`", fmt(g["sin_dato"])]] if g["sin_dato"] else []),
+                    [f"Casos que ya eran de estudio y pasan de 0 a 1 en `{k}`", fmt(v["sube"])],
+                    *([[f"Casos que ya eran de estudio y pasan de 1 a 0 en `{k}`", f"−{fmt(v['baja'])}"]] if v["baja"] else []),
+                    [f"**Aumento de casos con `{k}`**", f"**{suma} = {fmt(v['aumento'])}**"],
+                ]),
+                f"Las cadenas de más de dos tramos casi no influyen: los {fmt(g['separados'])} ingresos separados vienen de "
+                f"{fmt(sum(g['por_episodio'].values()))} episodios del análisis principal ({cadenas}). Cada separación tiene su propia "
+                "alta anterior, así que una cadena no reduce el aumento.",
+                "El mismo desglose en las cuatro variables:",
+                tabla_md(["Variable", "Casos agregados con reingreso", "Casos comunes de 0 a 1", "Casos comunes de 1 a 0", "Aumento"],
+                         [[f"`{x}`", fmt(w["agregados"]), fmt(w["sube"]), fmt(w["baja"]), fmt(w["aumento"])]
+                          for x, w in g["por_variable"].items()]),
+            ]
         elif e["clave"] == "derivados":
             a = d["agregados"]
             partes += [
@@ -332,6 +479,27 @@ def escribir_reporte(escenarios: list[dict], res: dict, variables: list[str], la
                 tabla_md(["", "Casos de estudio", *[f"`{k}`" for k in variables]],
                          [["Análisis principal", fmt(principal["casos"]), *tasas(principal, variables)],
                           ["Derivados que se agregan", fmt(a["casos"]), *tasas(a, variables)]]),
+            ]
+            g = d["desglose"]
+            codigos = list(g["por_codigo"])
+            larga_k = next(k for k in variables if k.startswith(f"REING_{larga}D"))
+            partes += [
+                "### Derivados que el escenario no agrega",
+                "Lo pidió explicar la revisión del profesor guía del 24 de octubre de 2026 (observación O4). En el análisis principal, "
+                f"{' y '.join(codigos)} dejan fuera {fmt(g['derivados'])} derivados ("
+                + "; ".join(f"{c}: {fmt(n)}" for c, n in g["por_codigo"].items()) + "). Al desactivar esos criterios, cada derivado "
+                "pasa al siguiente criterio de la tabla: los que cumplen alguno de los posteriores siguen fuera, por ese criterio.",
+                tabla_md(["", *codigos, "Total"], [
+                    *[[f"Quedan fuera por {cod} ({inicial_minuscula(f['nombre'])})", *[fmt(f["por_codigo"][c]) for c in codigos], fmt(f["total"])]
+                      for cod, f in g["fuera"].items()],
+                    ["**Se agregan como casos de estudio**", *[fmt(g["agregados_por_codigo"][c]) for c in codigos], f"**{fmt(g['agregados'])}**"],
+                    ["**Derivados excluidos en el análisis principal**", *[fmt(g["por_codigo"][c]) for c in codigos], f"**{fmt(g['derivados'])}**"],
+                ]),
+                "Por año del archivo, los que quedan fuera por cada criterio: "
+                + "; ".join(f"{cod}, " + ", ".join(f"{a}: {fmt(n)}" for a, n in f["por_anio"].items()) for cod, f in g["fuera"].items()) + ".",
+                f"De los {fmt(a['casos'])} derivados que se agregan, {fmt(a[larga_k][0])} tienen seguimiento suficiente para las "
+                f"variables de {larga} días; los otros {fmt(a['casos'] - a[larga_k][0])} quedan sin dato en ellas, como cualquier "
+                "caso de estudio con el alta cerca del cierre del bloque.",
             ]
         elif e["clave"] == "censura":
             partes += [
@@ -366,7 +534,8 @@ def main() -> None:
     df, _, genericos, base = m08.preparar(m08.cargar_parametros(), m08.cargar_criterios())
     originales = df[ORIGINALES].reset_index(drop=True)
 
-    res, fallidas, solo_caso = {}, [], []
+    res, fallidas, solo_caso, desgloses = {}, [], [], []
+    nombres = {c["codigo"]: c["criterio"] for c in m08.cargar_criterios()}
     principal = variables = todos_principal = None
     for e in escenarios:
         if "sin" in e:
@@ -397,9 +566,13 @@ def main() -> None:
         elif e["clave"] == "traslados":
             # Exigir la marca solo separa episodios: los ingresos que dejan de continuar uno pasan a abrir otro.
             r["detalle"] = {"nuevos_episodios": int((todos["PUEDE_SER_REINGRESO"].to_numpy()
-                                                     & ~todos_principal["PUEDE_SER_REINGRESO"].to_numpy()).sum())}
+                                                     & ~todos_principal["PUEDE_SER_REINGRESO"].to_numpy()).sum()),
+                            "desglose": detalle_traslados(originales, todos_principal, todos, variables, m09.cargar_parametros())}
+            desgloses += r["detalle"]["desglose"]["verificaciones"]
         elif e["clave"] == "derivados":
-            r["detalle"] = {"agregados": resumen(casos[~casos["ID_EGRESO"].isin(principal["ID_EGRESO"])], variables)}
+            r["detalle"] = {"agregados": resumen(casos[~casos["ID_EGRESO"].isin(principal["ID_EGRESO"])], variables),
+                            "desglose": detalle_derivados(originales, todos_principal, todos, list(e["criterios"]), nombres)}
+            desgloses += r["detalle"]["desglose"]["verificaciones"]
         if e.get("criterios") and not e.get("parametros"):
             # Un criterio que solo afecta al papel de caso de estudio no puede cambiar las variables de los demás casos.
             papel = {c["codigo"]: c["papel"] for c in m08.cargar_criterios()}
@@ -419,17 +592,22 @@ def main() -> None:
 
     # El escenario principal debe reproducir exactamente los archivos que dejaron los scripts 08 y 09.
     archivo = pq.read_table(ETIQUETADO, columns=list(todos_principal.columns)).to_pandas()
+    texto = ["MOTIVO_EXCLUSION"]                                   # columnas de texto: se comparan como texto
     iguales = (len(archivo) == len(todos_principal)
                and all((archivo[c].isna().to_numpy() == todos_principal[c].isna().to_numpy()).all()
                        and (archivo[c].to_numpy(dtype="float64", na_value=np.nan)[archivo[c].notna().to_numpy()]
                             == todos_principal[c].to_numpy(dtype="float64", na_value=np.nan)[todos_principal[c].notna().to_numpy()]).all()
-                       for c in todos_principal.columns))
+                       for c in todos_principal.columns if c not in texto)
+               and all((archivo[c].astype("object").fillna("").astype(str).to_numpy()
+                        == todos_principal[c].astype("object").fillna("").astype(str).to_numpy()).all() for c in texto))
     verificaciones = [
-        (f"El escenario principal reproduce exactamente las columnas de `{ETIQUETADO.name}` (caso de estudio, episodio y las variables objetivo)", bool(iguales)),
+        (f"El escenario principal reproduce exactamente las columnas de `{ETIQUETADO.name}` (persona, episodio, alta final, motivo de "
+         "exclusión, caso de estudio y las variables objetivo)", bool(iguales)),
         ("Las verificaciones del etiquetado (script 09) se cumplen en todos los escenarios", not fallidas),
         ("Al desactivar un criterio que solo afecta al papel de caso de estudio, los casos comunes conservan sus variables", all(solo_caso)),
+        *[(t, bool(ok)) for t, ok in desgloses],
     ]
-    escribir_reporte(escenarios, res, variables, larga, verificaciones)
+    escribir_reporte(escenarios, res, variables, larga, verificaciones, nombres)
     malas = [texto for texto, ok in verificaciones if not ok] + fallidas
     print(f"Listo en {time.time() - inicio:.0f} s. Verificaciones fallidas: {len(malas)}")
     for texto in malas:

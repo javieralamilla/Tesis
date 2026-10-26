@@ -147,6 +147,39 @@ La regla del análisis principal (bitácora D19) une al mismo episodio asistenci
 | Casos de estudio con `REING_30D` (análisis principal → escenario) | 241.953 → 244.119 (+2.166 casos, 0,9 % más) |
 | Casos de estudio con `REING_30D_CDM` (análisis principal → escenario) | 124.256 → 125.606 (+1.350 casos, 1,1 % más) |
 
+### Por qué los casos con `REING_7D` no aumentan tanto como los ingresos que dejan de unirse
+
+Lo pidió explicar la revisión del profesor guía del 24 de octubre de 2026 (observación O3). Cada ingreso que deja de unirse comienza el mismo día del alta anterior o al día siguiente, así que podría darle a esa alta un reingreso a 7 días. No lo hace en dos situaciones: cuando el alta anterior no es caso de estudio por otro criterio de la tabla, y cuando el ingreso separado no cuenta como reingreso no planificado (bitácora D20 y D33). Además, unos pocos casos que ya eran de estudio ganan un reingreso: el ingreso separado cae dentro de su ventana y antes, como continuación de un traslado, no contaba.
+
+|  | Cantidad |
+|---|---|
+| Ingresos que dejan de unirse (cada uno con su propia alta anterior) | 3.755 |
+| Alta anterior que no es caso de estudio por el criterio E13 (cirugía mayor ambulatoria) | −229 |
+| Alta anterior que no es caso de estudio por el criterio E11 (seguimiento incompleto: el alta está demasiado cerca del cierre del bloque incluso para la ventana más corta) | −101 |
+| Alta anterior que no es caso de estudio por el criterio E14 (sesión de tratamiento: diagnóstico principal Z51) | −35 |
+| Alta anterior que no es caso de estudio por el criterio E06 (alta por fallecimiento) | −11 |
+| Alta anterior que no es caso de estudio por el criterio E09 (sin GRD válido: sin código GRD o con CDM 99) | −3 |
+| **Casos de estudio que se agregan** (las altas anteriores) | **3.376** |
+| … con `REING_7D` = 1, porque el ingreso separado es un reingreso no planificado | 2.116 |
+| … con `REING_7D` = 1 por otro ingreso no planificado dentro de la ventana (el separado no cuenta) | 8 |
+| … con `REING_7D` = 0, porque el ingreso separado es de tipo PROGRAMADA | 909 |
+| … con `REING_7D` = 0, porque el ingreso separado es un parto o una cesárea (GRD 146 o 147) | 317 |
+| … con `REING_7D` = 0, porque el ingreso separado es una sesión de tratamiento | 24 |
+| … con `REING_7D` = 0, porque el ingreso separado no tiene tipo de ingreso | 2 |
+| Casos que ya eran de estudio y pasan de 0 a 1 en `REING_7D` | 9 |
+| **Aumento de casos con `REING_7D`** | **2.124 + 9 = 2.133** |
+
+Las cadenas de más de dos tramos casi no influyen: los 3.755 ingresos separados vienen de 3.719 episodios del análisis principal (3.684 con 1 separación; 34 con 2 separaciones; 1 con 3 separaciones). Cada separación tiene su propia alta anterior, así que una cadena no reduce el aumento.
+
+El mismo desglose en las cuatro variables:
+
+| Variable | Casos agregados con reingreso | Casos comunes de 0 a 1 | Casos comunes de 1 a 0 | Aumento |
+|---|---|---|---|---|
+| `REING_7D` | 2.124 | 9 | 0 | 2.133 |
+| `REING_7D_CDM` | 1.296 | 5 | 0 | 1.301 |
+| `REING_30D` | 2.117 | 49 | 0 | 2.166 |
+| `REING_30D_CDM` | 1.300 | 50 | 0 | 1.350 |
+
 ## 9. Con los derivados sin continuación como casos de estudio
 
 Criterio E07: Alta por derivación a otro hospital.
@@ -162,6 +195,23 @@ Casos de estudio que el escenario agrega (los derivados) y sus tasas:
 | Análisis principal | 4.192.410 | 2,07 % | 1,26 % | 5,90 % | 3,55 % |
 | Derivados que se agregan | 93.789 | 4,38 % | 2,66 % | 9,42 % | 5,20 % |
 
+### Derivados que el escenario no agrega
+
+Lo pidió explicar la revisión del profesor guía del 24 de octubre de 2026 (observación O4). En el análisis principal, E07 y E08 dejan fuera 99.573 derivados (E07: 76.605; E08: 22.968). Al desactivar esos criterios, cada derivado pasa al siguiente criterio de la tabla: los que cumplen alguno de los posteriores siguen fuera, por ese criterio.
+
+|  | E07 | E08 | Total |
+|---|---|---|---|
+| Quedan fuera por E09 (sin GRD válido: sin código GRD o con CDM 99) | 52 | 15 | 67 |
+| Quedan fuera por E11 (seguimiento incompleto: el alta está demasiado cerca del cierre del bloque incluso para la ventana más corta) | 3.505 | 726 | 4.231 |
+| Quedan fuera por E13 (cirugía mayor ambulatoria) | 1.087 | 194 | 1.281 |
+| Quedan fuera por E14 (sesión de tratamiento: diagnóstico principal Z51) | 153 | 52 | 205 |
+| **Se agregan como casos de estudio** | 71.808 | 21.981 | **93.789** |
+| **Derivados excluidos en el análisis principal** | 76.605 | 22.968 | **99.573** |
+
+Por año del archivo, los que quedan fuera por cada criterio: E09, 2019: 10, 2020: 11, 2021: 14, 2022: 12, 2023: 9, 2024: 11; E11, 2020: 1.865, 2024: 2.366; E13, 2019: 257, 2020: 295, 2021: 343, 2022: 127, 2023: 138, 2024: 121; E14, 2019: 58, 2020: 43, 2021: 27, 2022: 18, 2023: 24, 2024: 35.
+
+De los 93.789 derivados que se agregan, 91.594 tienen seguimiento suficiente para las variables de 30 días; los otros 2.195 quedan sin dato en ellas, como cualquier caso de estudio con el alta cerca del cierre del bloque.
+
 ## 10. Sin los casos con identidad ambigua
 
 Casos de estudio del análisis principal según la columna `IDENTIDAD_AMBIGUA` (reporte 08, sección 3):
@@ -175,6 +225,10 @@ Una diferencia entre los dos grupos no prueba por sí sola que haya reingresos f
 
 ## 11. Verificaciones
 
-- El escenario principal reproduce exactamente las columnas de `grd_etiquetado.parquet` (caso de estudio, episodio y las variables objetivo): **sí**.
+- El escenario principal reproduce exactamente las columnas de `grd_etiquetado.parquet` (persona, episodio, alta final, motivo de exclusión, caso de estudio y las variables objetivo): **sí**.
 - Las verificaciones del etiquetado (script 09) se cumplen en todos los escenarios: **sí**.
 - Al desactivar un criterio que solo afecta al papel de caso de estudio, los casos comunes conservan sus variables: **sí**.
+- Desglose de traslados: cada ingreso separado tiene su propia alta anterior, y esas altas son exactamente las que pasan a cerrar un episodio: **sí**.
+- Desglose de traslados: los casos de estudio que se agregan son exactamente las altas anteriores que no quedan fuera por otro criterio, y ningún caso deja de serlo: **sí**.
+- Desglose de traslados: en cada variable, los casos agregados con reingreso más los casos comunes que pasan de 0 a 1, menos los que pasan de 1 a 0, igualan el aumento: **sí**.
+- Desglose de derivados: los que quedan fuera por un criterio posterior más los que se agregan suman todos los derivados excluidos por E07 y E08: **sí**.

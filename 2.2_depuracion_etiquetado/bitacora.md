@@ -13,7 +13,11 @@ En su revisión del 13 de octubre aprobó D30 y D34, y aprobó la tabla de crite
 incorporar dos puntos: los partos en las variables relacionadas (punto 2.1 de esa revisión) y la
 sensibilidad de las reglas de traslado y de derivación (punto 2.4). Las entradas del 20 de octubre
 (H26, H27, D38 y D39) los incorporan; H28 responde a otro punto de la misma revisión (2.3), sobre la
-calidad del identificador por año. Cada exclusión se puede activar o desactivar en
+calidad del identificador por año. En su revisión del 24 de octubre dio por subsanados esos puntos y
+aprobó D38 y D39; pidió explicar dos cifras de la sensibilidad, que se agregaron el 26 de octubre: por
+qué exigir la marca de traslado suma menos reingresos que episodios separa (observación O3, H29) y qué
+criterio deja fuera a los derivados que la fila de sensibilidad no agrega (observación O4, D39). Cada
+exclusión se puede activar o desactivar en
 `reglas/criterios_exclusion.csv` y cada umbral se puede cambiar en `reglas/parametros.csv`, sin
 modificar el código.
 
@@ -399,7 +403,7 @@ que tienen 60 días de seguimiento, y las dos relacionadas no incluyen los parto
 - **Criterio desactivado:** El alta voluntaria y la fuga se conservan: son 69.296 casos de estudio con más reingreso que el resto (12,69 % y 20,08 % a 30 días, frente a 5,57 % del alta a domicilio), y dejarlos fuera quitaría un grupo de mayor riesgo.
 - **Reemplaza a:** la tabla de D23.
 - **Evidencia:** `2.2_depuracion_etiquetado/reportes/08_depuracion.md`, sección 5.
-- **Estado:** Adoptada. El profesor guía la aprobó el 13 de octubre de 2026 a condición de incorporar los puntos 2.1 y 2.4 de su revisión, incorporados el 20 de octubre (H26, H27, D38 y D39). Los catorce criterios no cambiaron.
+- **Estado:** Adoptada. El profesor guía la aprobó el 13 de octubre de 2026 a condición de incorporar los puntos 2.1 y 2.4 de su revisión, incorporados el 20 de octubre (H26, H27, D38 y D39). Los catorce criterios no cambiaron. En su revisión del 24 de octubre de 2026 dio por subsanados los dos puntos.
 
 ### D36 · 2026-10-08 · Versión del conjunto analítico, diccionario y pruebas independientes
 - **Actividad:** 2.2
@@ -432,7 +436,7 @@ que tienen 60 días de seguimiento, y las dos relacionadas no incluyen los parto
 - **Completa a:** D31 y H17. Se fundamenta en H26.
 - **Alcance:** Solo se aplica cuando cuentan únicamente los ingresos no planificados (`reingreso_solo_no_planificado` = SI). Si se cuenta todo ingreso, un parto también es reingreso y los partos sí pueden tener un reingreso relacionado.
 - **Evidencia:** `2.2_depuracion_etiquetado/reportes/09_etiquetado.md`, secciones 1 y 5; `2.2_depuracion_etiquetado/reportes/11_sensibilidad.md`.
-- **Estado:** Adoptada, por recomendación del profesor guía.
+- **Estado:** Adoptada, por recomendación del profesor guía. Aprobada por el profesor guía el 24 de octubre de 2026, con la unión de las CDM 13 y 14 como sensibilidad: considera completa la verificación de la CDM 14 y correcta la decisión.
 
 ### H27 · 2026-10-20 · Tabla de sensibilidad actualizada: partos, traslados y derivados
 - **Actividad:** 2.2
@@ -455,6 +459,7 @@ que tienen 60 días de seguimiento, y las dos relacionadas no incluyen los parto
 - **Traslados:** De los 96.998 ingresos en otro hospital que la regla D19 une dentro de 7 días, 6.916 (7,1 %) no tienen marca de traslado. De ellos, 3.161 comienzan antes del alta anterior (estadías solapadas): la persona todavía no había salido, no pueden ser un reingreso con ninguna regla y siguen unidos. Exigir la marca separa los otros 3.755 (2.244 del mismo día del alta y 1.511 del día siguiente). Resultado: 3.376 casos de estudio más y 75 casos comunes con alguna variable distinta; los casos con `REING_7D` pasan de 86.609 a 88.742 (2.133 más, un 2,5 %) y la tasa, de 2,07 % a 2,12 %. El peor caso estimado en la revisión (cerca del 8 % de los reingresos a 7 días) incluía las estadías solapadas; el efecto medido es de 2,5 % y ninguna tasa cambia más de 0,05 puntos. Se mantiene la regla D19.
 - **Conclusión:** La única decisión que cambia mucho las tasas sigue siendo la cirugía mayor ambulatoria. Dejar los partos sin dato sube las tasas de las variables relacionadas (1,08 % y 3,03 % pasan a 1,26 % y 3,55 %) solo porque baja el número de casos con dato: los reingresos son los mismos. Los traslados y los derivados mueven las tasas 0,08 puntos o menos.
 - **Actualiza a:** H25.
+- **Completada por:** H29 (26 de octubre de 2026), que explica por qué los 3.755 episodios separados suman 2.133 casos con `REING_7D`, y D39, con los derivados que la fila de sensibilidad no agrega.
 - **Evidencia:** `2.2_depuracion_etiquetado/scripts/11_sensibilidad.py` → `2.2_depuracion_etiquetado/reportes/11_sensibilidad.md`, secciones 1, 5, 6, 8 y 9.
 
 ### D39 · 2026-10-20 · Regla de los derivados sin continuación, declarada
@@ -462,10 +467,22 @@ que tienen 60 días de seguimiento, y las dos relacionadas no incluyen los parto
 - **Decisión:** Se declara la regla vigente desde D19 y D23. Los egresos con alta por derivación a otro hospital cuya continuación no aparece en la base (E07, 76.605) y los derivados a una institución privada (E08, 22.968) no son casos de estudio: no tienen valor en ninguna de las cuatro variables objetivo, de modo que no quedan como «sin reingreso». Sí pueden contar como reingreso de un alta anterior (95.720 de los 99.573). Un derivado cuya continuación sí aparece en la base es un tramo de traslado (E05) y su episodio sigue en el hospital de destino.
 - **Contexto:** En su revisión del 13 de octubre de 2026 (punto 2.4), el profesor guía señaló que el informe describía a estos egresos como una censura administrativa del seguimiento, pero no decía cómo entraban a las variables objetivo: si quedaran como casos de estudio con valor 0, serían falsos negativos, porque la persona siguió su atención donde la base no la ve. Pidió declarar la regla y agregar una fila que los excluya como casos de estudio. Como el análisis principal ya los excluye, la fila de sensibilidad es la inversa: los incluye.
 - **Sensibilidad:** Con E07 y E08 desactivados se agregan 93.789 casos de estudio (los demás derivados quedan fuera por criterios posteriores de la tabla). Tienen más reingreso observado que el resto (4,38 % a 7 días y 9,42 % a 30 días, frente a 2,07 % y 5,90 %), aunque parte de su seguimiento ocurre fuera de la base. Las tasas totales suben 0,05 puntos a 7 días y 0,08 a 30 días (H27).
+- **Derivados que no se agregan** (agregado el 26 de octubre de 2026, observación O4 de la revisión del 24 de octubre): De los 99.573 derivados, 5.784 no se agregan, porque al desactivar E07 y E08 cada derivado pasa al siguiente criterio de la tabla y estos cumplen alguno:
+
+  | Criterio que los deja fuera | E07 | E08 | Total |
+  |---|---|---|---|
+  | E11, seguimiento incompleto: alta a menos de 37 días del cierre del bloque (1.865 en 2020 y 2.366 en 2024) | 3.505 | 726 | 4.231 |
+  | E13, cirugía mayor ambulatoria | 1.087 | 194 | 1.281 |
+  | E14, sesión de tratamiento (Z51) | 153 | 52 | 205 |
+  | E09, sin GRD válido | 52 | 15 | 67 |
+  | **No quedan fuera: se agregan como casos de estudio** | **71.808** | **21.981** | **93.789** |
+  | **Total de derivados excluidos en el análisis principal** | **76.605** | **22.968** | **99.573** |
+
+  La mayoría (4.231, el 73 %) queda fuera por falta de seguimiento y el resto por los mismos criterios que se aplican a cualquier alta. De los 93.789 que se agregan, 2.195 tienen el alta entre 37 y 59 días antes del cierre: tienen las variables de 7 días y quedan sin dato en las de 30, como cualquier caso de estudio en esa situación (D30). El desglose está en la sección 9 del reporte 11.
 - **Visto bueno:** La persona a cargo de la tesis aprobó el 20 de octubre de 2026 la fila de traslados con marca y la de derivados al revés.
 - **Reafirma a:** D19 y D23 (criterios E07 y E08). Completa a H23.
 - **Evidencia:** `2.2_depuracion_etiquetado/reportes/08_depuracion.md`, sección 4; `2.2_depuracion_etiquetado/reportes/11_sensibilidad.md`, sección 9.
-- **Estado:** Adoptada.
+- **Estado:** Adoptada. Aprobada por el profesor guía el 24 de octubre de 2026, que pidió explicar la diferencia de 5.784 casos entre los derivados excluidos y los agregados (observación O4): se agregó el 26 de octubre, en el campo «Derivados que no se agregan».
 
 ### H28 · 2026-10-20 · La calidad del identificador no explica el aumento de 2023 y 2024
 - **Actividad:** 2.2
@@ -485,6 +502,28 @@ que tienen 60 días de seguimiento, y las dos relacionadas no incluyen los parto
 - **Consecuencia:** El aumento de 2023 y 2024 no se explica por cambios en la calidad del identificador. Junto con H24 (no se debe a los hospitales incorporados y ocurre dentro de cada tipo de ingreso), se trata como un cambio real en el tiempo, que es lo que mide la validación temporal (D37 y D40 de la bitácora de la 2.3).
 - **Completa a:** H24.
 - **Evidencia:** `2.2_depuracion_etiquetado/reportes/09_etiquetado.md`, sección 2 («Calidad del identificador»).
+
+### H29 · 2026-10-26 · Por qué exigir la marca de traslado suma menos reingresos que episodios separa
+- **Actividad:** 2.2
+- **Contexto:** En su revisión del 24 de octubre de 2026 (observación O3), el profesor guía señaló que, al exigir la marca de traslado (H27), se separan 3.755 episodios que antes quedaban unidos, pero los casos con `REING_7D` suben solo en 2.133 (de 86.609 a 88.742) y los casos de estudio, en 3.376. Como cada episodio separado comienza dentro de los 7 días posteriores a un alta, esperaba un aumento cercano a 3.755, y planteó tres posibles causas: altas anteriores que ya tenían un reingreso, cadenas de más de dos tramos o criterios de exclusión. Pidió agregar el desglose al reporte 11.
+- **Hallazgo:** Cada ingreso que deja de unirse tiene su propia alta anterior, que pasa a cerrar un episodio. Ninguna de esas altas era caso de estudio en el análisis principal (eran tramos de un traslado, E05), así que ninguna «ya tenía» un reingreso. El aumento es menor por dos razones: parte de las altas anteriores queda fuera por otro criterio, y un tercio de los ingresos separados no cuenta como reingreso no planificado.
+
+  | | Cantidad |
+  |---|---|
+  | Ingresos que dejan de unirse | 3.755 |
+  | Alta anterior que no es caso de estudio por otro criterio: E13 (229), E11 (101), E14 (35), E06 (11) y E09 (3) | −379 |
+  | **Casos de estudio que se agregan** | **3.376** |
+  | … con `REING_7D` = 1, porque el ingreso separado es un reingreso no planificado | 2.116 |
+  | … con `REING_7D` = 1 por otro ingreso no planificado dentro de los 7 días | 8 |
+  | … con `REING_7D` = 0: el ingreso separado es programado (909), un parto o una cesárea (317), una sesión de tratamiento (24) o no tiene tipo de ingreso (2) | 1.252 |
+  | Casos que ya eran de estudio y pasan de 0 a 1 en `REING_7D` | 9 |
+  | **Aumento** de casos con `REING_7D` | **2.124 + 9 = 2.133** |
+
+- **Las tres causas que planteó la revisión:** Las cadenas casi no influyen: los 3.755 ingresos vienen de 3.719 episodios (34 con dos separaciones y 1 con tres), y cada separación tiene su propia alta anterior, así que una cadena no reduce el aumento. Los criterios de exclusión explican 379 casos, sobre todo cirugía mayor ambulatoria seguida de una hospitalización en otro hospital (229). Lo que más pesa es otra causa: en 1.252 de los casos agregados, el ingreso separado es programado, un parto o una sesión de tratamiento, que nunca cuentan como reingreso no planificado (D20 y D33). Por ejemplo, una mujer que pasa a otro hospital para el parto el mismo día o al día siguiente: con la marca exigida, su alta anterior se vuelve caso de estudio, pero el parto no es un reingreso.
+- **Los 75 casos comunes de H27:** Son los que ganan un reingreso en alguna variable (9 en `REING_7D`, 5 en `REING_7D_CDM`, 49 en `REING_30D` y 50 en `REING_30D_CDM`), porque el ingreso separado cae en su ventana y antes, como continuación de un traslado, no contaba. Ninguno pierde un reingreso.
+- **Conclusión:** El efecto de exigir la marca sigue siendo pequeño (2,5 % más casos con `REING_7D`) y está explicado caso por caso. Se mantiene la regla D19.
+- **Completa a:** H27.
+- **Evidencia:** `2.2_depuracion_etiquetado/scripts/11_sensibilidad.py` → `2.2_depuracion_etiquetado/reportes/11_sensibilidad.md`, sección 8 («Por qué los casos con `REING_7D` no aumentan tanto como los ingresos que dejan de unirse»), con el desglose en las cuatro variables; contraste independiente en `pruebas/verificar_11_sensibilidad.py`.
 
 ---
 
@@ -547,6 +586,21 @@ Sobre la versión 2 se cumplen las 74 comprobaciones de los contrastes independi
 tengan dato solo donde corresponde y que su 0 haya sido obligatorio) y análisis de sensibilidad (11; los
 diez escenarios, incluidos los partos con valor 0, los traslados con marca y los derivados).
 
+## Verificación de la ejecución del 26 de octubre de 2026
+
+El script 11 se modificó para responder a las observaciones O3 y O4 de la revisión del 24 de octubre
+(H29 y D39) y se volvió a ejecutar con el reporte en una carpeta temporal, sin fallas en sus siete
+verificaciones (cuatro nuevas, que comprueban que cada desglose suma exactamente lo que explica). El
+reporte nuevo se comparó con el anterior: solo se agregaron las dos subsecciones y las verificaciones, y
+las tablas y tasas de los diez escenarios quedaron idénticas. Los scripts 08, 09 y 12 no se ejecutaron:
+los archivos de datos y la versión 2 del conjunto analítico no cambian.
+
+Sobre la versión 2 se cumplen las 77 comprobaciones de los contrastes independientes
+(`reportes/pruebas_independientes.md`): depuración (43), etiquetado (20) y análisis de sensibilidad (14).
+Las tres nuevas recalculan por otro camino los ingresos que separa el escenario de traslados, el criterio
+que deja fuera a cada alta anterior, el aumento de casos con `REING_7D`, y el criterio posterior que deja
+fuera a cada derivado no agregado, y los comparan con las tablas del reporte 11.
+
 ---
 
 ## Pendientes
@@ -555,7 +609,9 @@ diez escenarios, incluidos los partos con valor 0, los traslados con marca y los
 - [x] Presentar al profesor guía las entradas del 8 de octubre: el margen de la censura (D30), la marca de identidad ambigua (D34), la tabla final de criterios (D35) y el análisis de sensibilidad (H25). Las revisó el 13 de octubre de 2026: aprobó D30 y D34, y D35 a condición de incorporar los puntos 2.1 y 2.4 de su revisión.
 - [x] Incorporar los puntos 2.1 (partos) y 2.4 (traslados y derivados) de la revisión del 13 de octubre. Hecho el 20 de octubre de 2026: H26, H27, D38 y D39.
 - [x] Punto 2.3 de la revisión, en lo que toca a esta actividad: revisar por año los identificadores faltantes o ambiguos antes de tratar el aumento de 2023 y 2024 como un cambio real (H24). Hecho el 20 de octubre de 2026: H28 y reporte 09, sección 2.
-- [ ] Presentar al profesor guía, en el próximo avance, H26, H27, H28, D38 y D39.
+- [x] Presentar al profesor guía, en el próximo avance, H26, H27, H28, D38 y D39. Los revisó el 24 de octubre de 2026: aprobó D38 y D39 y pidió explicar dos cifras de la sensibilidad (observaciones O3 y O4).
+- [x] Explicar las dos cifras de la revisión del 24 de octubre: el aumento de casos con `REING_7D` al exigir la marca de traslado (O3, H29 y reporte 11, sección 8) y los derivados que la fila de sensibilidad no agrega (O4, D39 y reporte 11, sección 9). Hecho el 26 de octubre de 2026.
+- [ ] Presentar al profesor guía, en el próximo avance, H29 y el agregado a D39.
 - [x] Ejecutar el script 08 sobre la carpeta de datos y confirmar las cifras de esta bitácora con su reporte. Hecho el 6 de octubre de 2026 y repetido el 8 de octubre.
 - [x] Script 09: etiquetado del reingreso (D20, D25 y D26) y tasas por año y por definición. Hecho el 6 de octubre de 2026 y repetido el 8 de octubre.
 - [x] Decidir con profesor guía si la cirugía mayor ambulatoria es caso de estudio (D23). Resuelto el 8 de octubre de 2026: no lo es (D32).

@@ -2,7 +2,7 @@
 
 Registro de los hallazgos y decisiones de la actividad 2.3 de la Carta Gantt. Continúa la numeración
 de las bitácoras anteriores (`docs/bitacora.md` y `2.2_depuracion_etiquetado/bitacora.md`): aquí están
-el hallazgo H19 y las decisiones D27 a D29, D37 y D40 a D42. Una entrada no se borra: si una decisión cambia,
+el hallazgo H19 y las decisiones D27 a D29, D37 y D40 a D44. Una entrada no se borra: si una decisión cambia,
 se agrega una nueva entrada que la reemplaza y se indica en el campo **Estado**.
 
 Esta bitácora se reescribió el 8 de octubre de 2026. La versión del 6 de octubre no llegó a
@@ -17,6 +17,12 @@ incorporar dos puntos de su revisión: la validación temporal informada en tres
 las métricas y la calibración (punto 2.3). Los dos quedaron incorporados el 20 de octubre (D40 y
 D41). Ese día la partición también se volvió a ejecutar sobre la versión 2 del conjunto analítico
 (D38 de la bitácora de la 2.2), con el mismo reparto de identificadores (versión 2 de la partición, D29).
+
+En su revisión del 24 de octubre de 2026 el profesor guía dio por subsanados los dos puntos y aprobó D40 a
+D42, dos de ellas con un ajuste: el intercepto de calibración se estima con el logit de la probabilidad
+predicha como *offset* (observación O1) y la historia cortada se trata en el entrenamiento (observación
+O2). Los dos ajustes quedaron como D43 y D44 el 26 de octubre, antes de modelar. Consideró que nada impide
+seguir con la Etapa 3 del procedimiento (ingeniería de variables; actividad 3.1 de la Carta Gantt).
 
 **Tipos de entrada:** `H` = hallazgo (algo que se observó en los datos),
 `D` = decisión (algo que se resolvió hacer).
@@ -34,8 +40,8 @@ D41). Ese día la partición también se volvió a ejecutar sobre la versión 2 
 | Reserva | D29 | El conjunto de prueba queda en `data/reserva/`, como archivo de solo lectura y con su hash registrado. No se abre hasta la evaluación final. |
 | Esquema de validación | D37 | Validación cruzada estratificada de cinco particiones, agrupada por paciente, dentro del conjunto de desarrollo; validación temporal interna; una sola evaluación final en el conjunto de prueba. |
 | Validación temporal en tres grupos | D40 | Se informa con todos los casos de 2023 y 2024, solo con los de pacientes nuevos (sin ningún egreso en 2021 ni 2022) y solo con los de pacientes ya vistos. Los grupos quedan fijados en `validacion_temporal.parquet` (script 13). |
-| Métricas | D41 | Área bajo la curva de precisión y exhaustividad junto a la prevalencia, área bajo la curva ROC, puntaje de Brier junto al de referencia y calibración (intercepto y pendiente), con intervalos al 95 % por remuestreo de pacientes; recalibración de Platt si se equilibran las clases. |
-| Variables de historia (Etapa 3) | D42 | Solo egresos anteriores al ingreso índice, en una ventana de 12 meses. Se marcan los casos cuya ventana empieza antes del inicio de su bloque (todo 2019 y todo 2021). |
+| Métricas | D41, D43 | Área bajo la curva de precisión y exhaustividad junto a la prevalencia, área bajo la curva ROC, puntaje de Brier junto al de referencia y calibración, con intervalos al 95 % por remuestreo de pacientes; recalibración de Platt si se equilibran las clases. La pendiente de calibración sale de una regresión logística sobre el logit de la probabilidad predicha, y el intercepto, de otra con ese logit como *offset* (D43). |
+| Variables de historia (Etapa 3) | D42, D44 | Solo egresos anteriores al ingreso índice, en una ventana de 12 meses. Se marcan los casos cuya ventana empieza antes del inicio de su bloque (todo 2019 y todo 2021); la marca es una variable más del modelo, y una sensibilidad entrena solo con 2020 y 2022 (D44). |
 
 ---
 
@@ -129,7 +135,7 @@ D41). Ese día la partición también se volvió a ejecutar sobre la versión 2 
 - **Alternativa:** Contar solo los casos de estudio de 2021 y 2022 (`paciente_visto_egresos` = CASOS): serían 218.041 casos de pacientes ya vistos (18,4 %).
 - **Visto bueno:** La persona a cargo de la tesis lo aprobó el 20 de octubre de 2026, por ser lo que indica la revisión.
 - **Evidencia:** `2.3_validacion_particion/scripts/13_validacion_temporal.py` → `2.3_validacion_particion/reportes/13_validacion_temporal.md`; contraste independiente en `pruebas/verificar_13_validacion_temporal.py` (9 comprobaciones, sin fallas).
-- **Estado:** Adoptada, por recomendación del profesor guía.
+- **Estado:** Adoptada, por recomendación del profesor guía. Aprobada por el profesor guía el 24 de octubre de 2026: los tres grupos quedan fijados en un archivo común para todos los modelos y la limitación de los pacientes vistos en 2019 y 2020 con otro identificador está declarada.
 
 ### D41 · 2026-10-20 · Métricas de evaluación, intervalos y recalibración
 - **Actividad:** 2.3
@@ -153,7 +159,8 @@ D41). Ese día la partición también se volvió a ejecutar sobre la versión 2 
 - **Fundamento:** Revisión del profesor guía del 13 de octubre de 2026 (punto 2.3): con tasas tan bajas la exactitud no sirve y una sola métrica de discriminación no alcanza; la tasa sube en 2023 y 2024, así que un modelo entrenado con 2019–2022 tenderá a subestimar el riesgo en la validación temporal, lo que mide el intercepto; y equilibrar las clases desplaza las probabilidades. El profesor indicó las métricas, los intervalos por remuestreo de pacientes y la recalibración con datos de validación; las 1.000 repeticiones y el método de Platt son la forma concreta de aplicarlos.
 - **Visto bueno:** La persona a cargo de la tesis lo aprobó el 20 de octubre de 2026, por ser lo que indica la revisión.
 - **Completa a:** D37. La revisión de la calidad del identificador por año que pide el mismo punto está en H28 de la bitácora de la 2.2.
-- **Estado:** Adoptada, por recomendación del profesor guía.
+- **Precisada por:** D43 (26 de octubre de 2026): el intercepto de calibración ya no se toma de la misma regresión que la pendiente, sino de una segunda regresión con el logit de la probabilidad predicha como *offset*. El resto de esta entrada no cambia.
+- **Estado:** Adoptada, por recomendación del profesor guía. Aprobada por el profesor guía el 24 de octubre de 2026 con un ajuste en el intercepto de calibración (observación O1 de su revisión), incorporado en D43.
 
 ### D42 · 2026-10-20 · Variables de historia: solo el pasado, ventana de 12 meses y marca de ventana cortada
 - **Actividad:** 2.3 (se aplica en la Etapa 3 del procedimiento de la propuesta, actividad 3.1 de la Carta Gantt)
@@ -167,6 +174,45 @@ D41). Ese día la partición también se volvió a ejecutar sobre la versión 2 
 - **Aplicación:** En la Etapa 3 (actividad 3.1), junto con las variables de historia. La marca depende solo de la fecha del ingreso índice y del bloque, así que no hace falta cambiar ahora el conjunto analítico ni el conjunto de prueba sellado.
 - **Visto bueno:** La persona a cargo de la tesis lo aprobó el 20 de octubre de 2026 («sí, hazlo como lo sugiere el profesor»).
 - **Precisa a:** la advertencia de D29 y la de H18 de la bitácora de la 2.2, que hablaban de los egresos anteriores al alta.
+- **Completada por:** D44 (26 de octubre de 2026): la marca de ventana cortada es además una variable del modelo, y una sensibilidad entrena solo con 2020 y 2022.
+- **Estado:** Adoptada, por recomendación del profesor guía. Aprobada por el profesor guía el 24 de octubre de 2026 con un ajuste sobre la historia cortada en el entrenamiento (observación O2 de su revisión), incorporado en D44.
+
+### D43 · 2026-10-26 · El intercepto de calibración se estima con el logit como offset
+- **Actividad:** 2.3 (se aplica en cada evaluación de los modelos: validación cruzada, validación temporal y evaluación final)
+- **Decisión:** La calibración se resume con dos números, cada uno estimado con su propia regresión logística sobre las predicciones que se evalúan (p̂ es la probabilidad predicha y logit(p̂) = ln(p̂ / (1 − p̂))):
+  - **Pendiente** (ideal 1): regresión del resultado observado (0 o 1) sobre logit(p̂), con intercepto libre: logit P(reingreso) = a + b · logit(p̂). La pendiente es b. Menor que 1 indica predicciones demasiado extremas (el modelo exagera las diferencias entre pacientes); mayor que 1, demasiado tímidas.
+  - **Intercepto** o calibración global (ideal 0): regresión con logit(p̂) como *offset*, es decir, con su coeficiente fijo en 1, y solo el intercepto libre: logit P(reingreso) = a + logit(p̂). El intercepto es a. Positivo indica que el modelo subestima el riesgo; negativo, que lo sobreestima.
+  - Los intervalos de confianza de los dos números se calculan como los de las demás métricas (D41).
+- **Fundamento:** Revisión del profesor guía del 24 de octubre de 2026 (observación O1), que cita a Van Calster, McLernon, van Smeden, Wynants y Steyerberg (2019), «Calibration: the Achilles heel of predictive analytics», *BMC Medicine*, 17, 230 (https://doi.org/10.1186/s12916-019-1466-7). En la regresión de la pendiente, a es el valor de la recta cuando logit(p̂) = 0, es decir, cuando el riesgo predicho es 50 %, muy lejos de los riesgos de esta base (prevalencias de 1,3 % a 5,9 % en desarrollo). Si la pendiente no es 1, ese a se mueve aunque el nivel general del riesgo sea correcto. Ejemplo: un modelo cuyo riesgo promedio coincide con la tasa observada, con logits en torno a −2,8 y pendiente 0,8, tendría a ≈ −2,8 − 0,8 × (−2,8) = −0,56, como si sobreestimara el riesgo; con el *offset*, a ≈ 0. Con el *offset*, a responde solo a cuánto hay que subir o bajar todas las predicciones para que su nivel coincida con lo observado.
+- **Ejemplo con los datos:** Si un modelo entrenado con 2019–2022 asignara en la validación temporal un riesgo promedio igual a la tasa de `REING_30D` del entrenamiento (5,69 %), frente al 6,28 % observado en 2023–2024 (D40), el intercepto sería de alrededor de logit(0,0628) − logit(0,0569) ≈ +0,10: el modelo subestimaría el riesgo. Es una aproximación: el valor exacto depende de cómo se repartan las predicciones.
+- **No cambia:** La recalibración de Platt (D41) sigue siendo una regresión logística sobre logit(p̂) con intercepto y pendiente libres: corrige las dos cosas a la vez y no es una medida de calibración.
+- **Aplicación:** Todavía no hay código de evaluación. Al programarlo, la regresión con *offset* se puede ajustar, por ejemplo, con un modelo lineal generalizado de familia binomial que acepte un término *offset* (como `GLM` de statsmodels); la regresión logística de scikit-learn no lo admite.
+- **Visto bueno:** La persona a cargo de la tesis lo aprobó el 26 de octubre de 2026 («sí, haz los cuatro ajustes como los propones»).
+- **Precisa a:** D41.
+- **Estado:** Adoptada, por recomendación del profesor guía.
+
+### D44 · 2026-10-26 · La historia cortada se trata en el entrenamiento: la marca entra al modelo y se agrega una sensibilidad
+- **Actividad:** 2.3 (se aplica en la actividad 3.1, al crear la marca, y en las etapas de modelado)
+- **Situación:** Con la ventana de 12 meses (D42), la historia cortada se concentra en el entrenamiento de la validación temporal. Casos de estudio del conjunto de desarrollo, por año del alta:
+
+  | Período | Año | Casos de estudio | Con la ventana cortada |
+  |---|---|---|---|
+  | Entrenamiento | 2019 | 645.964 | 645.964 (100 %) |
+  | Entrenamiento | 2020 | 447.692 | 9.346 (2,1 %) |
+  | Entrenamiento | 2021 | 509.336 | 509.336 (100 %) |
+  | Entrenamiento | 2022 | 565.345 | 8.820 (1,6 %) |
+  | **Entrenamiento** | **2019–2022** | **2.168.337** | **1.173.466 (54,1 %)** |
+  | **Evaluación** | **2023–2024** | **1.185.781** | **8 (0,0 %)** |
+
+  En 2020 y 2022 solo quedan marcados los casos cuyo episodio comenzó el año anterior; los 8 de la evaluación son episodios que comenzaron antes de 2022 y terminaron en 2023.
+- **Decisión:**
+  1. La marca de ventana cortada se usa como una variable más del modelo, junto con las variables de historia. Así el modelo puede aprender que, en un caso marcado, «ninguna hospitalización previa» puede deberse a falta de datos.
+  2. Sensibilidad: además del modelo principal, entrenado con 2019–2022, se entrena el mismo modelo solo con los casos de 2020 y 2022, cuya ventana está casi siempre completa (1.013.037 casos de desarrollo; 18.166 marcados, 1,8 %). Los dos se comparan en 2023–2024 con las métricas de D41 y D43, en los tres grupos de D40. Si el modelo de 2020 y 2022 se calibra mejor, la historia cortada está afectando al modelo principal.
+- **Fundamento:** Revisión del profesor guía del 24 de octubre de 2026 (observación O2). El modelo principal aprende la relación entre la historia y el reingreso con historias incompletas y se evalúa con historias completas. Eso puede afectar más a la calibración (que el riesgo predicho sea correcto) que a la discriminación (que el modelo ordene bien a los pacientes, de mayor a menor riesgo).
+- **Advertencia:** 2020 es el primer año de la pandemia: tiene menos casos (447.692 en desarrollo, frente a 645.964 en 2019) y otra mezcla, con más ingresos por urgencia y más fallecimientos (H11 de `docs/bitacora.md`). Una diferencia entre los dos modelos puede deberse también a eso, y se declara al informar la sensibilidad. En la evaluación la marca vale 0 en casi todos los casos: solo cambia lo que el modelo aprende al entrenar, y su efecto se mide con esta sensibilidad.
+- **Aplicación:** La marca se crea en la actividad 3.1, como indica D42. Los años de la sensibilidad se fijarán como parámetro cuando se programe el entrenamiento, junto a `anios_entrenamiento_temporal`; ahora no cambia ningún archivo.
+- **Visto bueno:** La persona a cargo de la tesis lo aprobó el 26 de octubre de 2026 («sí, haz los cuatro ajustes como los propones»).
+- **Completa a:** D42 y D40.
 - **Estado:** Adoptada, por recomendación del profesor guía.
 
 ---
@@ -211,11 +257,13 @@ dependa de las variables objetivo y la tabla del reporte 13 coincide con el rec�
 - [x] Presentar al profesor guía las decisiones D27 a D29 y D37. Las revisó el 13 de octubre de 2026 y las aprobó a condición de incorporar los puntos 2.2 y 2.3 de su revisión.
 - [x] Punto 2.2 de la revisión: informar la validación temporal de tres maneras. Hecho el 20 de octubre de 2026 (D40, script 13).
 - [x] Punto 2.3 de la revisión: fijar antes de modelar las métricas, los intervalos y la recalibración (D41) y revisar por año los identificadores faltantes o ambiguos (H28 de la bitácora de la 2.2). Hecho el 20 de octubre de 2026.
-- [ ] Presentar al profesor guía, en el próximo avance, D40 y D41.
-- [ ] En las etapas de modelado, evaluar con los grupos de `data/processed/validacion_temporal.parquet` y con las métricas de D41.
+- [x] Presentar al profesor guía, en el próximo avance, D40 y D41. Las revisó el 24 de octubre de 2026: aprobó D40, y D41 con un ajuste en el intercepto de calibración (O1), incorporado en D43.
+- [ ] En las etapas de modelado, evaluar con los grupos de `data/processed/validacion_temporal.parquet` y con las métricas de D41, con el intercepto de calibración de D43.
 - [x] Punto 2.5 de la revisión: fijar la ventana de historia. Hecho el 20 de octubre de 2026: 12 meses (D42).
-- [ ] En la Etapa 3 (actividad 3.1), construir las variables de historia y la marca de ventana cortada según D42.
-- [ ] Presentar al profesor guía D42 en el próximo avance.
+- [ ] En la Etapa 3 (actividad 3.1), construir las variables de historia y la marca de ventana cortada según D42, con la marca como variable del modelo (D44).
+- [x] Presentar al profesor guía D42 en el próximo avance. La revisó el 24 de octubre de 2026 y la aprobó con un ajuste sobre la historia cortada en el entrenamiento (O2), incorporado en D44.
+- [ ] En el modelado, entrenar también el modelo de sensibilidad con 2020 y 2022 y compararlo con el principal en 2023–2024 (D44).
+- [ ] Presentar al profesor guía D43 y D44 en el próximo avance.
 - [ ] Declarar en el informe la limitación descrita en H19.
 - [ ] En las etapas siguientes, leer solo `desarrollo.parquet`, usar `ID_PACIENTE` como grupo de la validación cruzada y la semilla 2026.
 - [ ] Antes de la evaluación final, comprobar el hash del conjunto de prueba con `pruebas/verificar_10_particion.py`.

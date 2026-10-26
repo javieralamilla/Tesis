@@ -1,6 +1,6 @@
 # Pruebas independientes de la actividad 2.2
 
-Generado por `2.2_depuracion_etiquetado/pruebas/ejecutar_pruebas.py` el 20-10-2026. Cada programa vuelve a calcular con otro método lo que dejaron los scripts 08, 09 y 11, sin usar sus funciones, y compara el resultado con los archivos y con las tablas de los reportes.
+Generado por `2.2_depuracion_etiquetado/pruebas/ejecutar_pruebas.py` el 26-10-2026. Cada programa vuelve a calcular con otro método lo que dejaron los scripts 08, 09 y 11, sin usar sus funciones, y compara el resultado con los archivos y con las tablas de los reportes.
 
 Conjunto analítico probado: `data/processed/grd_etiquetado.parquet`, SHA-256 `f9b8be4065bad16dfe27a46a95db4f742024b1e817046d1d9b26e0a893b900dc`. Coincide con la versión 2 registrada el 2026-10-20 en `docs/version_conjunto_analitico.csv`: **sí**.
 
@@ -8,9 +8,9 @@ Conjunto analítico probado: `data/processed/grd_etiquetado.parquet`, SHA-256 `f
 
 | Programa | Qué contrasta | Comprobaciones | Fallas | Segundos |
 |---|---|---|---|---|
-| `verificar_08_depuracion.py` | Duplicados, personas, identidad ambigua, criterios, episodios y papeles de `grd_depurado.parquet`, y la tabla «paso a paso» del reporte 08. | 43 | 0 | 193 |
-| `verificar_09_etiquetado.py` | Las cuatro variables objetivo de `grd_etiquetado.parquet`, de dos formas distintas, y las tablas del reporte 09. | 20 | 0 | 76 |
-| `verificar_11_sensibilidad.py` | Casos de estudio y tasas de cada escenario de la tabla del reporte 11. | 11 | 0 | 362 |
+| `verificar_08_depuracion.py` | Duplicados, personas, identidad ambigua, criterios, episodios y papeles de `grd_depurado.parquet`, y la tabla «paso a paso» del reporte 08. | 43 | 0 | 97 |
+| `verificar_09_etiquetado.py` | Las cuatro variables objetivo de `grd_etiquetado.parquet`, de dos formas distintas, y las tablas del reporte 09. | 20 | 0 | 46 |
+| `verificar_11_sensibilidad.py` | Casos de estudio y tasas de cada escenario de la tabla del reporte 11, y los desgloses de traslados y derivados de sus secciones 8 y 9. | 14 | 0 | 215 |
 
 ## Depuración (script 08)
 
@@ -94,3 +94,6 @@ Conjunto analítico probado: `data/processed/grd_etiquetado.parquet`, SHA-256 `f
 - Con los derivados sin continuación como casos de estudio: casos de estudio y las cuatro tasas iguales a los de 11_sensibilidad.md (4286199 casos; tasas [2.12, 1.3, 5.98, 3.59]): **sí**.
 - Con las actividades que solo existen en 2019: casos de estudio y las cuatro tasas iguales a los de 11_sensibilidad.md (4275385 casos; tasas [2.11, 1.29, 5.99, 3.59]): **sí**.
 - Todas las filas de la tabla del reporte fueron contrastadas (10 filas): **sí**.
+- Traslados: cada ingreso separado deja una nueva alta final y los casos agregados son altas anteriores (3755 ingresos separados): **sí**.
+- Traslados: el desglose de 11_sensibilidad.md (ingresos separados, altas excluidas por criterio, casos agregados con y sin reingreso a 7 días, casos comunes que pasan de 0 a 1 y aumento) coincide con el recálculo ({'separados': 3755, 'agregados': 3376, 'uno': 2124, 'cero': 1252, 'sube': 9, 'aumento': 2133, 'excluida E13': 229, 'excluida E11': 101, 'excluida E14': 35, 'excluida E06': 11, 'excluida E09': 3}): **sí**.
+- Derivados: el criterio posterior que deja fuera a cada derivado no agregado, y los agregados, coinciden con 11_sensibilidad.md ({'derivados': 99573, 'agregados': 93789, 'E11': 4231, 'E13': 1281, 'E14': 205, 'E09': 67}): **sí**.
