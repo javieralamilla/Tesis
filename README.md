@@ -12,8 +12,9 @@ El trabajo se organiza en una carpeta por actividad de la Carta Gantt. Cada carp
 | `2.1_integracion_homogenizacion/` | Scripts que transforman los datos (conversión, homogenización, integración y diccionario), sus reportes y las tablas de reglas revisables en Excel. | Sí |
 | `2.2_depuracion_etiquetado/` | Depuración y etiquetado del reingreso: scripts, reportes, su propia `bitacora.md`, las tablas `reglas/criterios_exclusion.csv` (qué exclusiones están activas, con su justificación) y `reglas/parametros.csv` (umbrales), y `pruebas/`, con los programas que contrastan los resultados con otro método. | Sí |
 | `2.3_validacion_particion/` | Partición inicial en desarrollo (80 %) y prueba (20 %), reserva del conjunto de prueba y grupos de la validación temporal: scripts, reportes, su propia `bitacora.md`, `reglas/parametros.csv` (semilla del proyecto, tamaño de la prueba, variable principal y años de la validación temporal) y `pruebas/`, con los programas que contrastan la partición y los grupos. | Sí |
+| `3.1_filtro_dimensionalidad/` | Filtro de dimensionalidad (Etapa 3 de la propuesta): deja, para cada variable de reingreso, los códigos de diagnósticos y procedimientos con un tamaño de efecto (V de Cramér) mayor o igual a 0,01 y al menos 100 casos. Scripts, reportes (entre ellos la lista fija de códigos retenidos, `reportes/14_codigos_retenidos.csv`), su propia `bitacora.md`, `reglas/parametros.csv` (variables, nivel del código, umbrales y valores de la sensibilidad) y `pruebas/`, con el programa que contrasta el filtro. | Sí |
 | `data/interim/` | Parquet intermedios generados por los scripts (`crudo_<año>`, `homog_<año>`, `ids_<año>`). Compartida por todas las actividades. | No |
-| `data/processed/` | Tabla integrada 2019–2024 (`grd_2019_2024.parquet`), tabla depurada (`grd_depurado.parquet`), tabla etiquetada con las variables objetivo (`grd_etiquetado.parquet`), conjunto de cada egreso (`particion.parquet`) y de cada identificador de paciente (`particion_identificadores.parquet`), conjunto de desarrollo (`desarrollo.parquet`), que es el único que usan las etapas de modelado, y grupos de la validación temporal de sus casos de estudio (`validacion_temporal.parquet`). | No |
+| `data/processed/` | Tabla integrada 2019–2024 (`grd_2019_2024.parquet`), tabla depurada (`grd_depurado.parquet`), tabla etiquetada con las variables objetivo (`grd_etiquetado.parquet`), conjunto de cada egreso (`particion.parquet`) y de cada identificador de paciente (`particion_identificadores.parquet`), conjunto de desarrollo (`desarrollo.parquet`), que es el único que usan las etapas de modelado, grupos de la validación temporal de sus casos de estudio (`validacion_temporal.parquet`) y asociación de cada código de diagnóstico o procedimiento con cada variable de reingreso, pase o no el filtro (`filtro_codigos.parquet`). | No |
 | `data/reserva/` | Conjunto de prueba (`prueba.parquet`). Está apartado, como archivo de solo lectura: no se abre hasta la evaluación final. Su hash está registrado en `docs/version_particion.csv`. | No |
 | `docs/` | Documentación transversal: `bitacora.md` (hallazgos y decisiones de las actividades 1.2 y 2.1) y su versión Word; `diccionario_datos.md` (las 136 columnas de la tabla integrada); `diccionario_conjunto_analitico.md` (las 163 columnas de la tabla etiquetada, que es la que usan las etapas siguientes); `version_conjunto_analitico.csv` (versiones registradas de esa tabla, con su hash) y `version_particion.csv` (versiones registradas de la partición, con el hash del conjunto de prueba). | Sí |
 | `herramientas/` | Utilidades que no procesan datos, como `bitacora_word/`, que genera la versión Word de la bitácora. | Sí |
@@ -39,6 +40,7 @@ El número de cada script indica el orden, aunque estén en carpetas distintas.
 | 11 | 2.2 | `2.2_depuracion_etiquetado/scripts/11_sensibilidad.py` | Análisis de sensibilidad: vuelve a calcular las cuatro variables cambiando una decisión cada vez (actividades de 2019, cirugía mayor ambulatoria, sesiones Z51, partos con valor 0 en las variables relacionadas, CDM 13 y 14, censura sin margen, solo traslados con marca, derivados como casos de estudio, identidad ambigua). En los escenarios de traslados y derivados desglosa las cifras que pidió explicar la revisión del profesor guía del 24 de octubre de 2026. Usa las funciones de los scripts 08 y 09 y no modifica las tablas de datos; no depende del script 10. | `reportes/11_sensibilidad.md` |
 | 12 | 2.2 | `2.2_depuracion_etiquetado/scripts/12_diccionario_version.py` | Describe las columnas de la tabla etiquetada y registra su versión: el hash SHA-256 del archivo y de lo que lo produce. Hay que ejecutarlo de nuevo cada vez que la tabla cambia; no depende del script 10. | `docs/diccionario_conjunto_analitico.md`, `docs/version_conjunto_analitico.csv` |
 | 13 | 2.3 | `2.3_validacion_particion/scripts/13_validacion_temporal.py` | Marca los grupos de la validación temporal interna: cada caso de estudio de desarrollo es de entrenamiento (2019–2022) o de evaluación (2023–2024), y en la evaluación se separan los pacientes nuevos de los ya vistos en 2021–2022. Lee solo el conjunto de desarrollo y se ejecuta después del script 10. | `data/processed/validacion_temporal.parquet`, `reportes/13_validacion_temporal.md` |
+| 14 | 3.1 | `3.1_filtro_dimensionalidad/scripts/14_filtro_codigos.py` | Filtro de dimensionalidad: para cada código de diagnóstico (CIE-10) o de procedimiento (CIE-9-MC) de los casos de estudio de desarrollo, arma la tabla de 2×2 con cada variable de reingreso y calcula el chi-cuadrado, su valor p y la V de Cramér. Deja la lista fija de los códigos que pasan los umbrales de `reglas/parametros.csv` y cuenta cuántos pasarían con los de la sensibilidad. Lee solo el conjunto de desarrollo y se ejecuta después del script 10. | `data/processed/filtro_codigos.parquet`, `reportes/14_codigos_retenidos.csv`, `reportes/14_filtro_codigos.md` |
 
 Los reportes y las reglas de cada script están en la carpeta de su actividad. Para ejecutar un script, desde `Codigo`:
 
@@ -68,9 +70,15 @@ Los grupos de la validación temporal (script 13) se contrastan con otro program
 .venv\Scripts\python.exe 2.3_validacion_particion\pruebas\verificar_13_validacion_temporal.py
 ```
 
+El filtro de la actividad 3.1 (script 14) se contrasta con otro programa, que vuelve a calcular por otro camino una muestra de códigos y revisa la tabla completa y la lista. Tarda unos 3 minutos y deja `3.1_filtro_dimensionalidad/reportes/pruebas_filtro_codigos.md`:
+
+```
+.venv\Scripts\python.exe 3.1_filtro_dimensionalidad\pruebas\verificar_14_filtro_codigos.py
+```
+
 ## Orden para regenerar todo desde la tabla integrada
 
-Los scripts 08 y 09 generan la tabla etiquetada; el 11, el análisis de sensibilidad; el 12 registra la versión; las pruebas de la 2.2 la contrastan; el 10 hace la partición sobre la versión registrada, y su prueba la contrasta; el 13 marca los grupos de la validación temporal en el conjunto de desarrollo, y su prueba los contrasta.
+Los scripts 08 y 09 generan la tabla etiquetada; el 11, el análisis de sensibilidad; el 12 registra la versión; las pruebas de la 2.2 la contrastan; el 10 hace la partición sobre la versión registrada, y su prueba la contrasta; el 13 marca los grupos de la validación temporal en el conjunto de desarrollo, y su prueba los contrasta; el 14 calcula el filtro de códigos sobre el conjunto de desarrollo, y su prueba lo contrasta.
 
 ## Entorno
 
@@ -83,7 +91,7 @@ python -m venv .venv
 
 ## Bitácoras
 
-`docs/bitacora.md` registra los hallazgos y decisiones de las actividades 1.2 y 2.1. Desde la actividad 2.2, cada actividad lleva su propia bitácora dentro de su carpeta (`2.2_depuracion_etiquetado/bitacora.md` y `2.3_validacion_particion/bitacora.md`), con códigos que continúan la numeración.
+`docs/bitacora.md` registra los hallazgos y decisiones de las actividades 1.2 y 2.1. Desde la actividad 2.2, cada actividad lleva su propia bitácora dentro de su carpeta (`2.2_depuracion_etiquetado/bitacora.md`, `2.3_validacion_particion/bitacora.md` y `3.1_filtro_dimensionalidad/bitacora.md`), con códigos que continúan la numeración.
 
 La versión Word se regenera cada vez que una bitácora cambia (requiere Node.js):
 
@@ -93,9 +101,10 @@ npm install
 npm run generar
 npm run generar:2.2
 npm run generar:2.3
+npm run generar:3.1
 ```
 
-`npm run generar` actualiza `docs/bitacora.docx`; `npm run generar:2.2` y `npm run generar:2.3` actualizan el `bitacora.docx` de la carpeta de cada actividad.
+`npm run generar` actualiza `docs/bitacora.docx`; `npm run generar:2.2`, `npm run generar:2.3` y `npm run generar:3.1` actualizan el `bitacora.docx` de la carpeta de cada actividad.
 
 ## Semilla del proyecto
 

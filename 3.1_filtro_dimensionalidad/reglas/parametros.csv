@@ -1,0 +1,7 @@
+parametro;valor;descripcion
+variables_objetivo;REING_7D|REING_7D_CDM|REING_30D|REING_30D_CDM;Variables de reingreso para las que se calcula el filtro, separadas por una barra vertical. Cada una tiene su propia lista de códigos (D45)
+nivel_codigo;COMPLETO;COMPLETO = el código tal como viene (E11.9). CATEGORIA = solo la categoría, lo que va antes del punto (E11 en los diagnósticos y 99 en los procedimientos), como la columna «Categoría» de las tablas del DEIS (D45)
+v_minima;0,01;Umbral del tamaño de efecto: pasa un código cuya V de Cramér con la variable de reingreso sea mayor o igual a este valor (Etapa 3 de la propuesta y D45)
+casos_minimos;100;Prevalencia mínima: pasa un código que tengan al menos estos casos de estudio, contados entre los que tienen dato en la variable (Etapa 3 de la propuesta y D45)
+v_sensibilidad;0,005|0,01|0,02;Umbrales de V del análisis de sensibilidad, separados por una barra vertical. Solo se cuenta cuántos códigos pasarían: la lista fija usa v_minima (D45)
+casos_sensibilidad;50|100|500;Mínimos de casos del análisis de sensibilidad. Solo se cuenta cuántos códigos pasarían: la lista fija usa casos_minimos (D45)
