@@ -5,6 +5,7 @@
 //     npm run generar            docs/bitacora.md (actividades 1.2 y 2.1)
 //     npm run generar:2.2        2.2_depuracion_etiquetado/bitacora.md
 //     npm run generar:2.3        2.3_validacion_particion/bitacora.md
+//     npm run generar:3.1        3.1_filtro_dimensionalidad/bitacora.md
 //     node generar.js <entrada.md> <salida.docx>    cualquier otra bitácora
 const fs = require("fs");
 const path = require("path");
@@ -236,6 +237,10 @@ function tablaSimple(filas, total, tamFuente) {
 }
 
 // Ficha de una entrada: una fila por campo (Actividad, Decisión, Evidencia, Estado...).
+// El título de la entrada queda junto a sus dos primeras filas y el resto fluye entre páginas. Una fila corta no se
+// corta entre dos páginas; una fila larga, o con una tabla adentro, sí puede seguir en la página siguiente. Antes
+// toda la ficha se mantenía junta y, si no cabía en una página, Word dejaba casi vacía la página del título.
+const LARGO_FILA_ENTERA = 900;  // caracteres de texto: hasta este largo, una fila no se corta entre páginas
 function ficha(campos) {
   return new Table({
     width: { size: ANCHO, type: WidthType.DXA },
@@ -243,7 +248,9 @@ function ficha(campos) {
     layout: TableLayoutType.FIXED,
     borders: bordes,
     rows: campos.map((campo, idx) => {
-      const mantener = idx < campos.length - 1;  // mantiene la ficha en una sola página
+      const mantener = idx === 0 && campos.length > 1;  // la primera fila queda con la segunda (y con el título)
+      const conTabla = campo.bloques.some((b) => b.tipo === "tabla");
+      const largo = campo.bloques.reduce((n, b) => n + (b.tipo === "parrafo" ? b.texto.length : 0), 0);
       const contenido = [];
       campo.bloques.forEach((b, k) => {
         const ultimo = k === campo.bloques.length - 1;
@@ -261,7 +268,7 @@ function ficha(campos) {
       });
       if (!contenido.length) contenido.push(new Paragraph({ children: [] }));
       return new TableRow({
-        cantSplit: true,
+        cantSplit: !conTabla && largo <= LARGO_FILA_ENTERA,
         children: [
           new TableCell({
             width: { size: ANCHO_ETIQUETA, type: WidthType.DXA },
