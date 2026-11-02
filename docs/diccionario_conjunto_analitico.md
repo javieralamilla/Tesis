@@ -1,20 +1,20 @@
 # Diccionario del conjunto analítico
 
-Conjunto analítico: `data/processed/grd_etiquetado.parquet`. Es la tabla que usan la partición y las etapas siguientes. Tiene 5.800.973 registros (un registro por egreso hospitalario, de 2019 a 2024) y 163 columnas; 4.192.410 registros son caso de estudio (`ES_CASO_ESTUDIO`). Generado por `2.2_depuracion_etiquetado/scripts/12_diccionario_version.py`.
+Conjunto analítico: `data/processed/grd_etiquetado.parquet`. Es la tabla que usan la partición y las etapas siguientes. Tiene 5.800.973 registros (un registro por egreso hospitalario, de 2019 a 2024) y 164 columnas; 4.184.372 registros son caso de estudio (`ES_CASO_ESTUDIO`). Generado por `2.2_depuracion_etiquetado/scripts/12_diccionario_version.py`.
 
 ## Versión del conjunto
 
 | Dato | Valor |
 |---|---|
-| Versión | 2 |
-| Fecha de registro | 2026-10-20 |
-| Registros, columnas y casos de estudio | 5.800.973, 163 y 4.192.410 |
-| SHA-256 del archivo | `f9b8be4065bad16dfe27a46a95db4f742024b1e817046d1d9b26e0a893b900dc` |
+| Versión | 3 |
+| Fecha de registro | 2026-11-02 |
+| Registros, columnas y casos de estudio | 5.800.973, 164 y 4.184.372 |
+| SHA-256 del archivo | `3bf2bb4e7513daf6d580a9e025cdd00d55456602ccb7d78d60b722e8fe402bd2` |
 | SHA-256 de la tabla integrada (`grd_2019_2024.parquet`) | `805f4dbac473b150130a5f50b1af5a895cfe4f2b498630ac58dd1148120cf684` |
-| SHA-256 de `criterios_exclusion.csv` | `1d8bc19ad058d4a69d5bb21d89fe7e7cfd1e95cdb3060c8e66157c70738e1426` |
-| SHA-256 de `parametros.csv` | `b97db71394bee5b0d24de8f6a84848d38def4d1e367e1c173f2336de7dd0661b` |
-| SHA-256 de `08_depurar.py` | `d864ce0cdd0bae868990507ee23a4767d53a11f2de92752461a4229549dec076` |
-| SHA-256 de `09_etiquetar.py` | `dfbe07b74c5638aa3325ee635e806b8bf542e9543ef512586564c504cb23138a` |
+| SHA-256 de `criterios_exclusion.csv` | `832356b9980b111802ba919f3d693bfdb8cdd87bbb636af89246f47ae8c1f410` |
+| SHA-256 de `parametros.csv` | `127b21dc056adfd44e254d373c9603d5cfd5da7dab973e44d576a205f46fd42a` |
+| SHA-256 de `08_depurar.py` | `e51e56387cd3f89a126245cf79ee22515523150a97fc9255f9f06d340e673619` |
+| SHA-256 de `09_etiquetar.py` | `4ea7b87cb74666abc5248b03bd52d998f4dd94e53f21ad53917490d3db4f2c77` |
 | Bibliotecas | Python 3.14.5, pandas 3.0.3, pyarrow 25.0.1 |
 
 El historial de versiones está en `docs/version_conjunto_analitico.csv`. El hash identifica el archivo exacto: la partición (actividad 2.3) debe comprobar que el archivo que lee es el de la última versión registrada. Si se vuelven a ejecutar los scripts 08 o 09 y el archivo cambia, hay que ejecutar de nuevo este script para registrar la nueva versión. Con otras versiones de las bibliotecas el archivo puede tener otro hash aunque su contenido sea el mismo.
@@ -133,17 +133,18 @@ El historial de versiones está en `docs/version_conjunto_analitico.csv`. El has
 | `EXC_ALTA_VOLUNTARIA_FUGA` | Verdadero/falso | Criterio E12 (desactivado): Alta voluntaria o fuga del paciente. Verdadero si el egreso lo cumple, sin considerar los demás criterios. | Verdadero en 77.385 registros | 100 | Creada (script 08) |
 | `EXC_CMA` | Verdadero/falso | Criterio E13 (activo): Cirugía mayor ambulatoria. Verdadero si el egreso lo cumple, sin considerar los demás criterios. | Verdadero en 885.384 registros | 100 | Creada (script 08) |
 | `EXC_SESION` | Verdadero/falso | Criterio E14 (activo): Sesión de tratamiento: diagnóstico principal Z51. Verdadero si el egreso lo cumple, sin considerar los demás criterios. | Verdadero en 100.229 registros | 100 | Creada (script 08) |
-| `MOTIVO_EXCLUSION` | Texto | Código del primer criterio activo que excluye al egreso como caso de estudio, en el orden de `criterios_exclusion.csv`. Sin dato en los casos de estudio. | 13 valores distintos. Más frecuentes: `E13`, `E11`, `E06`, `E04`, `E05` | 27,73 (22,08 a 34,47 según el año) | Creada (script 08) |
-| `ES_CASO_ESTUDIO` | Verdadero/falso | Verdadero si el egreso es caso de estudio (egreso índice): no cumple ningún criterio de exclusión activo. Las variables objetivo solo tienen dato en estos egresos. | Verdadero en 4.192.410 registros | 100 | Creada (script 08) |
+| `EXC_TRATAMIENTO_PERIODICO` | Verdadero/falso | Criterio E15 (activo): Tratamiento periódico: ingreso programado de un día, con la misma categoría de diagnóstico principal que al menos otros dos de la misma persona en el año anterior. Verdadero si el egreso lo cumple, sin considerar los demás criterios. | Verdadero en 8.565 registros | 100 | Creada (script 08) |
+| `MOTIVO_EXCLUSION` | Texto | Código del primer criterio activo que excluye al egreso como caso de estudio, en el orden de `criterios_exclusion.csv`. Sin dato en los casos de estudio. | 14 valores distintos. Más frecuentes: `E13`, `E11`, `E06`, `E04`, `E05` | 27,87 (22,17 a 34,62 según el año) | Creada (script 08) |
+| `ES_CASO_ESTUDIO` | Verdadero/falso | Verdadero si el egreso es caso de estudio (egreso índice): no cumple ningún criterio de exclusión activo. Las variables objetivo solo tienen dato en estos egresos. | Verdadero en 4.184.372 registros | 100 | Creada (script 08) |
 | `PUEDE_SER_REINGRESO` | Verdadero/falso | Verdadero si el egreso puede contar como reingreso de un alta anterior: se puede seguir y abre un episodio asistencial. Un egreso excluido como caso de estudio, por ejemplo un fallecido, puede serlo. | Verdadero en 5.565.982 registros | 100 | Creada (script 08) |
 
 ## 9. Variables objetivo de reingreso
 
 | Columna | Tipo | Descripción | Valores | % con dato | Origen |
 |---|---|---|---|---|---|
-| `REING_7D` | Entero | Variable objetivo. Reingreso no planificado dentro de 7 días del alta, por cualquier causa: 1 = sí, 0 = no (bitácora D20, D26 y D33). Con dato solo en los casos de estudio con seguimiento suficiente para la ventana (D30). | `0` 97,93 % · `1` 2,07 % | 72,27 (65,53 a 77,92 según el año) | Creada (script 09) |
-| `REING_7D_CDM` | Entero | Variable objetivo. Reingreso no planificado dentro de 7 días, relacionado con el diagnóstico: algún ingreso de la ventana tiene la misma CDM que el caso de estudio (D31). 1 = sí, 0 = no. Con dato en los mismos casos que `REING_7D`, salvo los partos (casos de estudio de la CDM 14), que quedan sin dato porque con la comparación literal no pueden tener un reingreso relacionado (D38). | `0` 98,74 % · `1` 1,26 % | 61,67 (57,52 a 66,37 según el año) | Creada (script 09) |
-| `REING_30D` | Entero | Variable objetivo. Reingreso no planificado dentro de 30 días del alta, por cualquier causa: 1 = sí, 0 = no. Incluye a los de 7 días. Con dato solo en los casos de estudio con seguimiento suficiente para la ventana (D30). | `0` 94,10 % · `1` 5,90 % | 70,71 (61,06 a 77,92 según el año) | Creada (script 09) |
-| `REING_30D_CDM` | Entero | Variable objetivo. Reingreso no planificado dentro de 30 días, relacionado con el diagnóstico (misma CDM, D31). 1 = sí, 0 = no. Con dato en los mismos casos que `REING_30D`, salvo los partos (casos de estudio de la CDM 14), que quedan sin dato porque con la comparación literal no pueden tener un reingreso relacionado (D38). | `0` 96,45 % · `1` 3,55 % | 60,31 (53,57 a 66,37 según el año) | Creada (script 09) |
-| `DIAS_REING` | Entero | Trazabilidad. Días entre el alta del caso de estudio y el primer ingreso posterior que cuenta como reingreso, a cualquier distancia dentro del bloque. Sin dato si no hay ninguno. Describe lo que ocurre después del alta: no debe usarse como variable predictora. | De 0 a 1.454 | 14,39 (7,97 a 21,75 según el año) | Creada (script 09) |
-| `ID_EGRESO_REING` | Entero | Trazabilidad. `ID_EGRESO` de ese primer ingreso posterior, para poder revisar cada par. No debe usarse como variable predictora. | Identificador | 14,39 (7,97 a 21,75 según el año) | Creada (script 09) |
+| `REING_7D` | Entero | Variable objetivo. Reingreso no planificado dentro de 7 días del alta, por cualquier causa: 1 = sí, 0 = no (bitácora D20, D26 y D33). Con dato solo en los casos de estudio con seguimiento suficiente para la ventana (D30). | `0` 97,93 % · `1` 2,07 % | 72,13 (65,38 a 77,83 según el año) | Creada (script 09) |
+| `REING_7D_CDM` | Entero | Variable objetivo. Reingreso no planificado dentro de 7 días, relacionado con el diagnóstico: algún ingreso de la ventana tiene la misma CDM que el caso de estudio (D31). 1 = sí, 0 = no. Con dato en los mismos casos que `REING_7D`, salvo los partos (casos de estudio de la CDM 14), que quedan sin dato porque con la comparación literal no pueden tener un reingreso relacionado (D38). | `0` 98,74 % · `1` 1,26 % | 61,53 (57,38 a 66,28 según el año) | Creada (script 09) |
+| `REING_30D` | Entero | Variable objetivo. Reingreso no planificado dentro de 30 días del alta, por cualquier causa: 1 = sí, 0 = no. Incluye a los de 7 días. Con dato solo en los casos de estudio con seguimiento suficiente para la ventana (D30). | `0` 94,10 % · `1` 5,90 % | 70,57 (60,93 a 77,83 según el año) | Creada (script 09) |
+| `REING_30D_CDM` | Entero | Variable objetivo. Reingreso no planificado dentro de 30 días, relacionado con el diagnóstico (misma CDM, D31). 1 = sí, 0 = no. Con dato en los mismos casos que `REING_30D`, salvo los partos (casos de estudio de la CDM 14), que quedan sin dato porque con la comparación literal no pueden tener un reingreso relacionado (D38). | `0` 96,45 % · `1` 3,55 % | 60,17 (53,44 a 66,28 según el año) | Creada (script 09) |
+| `DIAS_REING` | Entero | Trazabilidad. Días entre el alta del caso de estudio y el primer ingreso posterior que cuenta como reingreso, a cualquier distancia dentro del bloque. Sin dato si no hay ninguno. Describe lo que ocurre después del alta: no debe usarse como variable predictora. | De 0 a 1.454 | 14,35 (7,94 a 21,70 según el año) | Creada (script 09) |
+| `ID_EGRESO_REING` | Entero | Trazabilidad. `ID_EGRESO` de ese primer ingreso posterior, para poder revisar cada par. No debe usarse como variable predictora. | Identificador | 14,35 (7,94 a 21,70 según el año) | Creada (script 09) |

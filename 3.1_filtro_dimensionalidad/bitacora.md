@@ -3,7 +3,7 @@
 Registro de los hallazgos y decisiones de la actividad 3.1 de la Carta Gantt, que corresponde a la Etapa 3
 del procedimiento de la propuesta (ingeniería de variables y reducción de la dimensionalidad). Continúa la
 numeración de las bitácoras anteriores (`docs/bitacora.md`, `2.2_depuracion_etiquetado/bitacora.md` y
-`2.3_validacion_particion/bitacora.md`): aquí están los hallazgos H30 a H33 y las decisiones D45 a D49. Una entrada no
+`2.3_validacion_particion/bitacora.md`): aquí están los hallazgos H30 a H33 y las decisiones D45 a D49 y D53 a D55. Una entrada no
 se borra: si una decisión cambia, se agrega una nueva entrada que la reemplaza y se indica en el campo
 **Estado**.
 
@@ -16,6 +16,8 @@ de desarrollo; el conjunto de prueba no se abre. Al terminar se pedirá una sola
 incluirá la consulta sobre el umbral de V (H30), el índice de comorbilidad (D48) y el hospital como predictora
 (D49).
 
+Los dos pasos se presentaron antes del cierre, en el informe de avance 5. En su revisión del 30 de octubre de 2026 el profesor guía consideró que el filtro y las 30 variables están bien construidos y verificados, aprobó la lista A como principal y dejó seis observaciones (O5 a O10, que siguen la numeración de la revisión anterior). Se incorporaron el 2 de noviembre: las listas para comparar y las listas de cada pliegue (O5 y O7, D53), el índice de Moore (O8, D54) y el uso del modelo con el hospital (O9, D55); los pliegues por paciente (O6) y la calibración por año (O10) están en D52 y D56 de la bitácora de la 2.3, y los tratamientos periódicos (H33), en D50 de la bitácora de la 2.2.
+
 **Tipos de entrada:** `H` = hallazgo (algo que se observó en los datos),
 `D` = decisión (algo que se resolvió hacer).
 
@@ -27,15 +29,17 @@ incluirá la consulta sobre el umbral de V (H30), el índice de comorbilidad (D4
 
 | Tema | Entrada | Definición |
 |---|---|---|
-| Filtro de códigos | D45 | Para cada variable de reingreso pasa un código de diagnóstico o de procedimiento si su V de Cramér es mayor o igual a 0,01 y lo tienen al menos 100 casos de estudio con dato en esa variable. Se calcula una sola vez con todo el conjunto de desarrollo y la lista queda fija. |
+| Filtro de códigos | D45, D53 | Para cada variable de reingreso pasa un código de diagnóstico o de procedimiento si su V de Cramér es mayor o igual a 0,01 y lo tienen al menos 100 casos de estudio con dato en esa variable (lista A). La lista de todo el conjunto de desarrollo queda fija para el modelo final; dentro de la validación cruzada, cada pliegue usa la suya (D53). |
+| Listas para comparar | D53 | La C (más los códigos de efecto grande), la agrupada (diagnósticos en su categoría) y la sin filtro (todos los códigos con al menos 100 casos), para compararlas con la A en la actividad 3.2. |
 | La V y los códigos poco frecuentes | H30 | La V mezcla la fuerza del efecto con la frecuencia del código. Con `REING_30D` deja fuera 1.178 códigos con 100 casos o más que duplican o reducen a la mitad el riesgo. Se propone comparar en la 3.2 los modelos con la lista actual y con una lista ampliada. |
 | Códigos que cambian con los años | H31 | 27 de los 423 códigos que pasan con `REING_30D` cambian su frecuencia más del triple entre años; varios siguen el ritmo de la pandemia. |
 | Códigos que dependen de una persona | H32 | El único código que deja fuera solo el mínimo de 100 casos debe 18 de sus 19 reingresos a una misma paciente. Entre los que pasan, solo dos dependen así de una persona. |
 | Variables de la propuesta | D46 | Edad al propio ingreso, sexo, previsión en 8 grupos, región desde la provincia, tipo de ingreso, estadía del episodio completo, CDM y peso GRD. Los faltantes quedan como SIN DATO, sin imputar. |
 | Historia de 12 meses | D47 | Hospitalizaciones previas (todas y las no planificadas), días desde la última, cirugías mayores ambulatorias y sesiones en los 365 días antes del ingreso índice, sin el propio episodio, y la marca de ventana cortada. |
-| Índice de comorbilidad | D48 | Número de condiciones de Elixhauser (Quan et al., 2005) en todos los diagnósticos del egreso, con tres jerarquías; Charlson con los pesos de Quan et al. (2011) como comparación. |
-| Demás columnas del CMBD | D49 | Entran sin filtro las 15 columnas que describen al paciente o su hospitalización; en las tomadas tal cual, los valores con menos de 100 casos pasan a OTRO. El hospital queda en la tabla y su uso como predictora se consulta. |
-| Tratamientos periódicos | H33 | Trece personas con tratamientos de un día sin código Z51 suman 697 casos con 50 o más hospitalizaciones previas. |
+| Índice de comorbilidad | D48, D54 | Índice de reingreso de Moore et al. (2017) con las condiciones de Elixhauser (Quan et al., 2005) de los diagnósticos secundarios, con tres jerarquías; el conteo, van Walraven y Charlson, como comparación. |
+| Demás columnas del CMBD | D49 | Entran sin filtro las 15 columnas que describen al paciente o su hospitalización; en las tomadas tal cual, los valores con menos de 100 casos pasan a OTRO. |
+| Uso del modelo y hospital | D55 | El modelo describe y predice el reingreso en estos mismos hospitales: el hospital entra en el análisis principal y se entrena también sin él. |
+| Tratamientos periódicos | H33 | Trece personas con tratamientos de un día sin código Z51 sumaban 697 casos con 50 o más hospitalizaciones previas. Resuelto con el criterio E15 (D50 de la bitácora de la 2.2): cuentan como sesiones. |
 
 ---
 
@@ -88,7 +92,7 @@ incluirá la consulta sobre el umbral de V (H30), el índice de comorbilidad (D4
 - **Parámetros:** `variables_objetivo`, `nivel_codigo` (`COMPLETO`), `v_minima` (0,01), `casos_minimos` (100), `v_sensibilidad` (0,005, 0,01 y 0,02) y `casos_sensibilidad` (50, 100 y 500), en `reglas/parametros.csv`.
 - **Evidencia:** `3.1_filtro_dimensionalidad/scripts/14_filtro_codigos.py` → `data/processed/filtro_codigos.parquet` (80.356 filas: cada código con cada variable, pase o no), `reportes/14_codigos_retenidos.csv` (la lista fija, 778 filas) y `reportes/14_filtro_codigos.md`; prueba en `reportes/pruebas_filtro_codigos.md`. Las descripciones vienen de `Datos/Tablas auxiliares/CIE-10.xlsx` y `CIE-9.xlsx`, que describen todos los códigos que pasan.
 - **Referencias del mínimo:** Wilson, E. B. (1927), *Journal of the American Statistical Association*, 22, 209–212 (intervalo de confianza); Cochran, W. G. (1954), *Biometrics*, 10(4), 417–451 (casos esperados en el chi-cuadrado); Greenland, S., Mansournia, M. A. y Altman, D. G. (2016), *BMJ*, 352, i1981 (sesgo por datos escasos).
-- **Estado:** Adoptada (aprobada por la persona a cargo el 26 de octubre de 2026). Pendiente de validar con profesor guía, en especial el umbral de V (H30).
+- **Estado:** Adoptada (aprobada por la persona a cargo el 26 de octubre de 2026). Aprobada por el profesor guía el 30 de octubre de 2026, con la lista A como principal. Precisada por D53.
 
 ### H30 · 2026-10-28 · La V castiga a los códigos poco frecuentes
 - **Actividad:** 3.1
@@ -112,6 +116,7 @@ incluirá la consulta sobre el umbral de V (H30), el índice de comorbilidad (D4
 - **Propuesta para el profesor guía:** Mantener A como lista principal y medir su costo en la actividad 3.2: entrenar los mismos modelos, con la misma validación cruzada, con la lista A y con la lista C, y comparar la AUPRC y la AUROC. Si dan igual, el filtro no pierde nada importante; si C predice mejor, se adopta C. Cambiar la lista solo requiere el parámetro correspondiente y volver a ejecutar el script 14 y su prueba.
 - **Evidencia:** `reportes/14_filtro_codigos.md`, secciones 3 y 4. Los códigos de efecto grande que quedan fuera, los de efecto débil que pasan, la V máxima posible y la opción C salen de una exploración de solo lectura del 28 de octubre de 2026 sobre `filtro_codigos.parquet` y el conjunto de desarrollo.
 - **Referencias:** Cohen, J. (1988), *Statistical Power Analysis for the Behavioral Sciences* (2.ª ed.); Guyon, I. y Elisseeff, A. (2003), *Journal of Machine Learning Research*, 3, 1157–1182; Fan, J. y Lv, J. (2008), *Journal of the Royal Statistical Society, Series B*, 70(5), 849–911; Kansagara, D., et al. (2011), *JAMA*, 306(15), 1688–1698.
+- **Resolución:** El profesor guía aprobó la lista A como principal (30 de octubre de 2026) y pidió comparar en la actividad 3.2 la lista C, una lista agrupada y una sin filtro, calculadas también dentro de la validación cruzada (D53).
 
 ### H31 · 2026-10-28 · Algunos códigos que pasan cambian mucho con los años
 - **Actividad:** 3.1
@@ -119,6 +124,7 @@ incluirá la consulta sobre el umbral de V (H30), el índice de comorbilidad (D4
 - **Ejemplos:** 90.39 («examen microscópico ORL, otro») está en el 3,4 % de los casos de estudio de 2019, el 39,3 % de 2021 y el 10,6 % de 2024: sigue el ritmo de la pandemia. 99.84 («aislamiento») va de 2,5 % a 10,1 % y 4,2 %, y J96.00 (insuficiencia respiratoria aguda tipo I), de 0,4 % a 3,0 % y 2,1 %. Otros crecen todos los años, como E55.9 (deficiencia de vitamina D), de 0,13 % a 0,98 %, de la mano del aumento de diagnósticos por caso (de 4,60 en 2019 a 6,18 en 2024).
 - **Consecuencia:** El filtro no cambia, pero el significado de esos códigos depende del período. Es parte de lo que medirá la validación temporal (D40 de la bitácora de la 2.3) y conviene comentarlo con el profesor guía.
 - **Evidencia:** `reportes/14_filtro_codigos.md`, sección 7.
+- **Resolución:** El profesor guía pidió medir la deriva con la calibración de cada año en la validación temporal (D56 de la bitácora de la 2.3).
 
 ### H32 · 2026-10-28 · Pocos códigos dependen de una sola persona
 - **Actividad:** 3.1
@@ -126,6 +132,7 @@ incluirá la consulta sobre el umbral de V (H30), el índice de comorbilidad (D4
 - **Entre los que pasan:** Solo en dos códigos, ambos de `REING_7D_CDM`, una persona aporta más de la mitad de los reingresos: K90.8 (otros tipos de malabsorción intestinal: 289 casos, 37 reingresos, 33 de una misma persona) y O36.1 (atención materna por otra isoinmunización: 145 casos, 25 reingresos, 17 de una misma persona). En las otras tres variables ningún código que pasa tiene una persona con más del 10 % de sus reingresos; en el caso típico, la persona que más aporta tiene entre el 0,2 % y el 1,2 % de los reingresos del código.
 - **Consecuencia:** El mínimo cuenta egresos, no personas: es una limitación que se declara. No invalida el filtro, que es laxo a propósito: en la actividad 3.2 la validación cruzada agrupada por paciente (D37) mostrará que un código así no sirve para predecir en otras personas. Se puede consultar al profesor guía si conviene exigir además un mínimo de pacientes distintos.
 - **Evidencia:** exploración de solo lectura del 28 de octubre de 2026 sobre el conjunto de desarrollo (casos y reingresos por identificador de paciente de cada código, sin mostrar identificadores).
+- **Resolución:** El profesor guía consideró que no hace falta un mínimo de pacientes distintos, porque cambia un solo código; el problema de fondo lo resuelven los pliegues por paciente (D52 de la bitácora de la 2.3).
 
 ### D46 · 2026-10-29 · Variables administrativas y demográficas de la propuesta
 - **Actividad:** 3.1
@@ -148,7 +155,7 @@ incluirá la consulta sobre el umbral de V (H30), el índice de comorbilidad (D4
 - **Reglas:** `reglas/prevision_grupos.csv` y `reglas/provincia_region.csv`.
 - **Visto bueno:** La persona a cargo de la tesis lo aprobó el 28 de octubre de 2026 (decisión 1 del paso 2).
 - **Evidencia:** `3.1_filtro_dimensionalidad/scripts/15_variables_casos.py` → `data/processed/variables_casos.parquet` y `reportes/15_variables_casos.md`, secciones 1 y 2; prueba en `reportes/pruebas_variables_casos.md`.
-- **Estado:** Adoptada. Pendiente de validar con profesor guía.
+- **Estado:** Adoptada. Aprobada por el profesor guía el 30 de octubre de 2026.
 
 ### D47 · 2026-10-29 · Historia de 12 meses y marca de ventana cortada
 - **Actividad:** 3.1 (aplica D42 y D44 de la bitácora de la 2.3)
@@ -183,7 +190,7 @@ incluirá la consulta sobre el umbral de V (H30), el índice de comorbilidad (D4
 - **Visto bueno:** La persona a cargo de la tesis aprobó la decisión 2 del paso 2 el 28 de octubre de 2026, y los detalles de la ventana el 29 de octubre, al aceptar el borrador del script («Sí, sigue»).
 - **Completa a:** D42 y D44 de la bitácora de la 2.3. Ver también H33.
 - **Evidencia:** `reportes/15_variables_casos.md`, sección 2. La prueba independiente recalcula la historia egreso por egreso en 3.062 casos, también en los bordes de la ventana.
-- **Estado:** Adoptada. Pendiente de validar con profesor guía.
+- **Estado:** Adoptada. Aprobada por el profesor guía el 30 de octubre de 2026. Los tratamientos periódicos de H33 cuentan como sesiones desde D50 de la bitácora de la 2.2.
 
 ### D48 · 2026-10-29 · Índice de comorbilidad: Elixhauser, con Charlson como comparación
 - **Actividad:** 3.1
@@ -197,7 +204,7 @@ incluirá la consulta sobre el umbral de V (H30), el índice de comorbilidad (D4
 - **Visto bueno:** La persona a cargo de la tesis lo aprobó el 28 de octubre de 2026 («Elixhauser, pero igualmente se puede dejar como validación»).
 - **Evidencia:** `reportes/15_variables_casos.md`, sección 3. La prueba independiente compara la tabla con una transcripción de los rangos de Quan et al. (2005) y recalcula el índice de todos los casos con otro método.
 - **Referencias:** Charlson, M. E., et al. (1987), *Journal of Chronic Diseases*, 40(5), 373–383; Elixhauser, A., et al. (1998), *Medical Care*, 36(1), 8–27; Quan, H., et al. (2005), *Medical Care*, 43(11), 1130–1139; Quan, H., et al. (2011), *American Journal of Epidemiology*, 173(6), 676–682; Gasparini, A. (2018), *Journal of Open Source Software*, 3(23), 648.
-- **Estado:** Adoptada. Pendiente de validar con profesor guía (Charlson o Elixhauser).
+- **Estado:** Adoptada. Aprobada por el profesor guía el 30 de octubre de 2026 (Elixhauser, con Charlson como comparación), con precisiones (O8). Reemplazada en parte por D54: el resumen del índice y los diagnósticos que se usan.
 
 ### D49 · 2026-10-29 · Las demás columnas del CMBD entran sin filtro
 - **Actividad:** 3.1
@@ -248,19 +255,100 @@ incluirá la consulta sobre el umbral de V (H30), el índice de comorbilidad (D4
 - **Visto bueno:** La persona a cargo de la tesis lo aprobó el 28 de octubre de 2026 («Sí, apruébala»).
 - **Evidencia:** `reportes/15_variables_casos.md`, sección 4; la observación por hospital y por nacionalidad sale de una exploración de solo lectura del 28 de octubre de 2026 sobre el conjunto de desarrollo.
 - **Referencias:** Li, Yao y Échevin (2020), citado en la propuesta (destino y departamento al alta entre los predictores más importantes); Donzé, J., et al. (2013), *JAMA Internal Medicine*, 173(8), 632–638 (puntaje HOSPITAL: alta desde oncología y procedimiento durante la estadía).
-- **Estado:** Adoptada. Pendiente de validar con profesor guía, en especial el hospital como predictora.
+- **Estado:** Adoptada. Aprobada por el profesor guía el 30 de octubre de 2026; el hospital como predictora, en D55.
 
 ### H33 · 2026-10-29 · Tratamientos periódicos de un día registrados como hospitalización
 - **Actividad:** 3.1
 - **Hallazgo:** 697 casos de 13 personas tienen 50 o más hospitalizaciones previas en la ventana de D47; el máximo es 342, mientras que el percentil 99 es 4 y el 99,9 es 13. De los 1.603 egresos de esas personas, el 72,4 % dura 0 días y el 94,5 % es programado. Sus diagnósticos principales más frecuentes son D66 (deficiencia hereditaria del factor VIII: 426 egresos), E76 (trastornos del metabolismo de los glucosaminoglicanos: 366), E78 (trastornos del metabolismo de las lipoproteínas: 229), Z29 (necesidad de otras medidas profilácticas: 198) y K91 (trastornos del sistema digestivo consecutivos a procedimientos: 151). Son tratamientos periódicos de un día, como infusiones o terapias de reemplazo, que no se codifican como sesión: D33 solo trata como sesión el diagnóstico principal Z51, así que cuentan como hospitalizaciones.
 - **Consecuencia:** Las variables de historia no se corrigen: cuentan lo registrado, como define D47. Los valores extremos afectan sobre todo a la regresión logística; en la actividad 3.2 se decide, con cada modelo, si se transforma la variable (por ejemplo, con un logaritmo o un tope). Se puede consultar al profesor guía si estos tratamientos deberían tratarse como sesiones, lo que cambiaría la cohorte de la 2.2 (criterio E14).
 - **Evidencia:** `reportes/15_variables_casos.md`, sección 2 (valores extremos); exploración de solo lectura del 28 de octubre de 2026 (diagnósticos y tipo de ingreso de los egresos de esas personas, sin mostrar identificadores).
+- **Resolución:** El profesor guía pidió tratarlos como sesiones con una regla (30 de octubre de 2026): es el criterio E15 (D50 de la bitácora de la 2.2). Con él, el máximo de hospitalizaciones previas baja de 342 a 64, y los casos con 50 o más, de 697 a 21 (de una persona con ciclos de nutrición parenteral de 5 días o más).
+
+### D53 · 2026-11-02 · Listas para comparar y listas de cada pliegue
+- **Actividad:** 3.1 (responde a las observaciones O5 y O7 de la revisión del profesor guía del 30 de octubre de 2026)
+- **Decisión:** Además de la lista A (D45), que sigue siendo la principal, el script 14 calcula para cada variable de reingreso tres listas para comparar en la actividad 3.2, y las listas que miran el reingreso se calculan también con el entrenamiento de cada pliegue de la validación cruzada (D52 de la bitácora de la 2.3):
+
+  | Lista | Qué contiene | Por pliegue |
+  |---|---|---|
+  | A | V ≥ 0,01 y al menos 100 casos (D45) | Sí |
+  | C | La A más los códigos de efecto grande: riesgo al menos el doble o como máximo la mitad que sin el código, con valor p menor que 0,001, y al menos 100 casos (H30) | Sí |
+  | Agrupada | La regla de la A con los diagnósticos en su categoría de tres caracteres (R57.0 → R57) y los procedimientos completos | Sí |
+  | Sin filtro | Todos los códigos completos con al menos 100 casos | No: no mira el reingreso |
+
+- **Qué lista se usa dónde:** La lista calculada con todo el conjunto de desarrollo (`PLIEGUE` = 0) queda fija para el modelo final y se aplica sin recalcularla al conjunto de prueba, como dice la Etapa 3 de la propuesta. Dentro de la validación cruzada, cada vuelta usa la lista calculada sin los casos del pliegue que evalúa (`PLIEGUE` = 1 a 5), para que los casos de validación no ayuden a elegir los códigos (O5). La Etapa 4 lo respalda: «todo preprocesamiento dependiente de los datos se ajusta por partición».
+- **Resultado (versión 3 del conjunto analítico):**
+
+  | Lista | `REING_7D` | `REING_7D_CDM` | `REING_30D` | `REING_30D_CDM` |
+  |---|---|---|---|---|
+  | A | 108 | 57 | 424 | 191 |
+  | C | 849 | 629 | 1.595 | 1.165 |
+  | Agrupada | 112 | 46 | 348 | 168 |
+  | Sin filtro | 7.184 | 6.975 | 7.116 | 6.913 |
+
+  Con la cohorte sin los tratamientos periódicos (D50 de la bitácora de la 2.2), la lista A de las variables a 30 días gana un código cada una (423 → 424 y 190 → 191).
+- **Estabilidad entre pliegues:** El índice de Jaccard compara la lista de cada pliegue con la de todo desarrollo: de los códigos que están en alguna de las dos, la parte que está en las dos (1 = iguales).
+
+  | Lista | `REING_7D` | `REING_7D_CDM` | `REING_30D` | `REING_30D_CDM` |
+  |---|---|---|---|---|
+  | A: Jaccard | 0,904 a 0,923 | 0,871 a 0,915 | 0,949 a 0,974 | 0,906 a 0,969 |
+  | A: en los 5 pliegues | 99 de 108 | 47 de 57 | 398 de 424 | 176 de 191 |
+  | C: Jaccard | 0,720 a 0,757 | 0,753 a 0,775 | 0,813 a 0,841 | 0,818 a 0,829 |
+  | Agrupada: Jaccard | 0,915 a 0,982 | 0,918 a 0,957 | 0,955 a 0,974 | 0,936 a 0,971 |
+
+  En la A solo cambian códigos con la V justo en el umbral. La C cambia bastante más: con el 80 % de los casos, su condición de valor p deja fuera unos 150 a 210 códigos en cada pliegue. Por la regla del profesor guía («si son casi iguales, la lista fija queda justificada; si no, el filtro tiene que ir dentro de la validación cruzada»), la C no es casi igual, y para comparar las listas de forma justa todas se tratan del mismo modo.
+- **La lista agrupada:** Una categoría pasa cuando sus subcódigos, sumados, llegan al umbral. Es el caso del ejemplo del profesor: R57.0 (choque cardiogénico) no pasa por sí solo, pero la categoría R57 sí (V 0,0218 con `REING_30D`). Con `REING_30D`, 1.094 diagnósticos que no pasan solos tienen su categoría en la lista agrupada, y 39 categorías pasan sin que pase ninguno de sus códigos completos.
+- **Archivos:** `data/processed/listas_codigos.parquet` (una fila por código de cada lista, variable y pliegue: 60.446 filas); `data/processed/filtro_codigos.parquet` agrega las columnas `NIVEL`, `RIESGO_RELATIVO` y `PASA_C` y las filas de las categorías de diagnóstico; `reportes/14_codigos_retenidos.csv` sigue siendo la lista A fija, con el mismo formato.
+- **Para la actividad 3.2:** Se sugiere juzgar si el filtro pierde algo con el criterio de éxito de la propia propuesta (objetivo específico 3): una caída no mayor de 0,02 en el área bajo la curva ROC ni de 10 % relativo en la de precisión y exhaustividad frente a la lista sin filtro.
+- **Verificación:** La prueba independiente revisa la regla de la C en toda la tabla y las cuatro listas de todo desarrollo; recalcula 24 categorías marcando los casos columna por columna, y rehace 10.080 decisiones de las listas por pliegue (168 códigos, 109 de ellos de los que cambian entre pliegues, con las 4 variables, los 5 pliegues y las 3 listas) contando directamente los casos de entrenamiento. Todo coincide. Con 3 códigos quitados y 2 agregados a propósito, falla justo en las tres comprobaciones que tocan esos errores.
+- **Parámetros:** `listas_comparacion` (C, AGRUPADA y SIN_FILTRO), `efecto_grande_riesgo` (2) y `efecto_grande_p` (0,001), en `reglas/parametros.csv`.
+- **Visto bueno:** La persona a cargo de la tesis lo aprobó el 2 de noviembre de 2026 («Sí, apruébalos»).
+- **Precisa a:** D45, en el campo «Una sola vez y fijo». Responde a la propuesta de H30.
+- **Evidencia:** `3.1_filtro_dimensionalidad/reportes/14_filtro_codigos.md`, secciones 3 y 4.
+- **Estado:** Adoptada, por recomendación del profesor guía.
+
+### D54 · 2026-11-02 · Índice de comorbilidad: el de reingreso de Moore, con los diagnósticos secundarios
+- **Actividad:** 3.1 (responde a la observación O8 de la revisión del profesor guía del 30 de octubre de 2026)
+- **Decisión:** `INDICE_COMORBILIDAD` es el índice de reingreso de Moore et al. (2017): la suma de los pesos de las condiciones de Elixhauser presentes en los diagnósticos secundarios del egreso, sin el principal. Las condiciones, sus códigos y las jerarquías son los de D48 (Quan et al., 2005). El conteo simple (el índice de D48), los pesos de van Walraven et al. (2009) y el puntaje de Charlson se calculan siempre, con y sin el diagnóstico principal, y el reporte los compara.
+- **Cómo se resumían las condiciones:** Hasta ahora, con el conteo simple (número de condiciones), lo que el informe no decía (O8).
+- **Los pesos:** Moore et al. (2017) estimaron un peso por cada una de las 29 medidas de Elixhauser de AHRQ para predecir el reingreso a 30 días: por ejemplo, insuficiencia cardíaca 13, insuficiencia renal 15, cáncer metastásico 21 y obesidad −3. Las 31 condiciones de Quan se llevan a esas 29 medidas: las arritmias no están entre ellas (peso 0) y las dos hipertensiones son una sola (−1, que se suma una vez porque la jerarquía deja solo una). Están en `reglas/pesos_elixhauser.csv`. Se tomaron del programa de índices de HCUP (AHRQ), transcrito en el paquete hcuppy de Python, y coinciden en las 29 medidas con el paquete coder de R (pesos `ahrq_readm`). Los de van Walraven coinciden entre el paquete comorbidity y el paquete coder de R.
+- **Sin el diagnóstico principal:** Es el motivo de la hospitalización y no una comorbilidad (O8), y el programa de AHRQ del que sale el índice de Moore busca las condiciones en los diagnósticos secundarios. Su información no se pierde: entra a los modelos por sus códigos (D45), la CDM, el peso GRD y la severidad. Con el principal, el número de condiciones subiría en 389.909 casos (11,6 %), sobre todo por el mismo cáncer o la misma insuficiencia cardíaca por la que la persona se hospitalizó.
+- **Resultado (versión 3):** Área bajo la curva ROC del índice solo, con `REING_30D`:
+
+  | Índice | Solo secundarios | Todos los diagnósticos |
+  |---|---|---|
+  | Moore (en uso) | 0,616 | 0,627 |
+  | Conteo de Elixhauser | 0,611 | 0,618 |
+  | van Walraven | 0,599 | 0,607 |
+  | Charlson | 0,592 | 0,609 |
+  | Número de diagnósticos | — | 0,614 |
+
+  En la exploración del 31 de octubre de 2026, en un modelo con la CDM y la edad, Moore con los diagnósticos secundarios elevaba el área de 0,628 a 0,666, más que el conteo (0,659 sin el principal y 0,662 con él). El índice va de −4 a 102, con promedio 5,25. Tienen alguna condición de Elixhauser en los diagnósticos secundarios el 56,2 % de los casos (de 49,2 % en 2019 a 62,5 % en 2024) y alguna de Charlson, el 31,7 %.
+- **Verificación:** La prueba independiente compara los pesos con una segunda transcripción (Moore por el nombre de la medida de AHRQ y van Walraven por condición) y recalcula el índice de todos los casos con expresiones regulares, marcando por separado el diagnóstico principal y los secundarios. Coincide en todos los casos; con 5 índices cambiados a propósito, falla justo en esa comprobación.
+- **Pendiente:** Contrastar la tabla 2 de Quan et al. (2005; DOI 10.1097/01.mlr.0000182534.19832.83) y los pesos de Moore et al. (2017; DOI 10.1097/MLR.0000000000000735) con los artículos completos, cuando se consigan por la biblioteca. Los dos se citan como fuente.
+- **Parámetros:** `indice_comorbilidad` (MOORE; también CONTEO, VAN_WALRAVEN o CHARLSON) y `comorbilidad_diagnosticos` (SECUNDARIOS o TODOS), en `reglas/parametros.csv`.
+- **Visto bueno:** La persona a cargo de la tesis lo aprobó el 2 de noviembre de 2026 («Sí, apruébalos»).
+- **Reemplaza a:** D48 en cómo se resume el índice (conteo → pesos de Moore) y en qué diagnósticos se usan (todos → secundarios). El resto de D48 sigue vigente.
+- **Evidencia:** `3.1_filtro_dimensionalidad/reportes/15_variables_casos.md`, sección 3.
+- **Referencias:** Moore, B. J., White, S., Washington, R., Coenen, N. y Elixhauser, A. (2017), *Medical Care*, 55(7), 698–705; van Walraven, C., Austin, P. C., Jennings, A., Quan, H. y Forster, A. J. (2009), *Medical Care*, 47(6), 626–633; Quan, H., et al. (2005), *Medical Care*, 43(11), 1130–1139.
+- **Estado:** Adoptada, por recomendación del profesor guía.
+
+### D55 · 2026-11-02 · Uso del modelo y el hospital como predictora
+- **Actividad:** 3.1 (responde a la observación O9 de la revisión del profesor guía del 30 de octubre de 2026; se aplica en la actividad 3.2)
+- **Uso del modelo:** La tesis es descriptiva: busca identificar e interpretar las variables asociadas al reingreso en los hospitales públicos de alta y mediana complejidad bajo sistema GRD, entre 2019 y 2024 («Alcances y limitaciones» de la propuesta). El modelo describe y predice el reingreso en estos mismos hospitales; no compara hospitales ni se traslada a otros.
+- **Decisión:** Como el modelo es para estos mismos hospitales, `HOSPITAL` entra como variable en el análisis principal, y se entrena además sin ella, como sensibilidad, comparando el subconjunto de variables seleccionado en los dos. Si una variable de los pacientes cambia mucho de lugar sin el hospital (por ejemplo, la región o el servicio clínico), es porque estaba representando al hospital.
+- **Los 7 hospitales sin casos antes de 2023:** Tienen 24.050 casos de la evaluación temporal (2,0 % de 1.183.563; 7.122 de 2023 y 16.928 de 2024), con 8,73 % de reingreso a 30 días frente a 6,23 % del resto. En la validación cruzada no hay problema, porque están en todos los pliegues. En la validación temporal (entrenamiento 2019–2022) y en su sensibilidad con 2020 y 2022 (D44), el modelo no los ve al entrenar y no puede aprender su efecto: el modelo con hospital se evalúa en los 65 hospitales que vio, y esos 7 se informan aparte con el modelo sin hospital.
+- **Fundamento:** Revisión del profesor guía del 30 de octubre de 2026 (O9): si el modelo es para predecir reingresos en estos mismos hospitales, el hospital sirve como variable; si es para comparar hospitales o usarlo en otros, no debe entrar, porque se come justo la diferencia que se quiere medir.
+- **Visto bueno:** La persona a cargo de la tesis lo aprobó el 2 de noviembre de 2026 («Sí, apruébalas»).
+- **Completa a:** D49, en el punto del hospital.
+- **Evidencia:** cifras de la versión 3 del conjunto de desarrollo (1 de noviembre de 2026).
+- **Estado:** Adoptada, por recomendación del profesor guía.
 
 ---
 
 ## Pendientes
 
-- Cierre de la actividad: armar las tablas que usarán los modelos (para cada variable de reingreso, las 30 variables de D46 a D49, los códigos de su lista de D45 y la variable objetivo), con su prueba, su diccionario y su registro de versión. Conviene que su reporte incluya también el desglose de los códigos que quedan fuera y la lista ampliada de H30, para que esas cifras queden reproducibles.
-- Revisión del profesor guía, al terminar la actividad, en un informe de avance que incluya: el umbral de V y la comparación de las listas A y C en la actividad 3.2 (H30), el mínimo de pacientes distintos (H32), la deriva de la codificación (H31), el índice de comorbilidad (D48), el hospital como predictora y las limitaciones de las columnas del CMBD (D49) y los tratamientos periódicos (H33).
-- Revisar la tabla 2 de Quan et al. (2005) si se consigue el artículo (D48).
-- Para la actividad 3.2: decidir con cada modelo cómo se codifican las categorías y si se transforman los números con valores extremos (H33), y tener en cuenta que las variables parecidas se reparten la importancia (D49).
+- Cierre de la actividad: armar las tablas que usarán los modelos (para cada variable de reingreso, las 30 variables de D46 a D49 y D54, los indicadores de los códigos de las cuatro listas de D53, el pliegue de D52 y la variable objetivo), con su prueba, su diccionario y su registro de versión.
+- Revisión del profesor guía de los dos pasos (informe de avance 5): hecha el 30 de octubre de 2026; sus observaciones quedaron en D50 (2.2), D52 y D56 (2.3) y D53 a D55.
+- Presentar al profesor guía, en el próximo avance, D53 a D55 y las entradas nuevas de las bitácoras de la 2.2 y la 2.3.
+- Revisar la tabla 2 de Quan et al. (2005) y los pesos de Moore et al. (2017) con los artículos completos, cuando se consigan por la biblioteca (D54).
+- Para la actividad 3.2: comparar las listas A, C, agrupada y sin filtro con los mismos modelos y la misma validación cruzada, cada pliegue con su lista (D53); entrenar con y sin el hospital y evaluar los 7 hospitales nuevos aparte en la validación temporal (D55); informar la calibración por año (D56); decidir con cada modelo cómo se codifican las categorías y si se transforman los números con valores extremos, como las sesiones previas (hasta 340, D50 y H33); y tener en cuenta que las variables parecidas se reparten la importancia (D49).

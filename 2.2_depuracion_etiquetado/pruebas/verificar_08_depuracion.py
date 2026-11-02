@@ -3,8 +3,9 @@
 Vuelve a calcular, con otro método, lo que el script 08 dejó en data/processed/grd_depurado.parquet:
 duplicados, personas, identidad ambigua, criterios de exclusión, episodios asistenciales y los dos
 papeles de cada egreso. No usa ninguna función del script 08: los criterios se evalúan con pyarrow
-en vez de pandas y los episodios se arman con un recorrido egreso por egreso. Al final compara el
-resultado con la tabla «paso a paso» del reporte 08. Solo lee.
+en vez de pandas, los episodios se arman con un recorrido egreso por egreso y los tratamientos
+periódicos (E15) se cuentan recorriendo los ingresos de cada persona con una cola de fechas. Al final
+compara el resultado con la tabla «paso a paso» del reporte 08. Solo lee.
 
 Uso (desde la carpeta Codigo):
     .venv\\Scripts\\python.exe 2.2_depuracion_etiquetado\\pruebas\\verificar_08_depuracion.py
@@ -19,6 +20,7 @@ import csv
 import re
 import sys
 import time
+from collections import deque
 from pathlib import Path
 
 import numpy as np
@@ -199,6 +201,34 @@ esperado = {
 marca = {codigo: valores.to_numpy(zero_copy_only=False) for codigo, valores in esperado.items()}
 marca["E01"] = (d["ID_PACIENTE"].isna() | (d["ID_PERSONA"].isna() & ~es_generico)).to_numpy()
 marca["E02"] = es_generico.to_numpy()
+
+# E15, tratamientos periódicos (D50): se recorren los ingresos candidatos de cada persona y categoría del diagnóstico
+# principal en orden de fecha, guardando en una cola las fechas de los anteriores; los que quedan fuera de la ventana salen
+# por el frente. Un ingreso es tratamiento periódico si en la cola hay al menos el mínimo de ingresos de días anteriores.
+tipos_periodico = {v.strip().upper() for v in par["periodico_tipo_ingreso"].split("|") if v.strip()}
+estadia_max, previos_min, ventana = (int(par["periodico_estadia_max_dias"]), int(par["periodico_previos_min"]),
+                                     int(par["periodico_ventana_dias"]))
+dias_estadia = (d["FECHAALTA"] - d["FECHA_INGRESO"]).dt.days.to_numpy(dtype="float64", na_value=np.nan)
+categoria = d["DIAGNOSTICO1"].str.slice(0, 3)
+candidato = (d["ID_PERSONA"].notna().to_numpy() & ~marca["E03"] & ~marca["E04"] & ~marca["E13"] & ~marca["E14"]
+             & d["TIPO_INGRESO"].isin(tipos_periodico).to_numpy() & (np.nan_to_num(dias_estadia, nan=np.inf) <= estadia_max)
+             & categoria.notna().to_numpy())
+lista = pd.DataFrame({"fila": np.flatnonzero(candidato), "persona": d.loc[candidato, "ID_PERSONA"].to_numpy(dtype="int64"),
+                      "categoria": categoria[candidato].to_numpy(),
+                      "dia": d.loc[candidato, "FECHA_INGRESO"].to_numpy().astype("datetime64[D]").astype("int64")})
+lista = lista.sort_values(["persona", "categoria", "dia"])
+marca["E15"] = np.zeros(len(d), dtype=bool)
+cola, serie_anterior = deque(), None
+for fila, persona, cat, dia in zip(lista["fila"].tolist(), lista["persona"].tolist(), lista["categoria"].tolist(), lista["dia"].tolist()):
+    if (persona, cat) != serie_anterior:
+        cola.clear()
+        serie_anterior = (persona, cat)
+    while cola and cola[0] < dia - ventana:
+        cola.popleft()
+    if sum(1 for anterior in cola if anterior < dia) >= previos_min:
+        marca["E15"][fila] = True
+    cola.append(dia)
+
 for codigo in sorted(marca):
     real = d[columna[codigo]].to_numpy()
     comprobar(f"{codigo} ({columna[codigo]})", (marca[codigo] == real).all(), f"(cumplen {int(real.sum())}; diferencias {int((marca[codigo] != real).sum())})")
@@ -283,7 +313,8 @@ if REPORTE is not None and REPORTE.exists():
     filas = {}
     for linea in REPORTE.read_text(encoding="utf-8").splitlines():
         m = re.match(r"\| (E\d\d) \| .* \| ([\d.]+) \| ([\d.]+|—) \| ([\d.]+) \|$", linea)
-        if m and m[1] not in filas:
+        # Solo los códigos de criterio: otras tablas del reporte tienen filas que empiezan con una categoría CIE-10 (E76).
+        if m and m[1] in columna and m[1] not in filas:
             filas[m[1]] = (int(m[2].replace(".", "")), None if m[3] == "—" else int(m[3].replace(".", "")), int(m[4].replace(".", "")))
     comprobar(f"La tabla «paso a paso» de {REPORTE.name} coincide con el recálculo en los {len(pasos)} criterios", filas == pasos,
               str({k: (filas.get(k), v) for k, v in pasos.items() if filas.get(k) != v}) if filas != pasos else "")

@@ -6,7 +6,8 @@ funciones de los scripts 08 y 09, con el cambio aplicado solo en memoria: no mod
 de reglas ni las tablas de datos. El análisis principal sigue siendo el de grd_etiquetado.parquet.
 
 Escenarios: con las actividades que solo existen en 2019 (E04), con la cirugía mayor ambulatoria
-(E13), con las sesiones de tratamiento (E14), con los partos en las variables relacionadas (valor 0),
+(E13), con las sesiones de tratamiento (E14), con los tratamientos periódicos (E15), con los partos
+en las variables relacionadas (valor 0),
 con las CDM de `cdm_sensibilidad` como una sola, con la censura sin margen, solo con los traslados
 que tienen marca explícita, con los derivados sin continuación como casos de estudio (E07 y E08) y
 sin los casos de identidad ambigua.
@@ -87,6 +88,10 @@ def definir_escenarios(m08, m09) -> list[dict]:
     if activo["E07"] and activo["E08"]:
         escenarios.append({"clave": "derivados", "nombre": "Con los derivados sin continuación como casos de estudio",
                            "cambio": "E07 y E08 desactivados", "criterios": {"E07": "NO", "E08": "NO"}})
+    # Al final, para no cambiar el número de las secciones que citan las bitácoras (traslados, 8; derivados, 9).
+    if activo["E15"]:
+        escenarios.append({"clave": "periodicos", "nombre": "Con los tratamientos periódicos", "cambio": "E15 desactivado",
+                           "criterios": {"E15": "NO"}})
     escenarios.append({"clave": "identidad", "nombre": "Sin los casos con identidad ambigua",
                        "cambio": "Se quitan los casos con `IDENTIDAD_AMBIGUA`", "sin": "IDENTIDAD_AMBIGUA"})
     for e in escenarios:
@@ -152,7 +157,7 @@ def detalle_por_actividad(casos: pd.DataFrame, variables: list[str]) -> dict:
 
 
 def detalle_sesiones(principal: pd.DataFrame, casos: pd.DataFrame, todo_ingreso: pd.DataFrame, variables: list[str], larga: int) -> dict:
-    """Caracterización de los casos de estudio que el escenario agrega (sesiones de tratamiento)."""
+    """Caracterización de los casos de estudio que el escenario agrega (sesiones de tratamiento o tratamientos periódicos)."""
     s = casos[~casos["ID_EGRESO"].isin(principal["ID_EGRESO"])]
     por_persona = s.groupby("ID_PERSONA").size()
     reiteradas = por_persona[por_persona >= MUCHAS_SESIONES]
@@ -378,7 +383,7 @@ def escribir_reporte(escenarios: list[dict], res: dict, variables: list[str], la
             ]
         elif e["clave"] == "cma":
             partes += ["Casos de estudio del escenario por tipo de actividad:", tabla_grupos("Tipo de actividad", d)]
-        elif e["clave"] == "sesiones":
+        elif e["clave"] in ("sesiones", "periodicos"):
             r, n = d["resumen"], d["casos"]
             partes += [
                 "Caracterización de los egresos que el criterio deja fuera como caso de estudio (los que el escenario agrega):",
@@ -394,7 +399,10 @@ def escribir_reporte(escenarios: list[dict], res: dict, variables: list[str], la
                      f"{fmt(d['todo_ingreso'][1])} ({pct(d['todo_ingreso'][1], d['todo_ingreso'][0], 1)})"],
                     *[[f"Con reingreso no planificado, `{k}`", f"{fmt(r[k][1])} ({pct(r[k][1], r[k][0])})"] for k in variables],
                 ]),
-                "En cualquier escenario, un ingreso con diagnóstico principal de sesión no cuenta como reingreso no planificado.",
+                "En cualquier escenario, un ingreso con diagnóstico principal de sesión no cuenta como reingreso no planificado."
+                if e["clave"] == "sesiones" else
+                "Un tratamiento periódico es un ingreso programado: en ningún escenario cuenta como reingreso no planificado, así "
+                "que el criterio solo cambia quiénes son casos de estudio y no las variables de los demás casos.",
             ]
         elif e["clave"] == "cdm":
             r = res[e["clave"]]["resumen"]
@@ -553,8 +561,8 @@ def main() -> None:
             r["detalle"] = detalle_actividad_2019(principal, casos, variables)
         elif e["clave"] == "cma":
             r["detalle"] = detalle_por_actividad(casos, variables)
-        elif e["clave"] == "sesiones":
-            # Otra pasada contando todo ingreso, para saber cuántas sesiones van seguidas de un ingreso programado.
+        elif e["clave"] in ("sesiones", "periodicos"):
+            # Otra pasada contando todo ingreso, para saber cuántos van seguidos de un ingreso programado.
             todo_ingreso, _, mal = calcular(m08, m09, originales, df, genericos, base, e, {"reingreso_solo_no_planificado": "NO"})
             fallidas += [f"{e['nombre']} (todo ingreso): {texto}" for texto in mal]
             r["detalle"] = detalle_sesiones(principal, casos, todo_ingreso, variables, larga)

@@ -3,9 +3,10 @@
 Comprueba, sin usar ninguna función del script 10, que la partición cumple lo que se exige de ella:
 ningún paciente está en los dos conjuntos, los dos archivos contienen exactamente los egresos del
 conjunto analítico sin cambiar ninguna celda, la partición se puede reproducir a partir de la
-semilla (se vuelve a calcular con un programa escrito de otra forma), los archivos tienen el hash
-registrado y las cifras del reporte 10 coinciden con el recálculo. Solo lee los datos; con las
-rutas por defecto deja reportes/pruebas_independientes.md.
+semilla (se vuelve a calcular con un programa escrito de otra forma) o, si se conservó el reparto
+registrado (parámetro reparto = REGISTRADO, D51), la lista de identificadores es la del sorteo
+original, los archivos tienen el hash registrado y las cifras del reporte 10 coinciden con el
+recálculo. Solo lee los datos; con las rutas por defecto deja reportes/pruebas_independientes.md.
 
 Uso (desde la carpeta Codigo):
     .venv\\Scripts\\python.exe 2.3_validacion_particion\\pruebas\\verificar_10_particion.py
@@ -155,9 +156,17 @@ for numero, e in enumerate(estratos):
     orden = fila[np.lexsort((azar[fila], casos_id[fila], reingresos[PRINCIPAL][fila]))]      # por reingresos, luego casos, luego azar
     a_prueba[orden[(np.arange(len(orden)) + partida[numero]) % UNA_DE_CADA == 0]] = True
 recalculado = pd.Series(np.where(a_prueba, "PRUEBA", "DESARROLLO"), index=identificador)
-comprobar(f"La partición se reproduce con la semilla {SEMILLA}: el recálculo asigna cada identificador al mismo conjunto",
-          (recalculado.reindex(lista["ID_PACIENTE"]).to_numpy() == lista["CONJUNTO"].to_numpy()).all(),
-          f"({len(estratos)} estratos; {int(a_prueba.sum())} identificadores a prueba)")
+iguales = recalculado.reindex(lista["ID_PACIENTE"]).to_numpy() == lista["CONJUNTO"].to_numpy()
+if par.get("reparto", "NUEVO").upper() == "REGISTRADO":
+    # Se conservó el reparto (D51): la lista debe ser la del sorteo original, la de la versión 1 de la partición. El sorteo
+    # recalculado sobre esta versión se informa para mostrar cuántos identificadores cambiarían de conjunto.
+    original = leer_csv(REGISTRO)[0]
+    comprobar("Reparto registrado: la lista de identificadores es la del sorteo original (mismo hash que la versión "
+              f"{original['version']} de la partición)", sha256(IDENTIFICADORES) == original["sha256_identificadores"],
+              f"(un sorteo nuevo con la semilla {SEMILLA} sobre esta versión cambiaría de conjunto a {int((~iguales).sum())} identificadores)")
+else:
+    comprobar(f"La partición se reproduce con la semilla {SEMILLA}: el recálculo asigna cada identificador al mismo conjunto",
+              iguales.all(), f"({len(estratos)} estratos; {int(a_prueba.sum())} identificadores a prueba)")
 
 # ------------------------------------------------------------------ 6. tamaño, tasas y reporte
 casos = {c: partes[c][partes[c]["ES_CASO_ESTUDIO"]] for c in ARCHIVOS}

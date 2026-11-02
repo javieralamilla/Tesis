@@ -12,10 +12,10 @@ Cada egreso puede cumplir dos papeles: **caso de estudio** (el alta desde la que
 | Copias exactas eliminadas | 3.818 |
 | Registros repetidos eliminados | 3.745 |
 | **Tabla depurada** | **5.800.973** |
-| Casos de estudio (`ES_CASO_ESTUDIO`) | 4.192.410 (72,3 %) |
+| Casos de estudio (`ES_CASO_ESTUDIO`) | 4.184.372 (72,1 %) |
 | Pueden contar como reingreso (`PUEDE_SER_REINGRESO`) | 5.565.982 (95,9 %) |
 
-La tabla depurada tiene 157 columnas: las de la tabla integrada, menos `DUP_EXACTO` y `DUP_CLAVE`, más las columnas nuevas de la sección 9.
+La tabla depurada tiene 158 columnas: las de la tabla integrada, menos `DUP_EXACTO` y `DUP_CLAVE`, más las columnas nuevas de la sección 9.
 
 ## 2. Duplicados eliminados
 
@@ -59,15 +59,15 @@ Otros 149 identificadores tienen tres fechas o más. Identificadores según el n
 
 | Qué cambia dentro del identificador | Resultado de la regla | Identificadores | Egresos | Casos de estudio |
 |---|---|---|---|---|
-| Solo el sexo | Una persona | 6.846 | 22.760 | 14.674 |
-| Solo la fecha de nacimiento | Una persona | 19.454 | 59.134 | 39.318 |
-| Solo la fecha de nacimiento | Varias personas | 2.800 | 8.135 | 5.918 |
+| Solo el sexo | Una persona | 6.846 | 22.760 | 14.347 |
+| Solo la fecha de nacimiento | Una persona | 19.454 | 59.134 | 39.060 |
+| Solo la fecha de nacimiento | Varias personas | 2.800 | 8.135 | 5.906 |
 | El sexo y la fecha de nacimiento | Una persona | 389 | 1.333 | 856 |
 | El sexo y la fecha de nacimiento | Varias personas | 1.115 | 2.981 | 2.512 |
 | El sexo y la fecha de nacimiento | Sin persona (identificador genérico) | 12 | 2.481 | 0 |
-| **Total con identidad ambigua** |  | **30.616** | **96.824** | **63.278** |
+| **Total con identidad ambigua** |  | **30.616** | **96.824** | **62.681** |
 
-Es el 0,76 % de los identificadores y el 1,51 % de los casos de estudio. **Cambian de persona** bajo la regla los 3.915 identificadores que se separan en varias personas (11.116 egresos; 8.430 casos de estudio): 4.964 de esos egresos (3.552 casos de estudio) quedan asignados a la segunda persona o a una posterior. En sentido contrario, 19.843 identificadores con más de una fecha de nacimiento se mantienen como una sola persona (60.467 egresos; 40.174 casos de estudio). Los más dudosos son los que tienen sexo y fecha de nacimiento distintos a la vez y aun así quedan como una persona (389 identificadores; 856 casos de estudio). El efecto de dejar fuera todos los casos con identidad ambigua está en `2.2_depuracion_etiquetado/reportes/11_sensibilidad.md`.
+Es el 0,76 % de los identificadores y el 1,50 % de los casos de estudio. **Cambian de persona** bajo la regla los 3.915 identificadores que se separan en varias personas (11.116 egresos; 8.418 casos de estudio): 4.964 de esos egresos (3.552 casos de estudio) quedan asignados a la segunda persona o a una posterior. En sentido contrario, 19.843 identificadores con más de una fecha de nacimiento se mantienen como una sola persona (60.467 egresos; 39.916 casos de estudio). Los más dudosos son los que tienen sexo y fecha de nacimiento distintos a la vez y aun así quedan como una persona (389 identificadores; 856 casos de estudio). El efecto de dejar fuera todos los casos con identidad ambigua está en `2.2_depuracion_etiquetado/reportes/11_sensibilidad.md`.
 
 ## 4. Episodios asistenciales
 
@@ -140,7 +140,8 @@ Los criterios se aplican en el orden de la tabla. **Cumplen el criterio**: egres
 | E12 | Alta voluntaria o fuga del paciente | Caso | No | 77.385 | — | 5.119.939 |
 | E13 | Cirugía mayor ambulatoria | Caso | Sí | 885.384 | 845.604 | 4.274.335 |
 | E14 | Sesión de tratamiento: diagnóstico principal Z51 | Caso | Sí | 100.229 | 81.925 | 4.192.410 |
-|  | **Casos de estudio** |  |  |  |  | **4.192.410** |
+| E15 | Tratamiento periódico: ingreso programado de un día, con la misma categoría de diagnóstico principal que al menos otros dos de la misma persona en el año anterior | Caso | Sí | 8.565 | 8.038 | 4.184.372 |
+|  | **Casos de estudio** |  |  |  |  | **4.184.372** |
 
 Egresos que quita cada paso, por año del archivo:
 
@@ -162,18 +163,36 @@ Egresos que quita cada paso, por año del archivo:
 | E11 | 0 | 73.672 | 0 | 0 | 0 | 102.385 | **176.057** |
 | E13 | 145.180 | 68.864 | 100.854 | 152.597 | 190.083 | 188.026 | **845.604** |
 | E14 | 19.115 | 12.630 | 11.166 | 11.553 | 13.570 | 13.891 | **81.925** |
-| **Casos de estudio** | 807.143 | 559.915 | 636.039 | 707.310 | 771.272 | 710.731 | **4.192.410** |
-| % de la tabla depurada | 70,2 % | 71,9 % | 77,9 % | 75,9 % | 74,3 % | 65,5 % | 72,3 % |
+| E15 | 1.987 | 937 | 737 | 1.529 | 1.290 | 1.558 | **8.038** |
+| **Casos de estudio** | 805.156 | 558.978 | 635.302 | 705.781 | 769.982 | 709.173 | **4.184.372** |
+| % de la tabla depurada | 70,0 % | 71,8 % | 77,8 % | 75,7 % | 74,1 % | 65,4 % | 72,1 % |
 
 Criterios desactivados: no quitan ningún egreso. La columna indica cuántos casos de estudio quitaría cada uno si se activara (cambiando `NO` por `SI` en la tabla de criterios).
 
 | Código | Criterio | Casos de estudio que quitaría | % |
 |---|---|---|---|
-| E12 | Alta voluntaria o fuga del paciente | 69.296 | 1,7 % |
+| E12 | Alta voluntaria o fuga del paciente | 69.286 | 1,7 % |
 
 E07 y E05 se complementan: los egresos derivados a otro hospital cuya continuación está en la base ya quedan fuera en E05, porque no son el alta final de su episodio; E07 quita los derivados cuya continuación no se ve. Detalle de E09: Sin código GRD: 90; CDM 99: 4.952. Detalle de E10 (un egreso puede cumplir más de una condición): sin fecha de nacimiento: 37; fecha de nacimiento posterior al ingreso: 1; edad al ingreso mayor de 110 años: 26; sin tipo de alta: 101.
 
-**Censura (E11).** Los archivos están organizados por año de alta, así que un reingreso solo aparece en la base si termina antes del cierre del bloque. Por eso cada ventana exige, además de sus días, un margen de 30 días entre el alta y el cierre. E11 quita los egresos que no alcanzan el seguimiento de la ventana más corta (7 + 30 = 37 días). Casos de estudio con seguimiento suficiente para cada ventana: 7 días (alta al menos 37 días antes del cierre), 4.192.410; 30 días (alta al menos 60 días antes del cierre), 4.101.883. Un caso que no alcanza una ventana queda sin las variables de esa ventana (reporte 09).
+**Censura (E11).** Los archivos están organizados por año de alta, así que un reingreso solo aparece en la base si termina antes del cierre del bloque. Por eso cada ventana exige, además de sus días, un margen de 30 días entre el alta y el cierre. E11 quita los egresos que no alcanzan el seguimiento de la ventana más corta (7 + 30 = 37 días). Casos de estudio con seguimiento suficiente para cada ventana: 7 días (alta al menos 37 días antes del cierre), 4.184.372; 30 días (alta al menos 60 días antes del cierre), 4.094.011. Un caso que no alcanza una ventana queda sin las variables de esa ventana (reporte 09).
+
+**Tratamientos periódicos (E15).** Algunos tratamientos se repiten cada pocos días o semanas, como la infusión de factores de coagulación, la terapia de reemplazo enzimático, la inmunoglobulina o la aféresis, y no se codifican como sesión (Z51): se registran con el diagnóstico de la enfermedad. Igual que las sesiones, no son caso de estudio (bitácora D50). Es candidato un egreso con tipo de ingreso «programada» que dura 0 o 1 día, con persona y diagnóstico principal, que no es de los tipos de actividad de 2019, cirugía mayor ambulatoria ni sesión: hay 342.953. Es un tratamiento periódico si la misma persona tuvo al menos 2 ingresos candidatos con la misma categoría de diagnóstico principal (sus tres primeros caracteres) en los 365 días anteriores a su ingreso, sin contar el mismo día. Solo se mira hacia atrás, como en las variables de historia. Candidatos según cuántos ingresos iguales tuvo la persona en esa ventana: ninguno, 321.381; 1, 13.007; 2, 2.062; 3 a 5, 2.079; 6 a 11, 1.748; 12 o más, 2.676. Cumplen el criterio 8.565 egresos de 1.812 personas (6.329 de 0 días; 2.236 de 1 día). Como son ingresos programados, ninguno cuenta como reingreso no planificado, en ningún escenario. Las categorías más frecuentes (12 de 310):
+
+| Categoría | Descripción | Egresos | Personas | Casos de estudio que deja fuera |
+|---|---|---|---|---|
+| Z29 | Necesidad de otras medidas profilácticas | 2.107 | 280 | 2.043 |
+| E76 | Trastornos del metabolismo de los glucosaminoglicanos | 1.043 | 38 | 1.023 |
+| F20 | Esquizofrenia | 516 | 33 | 396 |
+| D66 | Deficiencia hereditaria del factor VIII | 474 | 6 | 462 |
+| C91 | Leucemia linfoide | 329 | 128 | 320 |
+| E78 | Trastornos del metabolismo de las lipoproteínas y otras lipidemias | 219 | 2 | 214 |
+| K91 | Trastornos del sistema digestivo consecutivos a procedimientos, no clasificados en otra parte | 184 | 14 | 183 |
+| J45 | Asma | 177 | 12 | 161 |
+| F31 | Trastorno afectivo bipolar | 146 | 14 | 43 |
+| F32 | Episodio depresivo | 130 | 24 | 121 |
+| K51 | Colitis ulcerativa | 108 | 22 | 102 |
+| C53 | Tumor maligno del cuello del útero | 91 | 68 | 90 |
 
 Justificación de cada criterio:
 
@@ -193,6 +212,7 @@ Justificación de cada criterio:
 | E12 | Alta voluntaria o fuga del paciente | Se conservan: son egresos hospitalarios, y dejarlos fuera quitaría un grupo de mayor riesgo de reingreso. |
 | E13 | Cirugía mayor ambulatoria | Es un proceso asistencial distinto de la hospitalización convencional, y el estudio trata del reingreso después de un egreso hospitalario (revisión del profesor guía, 7 de octubre de 2026). |
 | E14 | Sesión de tratamiento: diagnóstico principal Z51 | Son atenciones planificadas o repetitivas, con una dinámica distinta de la del episodio agudo (revisión del profesor guía, 7 de octubre de 2026). |
+| E15 | Tratamiento periódico: ingreso programado de un día, con la misma categoría de diagnóstico principal que al menos otros dos de la misma persona en el año anterior | Son tratamientos planificados que se repiten cada pocos días o semanas (infusiones, terapias de reemplazo, aféresis) y no se codifican como sesión Z51: igual que las sesiones, tienen una dinámica distinta de la del episodio agudo (revisión del profesor guía, 30 de octubre de 2026). |
 
 ## 6. Egresos que pueden contar como reingreso
 
@@ -213,21 +233,21 @@ Un egreso puede contar como el reingreso de un alta anterior si se puede seguir 
 
 | Tipo de alta | Casos de estudio | % |
 |---|---|---|
-| DOMICILIO | 3.973.075 | 94,77 % |
-| HOSPITALIZACIÓN DOMICILIARIA | 129.823 | 3,10 % |
-| ALTA VOLUNTARIA | 52.562 | 1,25 % |
-| DERIVACIÓN A OTROS CENTROS (CÁRCEL, HOGAR DE | 20.216 | 0,48 % |
-| FUGA DEL PACIENTE | 16.734 | 0,40 % |
+| DOMICILIO | 3.965.104 | 94,76 % |
+| HOSPITALIZACIÓN DOMICILIARIA | 129.806 | 3,10 % |
+| ALTA VOLUNTARIA | 52.553 | 1,26 % |
+| DERIVACIÓN A OTROS CENTROS (CÁRCEL, HOGAR DE | 20.176 | 0,48 % |
+| FUGA DEL PACIENTE | 16.733 | 0,40 % |
 
 | Tipo de actividad | Casos de estudio | % |
 |---|---|---|
-| HOSPITALIZACIÓN | 4.192.410 | 100,00 % |
+| HOSPITALIZACIÓN | 4.184.372 | 100,00 % |
 
 | Tipo de ingreso | Casos de estudio | % |
 |---|---|---|
-| URGENCIA | 2.462.241 | 58,73 % |
-| OBSTETRICA | 879.251 | 20,97 % |
-| PROGRAMADA | 850.539 | 20,29 % |
+| URGENCIA | 2.462.241 | 58,84 % |
+| OBSTETRICA | 879.251 | 21,01 % |
+| PROGRAMADA | 842.501 | 20,13 % |
 | (sin dato) | 379 | 0,01 % |
 
 ## 8. Parámetros usados por este script
@@ -243,6 +263,10 @@ Un egreso puede contar como el reingreso de un alta anterior si se puede seguir 
 | `ventanas_dias` | `7 / 30` | Ventanas de reingreso, en días, separadas por una barra vertical (D20) |
 | `censura_margen_dias` | `30` | Días que se suman a cada ventana para la censura. Un caso de estudio tiene las variables de una ventana solo si su alta ocurre al menos ventana + margen días antes del cierre del bloque, porque un reingreso solo aparece en la base si termina antes del cierre. 0 = solo la ventana (H20, D30) |
 | `diagnosticos_sesion` | `Z51` | Comienzo del diagnóstico principal de las sesiones de tratamiento, separados por una barra vertical si son varios. Esos egresos no son caso de estudio (criterio E14) ni cuentan como reingreso no planificado (D33) |
+| `periodico_tipo_ingreso` | `PROGRAMADA` | Tipos de ingreso de un tratamiento periódico (criterio E15), separados por una barra vertical. Ninguno puede ser un ingreso no planificado: E15 solo quita casos de estudio y no cambia lo que cuenta como reingreso (D50) |
+| `periodico_estadia_max_dias` | `1` | Días máximos entre el ingreso y el alta de un tratamiento periódico: 0 = solo el mismo día, 1 = el mismo día o el siguiente (D50) |
+| `periodico_previos_min` | `2` | Un ingreso es tratamiento periódico si la misma persona tuvo al menos este número de ingresos que cumplen las mismas condiciones, con la misma categoría de diagnóstico principal (sus tres primeros caracteres), en la ventana anterior. 2 = el tercero de una serie o uno posterior (D50) |
+| `periodico_ventana_dias` | `365` | Días antes del ingreso en que se buscan esos ingresos anteriores, sin contar el mismo día (D50) |
 
 Cierre de cada bloque de identificador: A, 31-12-2020; B, 31-12-2024.
 
@@ -270,6 +294,7 @@ Cierre de cada bloque de identificador: A, 31-12-2020; B, 31-12-2024.
 | `EXC_ALTA_VOLUNTARIA_FUGA` | E12. Alta voluntaria o fuga del paciente. |
 | `EXC_CMA` | E13. Cirugía mayor ambulatoria. |
 | `EXC_SESION` | E14. Sesión de tratamiento: diagnóstico principal Z51. |
+| `EXC_TRATAMIENTO_PERIODICO` | E15. Tratamiento periódico: ingreso programado de un día, con la misma categoría de diagnóstico principal que al menos otros dos de la misma persona en el año anterior. |
 | `MOTIVO_EXCLUSION` | Código del primer criterio activo que excluye al egreso como caso de estudio. Sin dato en los casos de estudio. |
 | `ES_CASO_ESTUDIO` | Verdadero si el egreso no cumple ningún criterio activo. |
 | `PUEDE_SER_REINGRESO` | Verdadero si el egreso puede contar como reingreso de un alta anterior (sección 6). |
@@ -288,6 +313,7 @@ Las columnas `EXC_*` se calculan siempre, también para los criterios desactivad
 - Los episodios de una persona no se solapan entre sí: **sí**.
 - Todo caso de estudio tiene persona, episodio y es el alta final de su episodio: **sí**.
 - Todo egreso de un identificador genérico o separado en varias personas tiene `IDENTIDAD_AMBIGUA`: **sí**.
+- Todo tratamiento periódico (E15) tiene persona y tipo de ingreso «programada», dura 0 o 1 día y no es de 2019 (E04), cirugía mayor ambulatoria ni sesión: **sí**.
 - El archivo escrito tiene las filas esperadas: **sí**.
 - Las columnas originales conservan su nombre, orden y tipo de dato: **sí**.
 - Contenido idéntico al de la tabla integrada en 7 columnas de control: **sí**.

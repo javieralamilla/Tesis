@@ -1,7 +1,8 @@
-"""Grupos de la validación temporal interna (actividad 2.3, script 13).
+"""Grupos de la validación temporal interna y pliegues de la validación cruzada (actividad 2.3, script 13).
 
 Parte del conjunto de desarrollo (data/processed/desarrollo.parquet) y marca cada caso de estudio
-para la validación temporal interna (bitácora D37 y D40). No abre el conjunto de prueba.
+para la validación temporal interna (bitácora D37 y D40) y con su pliegue de la validación cruzada
+(D52). No abre el conjunto de prueba.
 
   1. Versión. Comprueba que el conjunto de desarrollo sea el de la última versión registrada de la
      partición (docs/version_particion.csv).
@@ -12,10 +13,14 @@ para la validación temporal interna (bitácora D37 y D40). No abre el conjunto 
      2022. Los egresos de 2019 y 2020 tienen otro identificador y no se pueden enlazar (H19): la
      separación vale dentro del bloque 2021-2024, y un paciente «nuevo» pudo estar hospitalizado
      en 2019 o 2020 con el otro identificador.
-  4. Salida. data/processed/validacion_temporal.parquet tiene una fila por caso de estudio de
-     desarrollo: su período y, en los de evaluación, si el paciente ya fue visto. No contiene nada
-     que dependa de las variables objetivo, así que las etapas siguientes pueden usarla para que
-     todos los modelos se evalúen con los mismos grupos.
+  4. Pliegues. Cada identificador de paciente va a uno de los pliegues de la validación cruzada,
+     con el mismo método de la partición (D28): por bloque y por el patrón de sus variables
+     objetivo, ordenados por sus reingresos de la variable principal y por sus casos de estudio,
+     y repartidos en orden con un punto de partida al azar fijado por la semilla del proyecto.
+     Todos los casos de un paciente quedan en el mismo pliegue (D37 y D52).
+  5. Salida. data/processed/validacion_temporal.parquet tiene una fila por caso de estudio de
+     desarrollo: su período, en los de evaluación si el paciente ya fue visto, y su pliegue. Las
+     etapas siguientes la usan para que todos los modelos se evalúen con los mismos grupos.
 
 La validación temporal se informa de tres maneras: con todos los casos de evaluación, solo con los
 de pacientes nuevos y solo con los de pacientes ya vistos (revisión del profesor guía del 13 de
@@ -44,7 +49,8 @@ DESARROLLO = DIR_PROCESSED / "desarrollo.parquet"
 DESTINO = DIR_PROCESSED / "validacion_temporal.parquet"
 ARCHIVO_PARAMETROS = ACTIVIDAD / "reglas" / "parametros.csv"
 REGISTRO = RAIZ / "docs" / "version_particion.csv"
-PARAMETROS = ["anios_entrenamiento_temporal", "anios_evaluacion_temporal", "paciente_visto_egresos"]
+PARAMETROS = ["anios_entrenamiento_temporal", "anios_evaluacion_temporal", "paciente_visto_egresos", "semilla", "variable_principal",
+              "pliegues_validacion_cruzada"]
 COLUMNAS = ["ID_EGRESO", "ID_PACIENTE", "BLOQUE_ID", "ANIO_ARCHIVO", "ES_CASO_ESTUDIO"]
 ENTRENAMIENTO, EVALUACION = "ENTRENAMIENTO", "EVALUACION"
 FORMAS_VISTO = {"TODOS": "cualquier egreso, sea o no caso de estudio", "CASOS": "un caso de estudio"}
@@ -65,7 +71,10 @@ def cargar_parametros() -> dict:
     def anios(nombre: str) -> list[int]:
         return sorted(int(v) for v in filas[nombre]["valor"].split("|") if v.strip())
     par = {"entrenamiento": anios("anios_entrenamiento_temporal"), "evaluacion": anios("anios_evaluacion_temporal"),
-           "visto": filas["paciente_visto_egresos"]["valor"].strip().upper()}
+           "visto": filas["paciente_visto_egresos"]["valor"].strip().upper(), "semilla": int(filas["semilla"]["valor"]),
+           "principal": filas["variable_principal"]["valor"].strip(), "pliegues": int(filas["pliegues_validacion_cruzada"]["valor"])}
+    if par["pliegues"] < 2:
+        raise SystemExit("pliegues_validacion_cruzada debe ser 2 o más.")
     if not par["entrenamiento"] or not par["evaluacion"] or max(par["entrenamiento"]) >= min(par["evaluacion"]):
         raise SystemExit("Los años de evaluación deben ser posteriores a todos los de entrenamiento.")
     if par["visto"] not in FORMAS_VISTO:
@@ -92,6 +101,43 @@ def comprobar_version() -> dict:
     return version
 
 
+# ------------------------------------------------------------------ pliegues de la validación cruzada
+def asignar_pliegues(casos: pd.DataFrame, objetivos: list[str], par: dict) -> pd.Series:
+    """Pliegue (1 a N) de cada identificador de paciente con casos de estudio, con el método de la partición (D28 y D52).
+
+    Estratos: bloque × patrón de las variables objetivo (en qué variables alguno de sus casos tiene reingreso; un
+    reingreso dentro de 7 días también lo es dentro de 30). Dentro de cada estrato los identificadores se ordenan por sus
+    casos con reingreso en la variable principal, por sus casos de estudio y por un número al azar, y se reparten en orden
+    entre los pliegues desde un punto de partida sorteado. Con la misma tabla y la misma semilla, el reparto es siempre igual.
+    """
+    n = par["pliegues"]
+    u = casos.groupby("ID_PACIENTE").agg(BLOQUE_ID=("BLOQUE_ID", "first"), CASOS=("ID_EGRESO", "size")).sort_index()
+    reingresos = {k: casos.groupby("ID_PACIENTE")[k].sum().reindex(u.index).fillna(0).astype("int64") for k in objetivos}
+    u["REINGRESOS"] = reingresos[par["principal"]]
+    # Patrón: un dígito por variable (1 = algún caso con reingreso), de la ventana más larga a la más corta, como en la
+    # partición. Un reingreso dentro de una ventana corta también lo es dentro de una más larga.
+    ventanas = sorted({int(k.split("_")[1][:-1]) for k in objetivos})
+    digito = {}
+    for sufijo in ("", "_CDM"):
+        alguno = np.zeros(len(u), dtype=bool)
+        for v in ventanas:                                       # de la ventana más corta a la más larga
+            alguno = alguno | (reingresos[f"REING_{v}D{sufijo}"] > 0).to_numpy()
+            digito[f"REING_{v}D{sufijo}"] = pd.Series(alguno.astype("int8").astype(str), index=u.index)
+    patron = pd.Series("", index=u.index)
+    for v in reversed(ventanas):
+        for sufijo in ("", "_CDM"):
+            patron = patron + digito[f"REING_{v}D{sufijo}"]
+    u["PATRON"] = patron
+    rng = np.random.default_rng(par["semilla"])
+    u["AZAR"] = rng.random(len(u))                               # desempata a los identificadores iguales
+    u["ESTRATO"] = u.groupby(["BLOQUE_ID", "PATRON"], sort=True).ngroup()
+    partida = rng.integers(0, n, u["ESTRATO"].max() + 1)         # punto de partida de cada estrato
+    u = u.sort_values(["ESTRATO", "REINGRESOS", "CASOS", "AZAR"])
+    lugar = u.groupby("ESTRATO").cumcount().to_numpy()
+    u["PLIEGUE"] = ((lugar + partida[u["ESTRATO"].to_numpy()]) % n + 1).astype("int8")
+    return u["PLIEGUE"].sort_index()
+
+
 # ------------------------------------------------------------------ grupos
 def marcar(par: dict) -> tuple[pd.DataFrame, dict]:
     """Devuelve una fila por caso de estudio de desarrollo, con su período y si el paciente ya fue visto,
@@ -111,7 +157,10 @@ def marcar(par: dict) -> tuple[pd.DataFrame, dict]:
     casos["PACIENTE_VISTO"] = pd.array(np.where(evaluacion, visto, False), dtype="boolean")
     casos.loc[~evaluacion, "PACIENTE_VISTO"] = pd.NA
 
-    salida = casos[["ID_EGRESO", "ID_PACIENTE", "PERIODO", "PACIENTE_VISTO"]].reset_index(drop=True)
+    # Pliegue de la validación cruzada: el de su identificador de paciente (D52).
+    pliegue_id = asignar_pliegues(casos, objetivos, par)
+    casos["PLIEGUE"] = pliegue_id.reindex(casos["ID_PACIENTE"]).to_numpy()
+    salida = casos[["ID_EGRESO", "ID_PACIENTE", "PERIODO", "PACIENTE_VISTO", "PLIEGUE"]].reset_index(drop=True)
 
     # ---------------------------------------------------------------- cifras del reporte
     def resumen(mascara: np.ndarray) -> dict:
@@ -130,6 +179,22 @@ def marcar(par: dict) -> tuple[pd.DataFrame, dict]:
             "egresos_previos": len(previos), "pacientes_previos": int(previos["ID_PACIENTE"].nunique()),
             "entrenamiento_bloque": entrenamiento_bloque}
 
+    # Pliegues: tamaño y tasas de cada uno, y por qué agrupar por paciente.
+    pliegue = casos["PLIEGUE"].to_numpy()
+    info["pliegues"] = {f: resumen(pliegue == f) for f in range(1, par["pliegues"] + 1)}
+    casos_paciente = casos.groupby("ID_PACIENTE")["ID_EGRESO"].transform("size").to_numpy()
+    info["por_paciente"] = {
+        "pacientes": int(casos["ID_PACIENTE"].nunique()),
+        "con_varios": int((casos.groupby("ID_PACIENTE").size() >= 2).sum()),
+        "casos_con_varios": int((casos_paciente >= 2).sum()),
+        # Con pliegues por egreso al azar, cada otro caso del paciente cae en el entrenamiento con probabilidad (N - 1) / N.
+        "compartiria": float((1 - (1 / par["pliegues"]) ** (casos_paciente - 1)).mean()),
+        "maximo": int(casos_paciente.max()),
+    }
+    tasas = {k: [100 * r[k][1] / r[k][0] for r in info["pliegues"].values()] for k in objetivos}
+    info["diferencia_pliegues"] = max(max(v) - min(v) for v in tasas.values())
+    tamanos = [r["casos"] for r in info["pliegues"].values()]
+
     # ---------------------------------------------------------------- verificaciones
     info["verificaciones"] = [
         ("Todo caso de estudio de desarrollo tiene un período, de entrenamiento o de evaluación", bool((casos["PERIODO"] != "").all())),
@@ -143,6 +208,11 @@ def marcar(par: dict) -> tuple[pd.DataFrame, dict]:
         ("Un paciente ya visto tiene, en un año de entrenamiento de su bloque, un egreso anterior a su caso de evaluación",
          bool((previos.groupby("ID_PACIENTE")["ANIO_ARCHIVO"].max().reindex(casos.loc[ya_visto, "ID_PACIENTE"]).to_numpy()
                < anio[ya_visto].to_numpy()).all())),
+        (f"Todo caso de estudio tiene un pliegue de 1 a {par['pliegues']} y todos los casos de un paciente están en el mismo pliegue",
+         bool(salida["PLIEGUE"].between(1, par["pliegues"]).all() and (casos.groupby("ID_PACIENTE")["PLIEGUE"].nunique() == 1).all())),
+        (f"Cada pliegue tiene entre {100 / par['pliegues'] - 0.5:.1f} % y {100 / par['pliegues'] + 0.5:.1f} % de los casos de estudio".replace(".", ","),
+         all(abs(100 * t / len(casos) - 100 / par["pliegues"]) < 0.5 for t in tamanos)),
+        ("La tasa de cada variable objetivo difiere en menos de 0,05 puntos porcentuales entre los pliegues", info["diferencia_pliegues"] < 0.05),
     ]
     return salida, info
 
@@ -188,12 +258,13 @@ def escribir_reporte(info: dict, par: dict, version: dict) -> None:
     anios_e = " y ".join(str(a) for a in par["evaluacion"])
     anios_t = f"{min(par['entrenamiento'])} a {max(par['entrenamiento'])}"
     previos = " y ".join(str(a) for a in info["anios_previos"])
+    pp, n_pl = info["por_paciente"], par["pliegues"]
     partes = [
-        "# Grupos de la validación temporal (actividad 2.3, script 13)",
+        "# Grupos de la validación temporal y pliegues de la validación cruzada (actividad 2.3, script 13)",
         f"Generado por `{ruta}/scripts/13_validacion_temporal.py`. Entrada: `data/processed/{DESARROLLO.name}`, de la versión "
         f"{version['version']} de la partición (SHA-256 `{version['sha256_desarrollo']}`). Salida: `data/processed/{DESTINO.name}`. "
         "No se abre el conjunto de prueba. Las decisiones están en "
-        f"`{ruta}/bitacora.md` (D37 y D40).",
+        f"`{ruta}/bitacora.md` (D37, D40 y D52).",
         f"**Validación temporal interna:** el modelo se entrena con los casos de estudio de desarrollo de {anios_t} y se evalúa "
         f"en los de {anios_e}. Como el reingreso depende mucho de cada paciente, el resultado se informa de tres maneras: con "
         "todos los casos de evaluación, solo con los de pacientes nuevos y solo con los de pacientes ya vistos (revisión del "
@@ -218,21 +289,41 @@ def escribir_reporte(info: dict, par: dict, version: dict) -> None:
         f"Egresos que hacen visto a un paciente: {fmt(info['egresos_previos'])} egresos de {fmt(info['pacientes_previos'])} "
         f"identificadores, de {previos}, del bloque {' y '.join(info['bloques_evaluacion'])}.",
 
-        "## 2. Parámetros usados por este script",
+        "## 2. Pliegues de la validación cruzada",
+        f"La validación cruzada reparte los casos de estudio de desarrollo en {n_pl} pliegues: el modelo se entrena {n_pl} veces, "
+        f"cada vez con {n_pl - 1} pliegues, y se evalúa con el que quedó fuera. Los pliegues se arman por paciente: todos los casos "
+        "de un identificador de paciente quedan en el mismo pliegue, para que el modelo nunca se evalúe con un paciente que vio al "
+        "entrenar (D37 y D52). El reparto usa el método de la partición (D28): estratos por bloque y por el patrón de las variables "
+        f"objetivo del paciente, orden por sus casos con reingreso en `{par['principal']}` y por sus casos de estudio, y punto de "
+        f"partida al azar con la semilla del proyecto ({par['semilla']}).",
+        f"**Por qué por paciente:** {fmt(pp['con_varios'])} de los {fmt(pp['pacientes'])} pacientes tienen dos casos de estudio o más, "
+        f"y suman {fmt(pp['casos_con_varios'])} casos ({pct(pp['casos_con_varios'], info['casos'], 1)}); un paciente llega a "
+        f"{fmt(pp['maximo'])}. Si los pliegues se armaran por egreso, el {pct(pp['compartiria'], 1, 1)} de los casos de validación "
+        "tendría otro caso de su mismo paciente en el entrenamiento, y un modelo como Random Forest o XGBoost podría aprender a "
+        "reconocer a esa persona en vez de predecir el reingreso.",
+        "Tamaño y tasas de cada pliegue (cada tasa usa los casos de estudio del pliegue con dato en esa variable):",
+        tabla_md(["Pliegue", "Casos de estudio", "% de los casos", "Pacientes", *[f"`{k}`" for k in objetivos]],
+                 [[f, fmt(r["casos"]), pct(r["casos"], info["casos"], 2), fmt(r["pacientes"]), *[pct(r[k][1], r[k][0]) for k in objetivos]]
+                  for f, r in info["pliegues"].items()]),
+        f"La mayor diferencia de una tasa entre dos pliegues es de {info['diferencia_pliegues']:.3f} puntos porcentuales.".replace(".", ",", 1),
+
+        "## 3. Parámetros usados por este script",
         tabla_md(["Parámetro", "Valor", "Descripción"],
                  [[f"`{k}`", f"`{v.replace('|', ' / ')}`", desc] for k, (v, desc) in par["descripcion"].items()]),
 
-        "## 3. Archivo de salida",
+        "## 4. Archivo de salida",
         tabla_md(["Columna", "Contenido"], [
             ["`ID_EGRESO`", "Caso de estudio de desarrollo."],
             ["`ID_PACIENTE`", "Identificador de paciente: es el grupo de la validación cruzada (D27)."],
             ["`PERIODO`", f"`{ENTRENAMIENTO}` ({anios_t}) o `{EVALUACION}` ({anios_e})."],
             ["`PACIENTE_VISTO`", "En los casos de evaluación, verdadero si el paciente ya fue visto en el entrenamiento. Sin dato "
                                  "en los casos de entrenamiento."],
+            ["`PLIEGUE`", f"Pliegue de la validación cruzada, de 1 a {n_pl}: el mismo para todos los casos de un paciente (D52)."],
         ]),
-        "El archivo no contiene las variables objetivo ni nada que dependa de ellas.",
+        "El archivo no contiene las variables objetivo. Los pliegues se estratifican por el patrón de reingresos del paciente, "
+        "igual que la partición, solo para que las tasas queden parejas entre pliegues: no son una variable del modelo.",
 
-        "## 4. Verificaciones",
+        "## 5. Verificaciones",
         "\n".join(f"- {texto}: **{'sí' if ok else 'NO'}**." for texto, ok in info["verificaciones"]),
     ]
     salida = DIR_REPORTS / "13_validacion_temporal.md"

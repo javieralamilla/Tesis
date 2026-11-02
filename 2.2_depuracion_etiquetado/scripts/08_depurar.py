@@ -12,6 +12,7 @@ Parte de data/processed/grd_2019_2024.parquet y deja data/processed/grd_depurado
   4. Criterios de exclusión (D23): cada criterio de reglas/criterios_exclusion.csv se marca en una
      columna EXC_*, sin borrar filas. ES_CASO_ESTUDIO indica los egresos que pasan todos los
      criterios activos; PUEDE_SER_REINGRESO, los que pueden contar como reingreso de un alta anterior.
+     El criterio E15 (tratamientos periódicos, D50) mira además los ingresos anteriores de la misma persona.
 
 Los umbrales están en reglas/parametros.csv. El reporte reportes/08_depuracion.md muestra cuántos
 egresos quita cada criterio, paso a paso, desde la tabla integrada hasta los casos de estudio.
@@ -40,7 +41,10 @@ ARCHIVO_CRITERIOS = ACTIVIDAD / "reglas" / "criterios_exclusion.csv"
 ARCHIVO_PARAMETROS = ACTIVIDAD / "reglas" / "parametros.csv"
 # Nombres de los hospitales: hoja Hospitales de la tabla maestra del DEIS (solo se usan en el reporte).
 TABLA_MAESTRA = RAIZ.parent / "Datos" / "Tablas auxiliares" / "Tablas maestras bases GRD.xlsx"
+# Descripción de las categorías de diagnóstico de la tabla CIE-10 del DEIS (solo se usa en el reporte).
+TABLA_CIE10 = RAIZ.parent / "Datos" / "Tablas auxiliares" / "CIE-10.xlsx"
 ANIOS = list(range(2019, 2025))
+BASE = 1 << 20  # más que cualquier fecha contada en días desde 1970 (unos 20.000): permite ordenar por serie y día
 
 # Último día observado de cada bloque de identificador (bitácora D03).
 CIERRE_BLOQUE = {"A": pd.Timestamp("2020-12-31"), "B": pd.Timestamp("2024-12-31")}
@@ -62,7 +66,9 @@ QUITAR = ["DUP_EXACTO", "DUP_CLAVE"]             # describen la tabla integrada,
 # list = varios valores separados por una barra vertical.
 PARAMETROS = {"persona_dias_fnac": int, "persona_mismo_dia_mes": bool, "id_generico_min_personas": int,
               "traslado_dias_max": int, "traslado_exige_marca": bool, "edad_maxima": int,
-              "ventanas_dias": list, "censura_margen_dias": int, "diagnosticos_sesion": list}
+              "ventanas_dias": list, "censura_margen_dias": int, "diagnosticos_sesion": list,
+              "periodico_tipo_ingreso": list, "periodico_estadia_max_dias": int, "periodico_previos_min": int,
+              "periodico_ventana_dias": int}
 # Motivo por el que un egreso continúa el episodio anterior.
 SOLAPADO, OTRO_MISMO_DIA, OTRO_DIA_SIGUIENTE, MISMA_ESTADIA = 1, 2, 3, 4
 # Qué dato del paciente cambia entre los registros de un identificador con identidad ambigua.
@@ -103,6 +109,15 @@ def cargar_parametros(cambios: dict | None = None) -> dict:
     par["ventanas_dias"] = sorted(int(v) for v in par["ventanas_dias"])
     if not par["ventanas_dias"] or par["censura_margen_dias"] < 0:
         raise SystemExit("Se necesita al menos una ventana y un margen de censura que no sea negativo.")
+    if (not par["periodico_tipo_ingreso"] or par["periodico_estadia_max_dias"] < 0 or par["periodico_previos_min"] < 1
+            or par["periodico_ventana_dias"] < 1):
+        raise SystemExit("Tratamientos periódicos (E15): se necesita al menos un tipo de ingreso, una estadía máxima que no sea "
+                         "negativa, al menos un ingreso anterior y una ventana de al menos un día.")
+    # E15 solo quita casos de estudio: si un tratamiento periódico pudiera ser un ingreso no planificado, seguiría contando
+    # como reingreso en el script 09, a diferencia de una sesión.
+    no_planificados = {v.strip().upper() for v in filas.get("ingresos_no_planificados", {}).get("valor", "").split("|") if v.strip()}
+    if no_planificados & set(par["periodico_tipo_ingreso"]):
+        raise SystemExit("periodico_tipo_ingreso no puede incluir un tipo de ingreso no planificado (ingresos_no_planificados).")
     par["descripcion"] = {nombre: (filas[nombre]["valor"].strip(), filas[nombre]["descripcion"]) for nombre in PARAMETROS}
     return par
 
@@ -369,6 +384,63 @@ def marcar_criterios(df: pd.DataFrame, genericos: np.ndarray, par: dict) -> dict
     return {codigo: np.asarray(m, dtype=bool) for codigo, m in marcas.items()}
 
 
+def a_dias(fechas: pd.Series) -> np.ndarray:
+    """Cada fecha como número de días desde el 1 de enero de 1970: así se resta y se compara rápido."""
+    return fechas.to_numpy(dtype="datetime64[ms]").astype("datetime64[D]").astype("int64")
+
+
+def tratamiento_periodico(df: pd.DataFrame, marcas: dict[str, np.ndarray], par: dict) -> tuple[np.ndarray, dict]:
+    """Criterio E15 (bitácora D50): tratamientos que se repiten cada pocos días o semanas y no se codifican como sesión.
+
+    Un egreso es candidato si tiene persona y fechas válidas, no es de los tipos de actividad de 2019 (E04), ni cirugía
+    mayor ambulatoria (E13), ni sesión (E14), su tipo de ingreso es uno de `periodico_tipo_ingreso`, dura a lo más
+    `periodico_estadia_max_dias` días y tiene diagnóstico principal. Es un tratamiento periódico si la misma persona tuvo
+    al menos `periodico_previos_min` ingresos candidatos con la misma categoría de diagnóstico principal (sus tres primeros
+    caracteres) que empezaron en los `periodico_ventana_dias` días anteriores a su ingreso, sin contar el mismo día.
+    Solo mira hacia atrás, así que se puede saber al momento del alta. Se calcula con las marcas, no con los criterios
+    activos: es el mismo en todos los escenarios del script 11.
+    """
+    categoria = df["DIAGNOSTICO1"].str[:3]
+    estadia = (df["FECHAALTA"] - df["FECHA_INGRESO"]).dt.days
+    candidato = (df["ID_PERSONA"].notna().to_numpy() & ~marcas["E03"] & ~marcas["E04"] & ~marcas["E13"] & ~marcas["E14"]
+                 & df["TIPO_INGRESO"].isin(par["periodico_tipo_ingreso"]).to_numpy()
+                 & (estadia <= par["periodico_estadia_max_dias"]).to_numpy(dtype=bool) & categoria.notna().to_numpy())
+    c = pd.DataFrame({"ID_PERSONA": df.loc[candidato, "ID_PERSONA"].to_numpy(dtype="int64"),
+                      "CATEGORIA": categoria[candidato].to_numpy(), "DIA": a_dias(df.loc[candidato, "FECHA_INGRESO"])})
+    # Cada ingreso se resume en un número (serie · BASE + día): los de una misma persona y categoría quedan juntos y por
+    # fecha, así que basta buscar dónde caerían el día del ingreso y el primer día de la ventana.
+    serie = c.groupby(["ID_PERSONA", "CATEGORIA"], sort=False).ngroup().to_numpy(dtype="int64")
+    clave = serie * BASE + c["DIA"].to_numpy()
+    ordenada = np.sort(clave)
+    previos = (np.searchsorted(ordenada, clave, side="left")
+               - np.searchsorted(ordenada, clave - par["periodico_ventana_dias"], side="left"))
+    es = previos >= par["periodico_previos_min"]
+    marca = np.zeros(len(df), dtype=bool)
+    marca[np.flatnonzero(candidato)[es]] = True
+    tramos = [("Ninguno", previos == 0), ("1", previos == 1), ("2", previos == 2), ("3 a 5", (previos >= 3) & (previos <= 5)),
+              ("6 a 11", (previos >= 6) & (previos <= 11)), ("12 o más", previos >= 12)]
+    detalle = {"candidatos": int(candidato.sum()), "previos": [(texto, int(m.sum())) for texto, m in tramos],
+               "egresos": int(es.sum()), "personas": int(c.loc[es, "ID_PERSONA"].nunique()),
+               "estadia": {int(k): int(v) for k, v in estadia[marca].value_counts().sort_index().items()}}
+    return marca, detalle
+
+
+def texto_periodico(par: dict) -> tuple[str, str]:
+    """Los tipos de ingreso y la estadía del criterio E15, escritos para el reporte: («programada», «0 o 1 día»)."""
+    tipos = " o ".join(f"«{t.lower()}»" for t in par["periodico_tipo_ingreso"])
+    maximo = par["periodico_estadia_max_dias"]
+    estadia = "0 días" if maximo == 0 else "0 o 1 día" if maximo == 1 else f"de 0 a {maximo} días"
+    return tipos, estadia
+
+
+def descripciones_cie10() -> dict:
+    """Descripción de cada código de la tabla CIE-10 del DEIS. Vacío si el archivo no está."""
+    if not TABLA_CIE10.exists():
+        return {}
+    tabla = pd.read_excel(TABLA_CIE10, dtype=str)
+    return dict(zip(tabla["Código"].str.strip(), tabla["Descripción"].str.split().str.join(" ")))
+
+
 def conteo(mascara: np.ndarray, valores: pd.Series) -> dict:
     return {k: int(v) for k, v in valores[mascara].value_counts(dropna=False).items()}
 
@@ -428,6 +500,7 @@ def aplicar_criterios(df: pd.DataFrame, genericos: np.ndarray, par: dict, criter
 
     # 3. Episodios asistenciales, sobre los egresos que se pueden seguir
     marcas = marcar_criterios(df, genericos, par)
+    marcas["E15"], info["periodicos"] = tratamiento_periodico(df, marcas, par)
     seguible = df["ID_PERSONA"].notna().to_numpy() & ~marcas["E03"]
     for c in criterios:
         if c["papel"] == "AMBOS" and c["activo"]:
@@ -455,6 +528,15 @@ def aplicar_criterios(df: pd.DataFrame, genericos: np.ndarray, par: dict, criter
                       "quita_anio": conteo(quita, anio), "quedan": int(restante.sum())})
     for p in pasos:
         p["quitaria"] = int((restante & marcas[p["codigo"]]).sum())      # solo se informa en los desactivados
+    # Tratamientos periódicos por categoría del diagnóstico principal: egresos, personas y casos de estudio que deja fuera.
+    periodico = marcas["E15"]
+    por_categoria = (pd.DataFrame({"CATEGORIA": df.loc[periodico, "DIAGNOSTICO1"].str[:3].to_numpy(),
+                                   "PERSONA": df.loc[periodico, "ID_PERSONA"].to_numpy(), "QUITA": motivo[periodico] == "E15"})
+                     .groupby("CATEGORIA").agg(egresos=("PERSONA", "size"), personas=("PERSONA", "nunique"), casos=("QUITA", "sum"))
+                     .sort_values(["egresos", "personas"], ascending=False))
+    info["periodicos"] = {**info["periodicos"], "categorias": [(cat, int(f["egresos"]), int(f["personas"]), int(f["casos"]))
+                                                                for cat, f in por_categoria.head(12).iterrows()],
+                          "n_categorias": len(por_categoria)}
     reingreso = seguible & ~df["CONTINUA_EPISODIO"].to_numpy()
     dias_al_cierre = (df["BLOQUE_ID"].map(CIERRE_BLOQUE) - df["FECHAALTA"]).dt.days.to_numpy()
     info["casos_por_ventana"] = {v: int((restante & (dias_al_cierre >= v + par["censura_margen_dias"])).sum())
@@ -528,6 +610,11 @@ def aplicar_criterios(df: pd.DataFrame, genericos: np.ndarray, par: dict, criter
          bool((df.loc[restante, "ID_EPISODIO"].notna() & (df.loc[restante, "ALTA_FINAL_EPISODIO"] | (not activo["E05"]))).all())),
         ("Todo egreso de un identificador genérico o separado en varias personas tiene `IDENTIDAD_AMBIGUA`",
          bool(df.loc[df["RESULTADO_PERSONA"].isin([VARIAS_PERSONAS, SIN_PERSONA]), "IDENTIDAD_AMBIGUA"].all())),
+        (f"Todo tratamiento periódico (E15) tiene persona y tipo de ingreso {texto_periodico(par)[0]}, dura {texto_periodico(par)[1]} "
+         "y no es de 2019 (E04), cirugía mayor ambulatoria ni sesión",
+         bool(df.loc[periodico, "ID_PERSONA"].notna().all() and df.loc[periodico, "TIPO_INGRESO"].isin(par["periodico_tipo_ingreso"]).all()
+              and ((df.loc[periodico, "FECHAALTA"] - df.loc[periodico, "FECHA_INGRESO"]).dt.days <= par["periodico_estadia_max_dias"]).all()
+              and not (marcas["E04"] | marcas["E13"] | marcas["E14"])[periodico].any())),
     ]
     return nuevo, info
 
@@ -661,6 +748,7 @@ def escribir_reporte(info: dict, par: dict, criterios: list[dict]) -> None:
     der_completos = der[completos].groupby("ANIO")[medidas].sum()
     der_hospital = der.groupby("COD_HOSPITAL").agg(DESDE=("ANIO", "min"), HASTA=("ANIO", "max"), **{m: (m, "sum") for m in medidas})
     nombres = nombres_hospitales()
+    per15, cie10 = info["periodicos"], descripciones_cie10()
 
     def fila_anio(tabla: pd.DataFrame, parte: list[str], total: str | None = None) -> list[str]:
         """Suma de las columnas `parte` por año; como porcentaje de la columna `total` si se indica."""
@@ -848,6 +936,22 @@ def escribir_reporte(info: dict, par: dict, criterios: list[dict]) -> None:
         f"({min(ventanas)} + {margen} = {min(ventanas) + margen} días). Casos de estudio con seguimiento suficiente para cada ventana: "
         + "; ".join(f"{v} días (alta al menos {v + margen} días antes del cierre), {fmt(info['casos_por_ventana'][v])}" for v in ventanas)
         + ". Un caso que no alcanza una ventana queda sin las variables de esa ventana (reporte 09).",
+        "**Tratamientos periódicos (E15).** Algunos tratamientos se repiten cada pocos días o semanas, como la infusión de "
+        "factores de coagulación, la terapia de reemplazo enzimático, la inmunoglobulina o la aféresis, y no se codifican como "
+        "sesión (Z51): se registran con el diagnóstico de la enfermedad. Igual que las sesiones, no son caso de estudio "
+        f"(bitácora D50). Es candidato un egreso con tipo de ingreso {texto_periodico(par)[0]} que dura {texto_periodico(par)[1]}, "
+        "con persona y diagnóstico principal, que no es de los tipos de actividad de 2019, cirugía mayor ambulatoria ni sesión: "
+        f"hay {fmt(per15['candidatos'])}. Es un tratamiento periódico si la misma persona tuvo al menos {par['periodico_previos_min']} "
+        "ingresos candidatos con la misma categoría de diagnóstico principal (sus tres primeros caracteres) en los "
+        f"{par['periodico_ventana_dias']} días anteriores a su ingreso, sin contar el mismo día. Solo se mira hacia atrás, como en "
+        "las variables de historia. Candidatos según cuántos ingresos iguales tuvo la persona en esa ventana: "
+        + "; ".join(f"{texto.lower()}, {fmt(n)}" for texto, n in per15["previos"])
+        + f". Cumplen el criterio {fmt(per15['egresos'])} egresos de {fmt(per15['personas'])} personas ("
+        + "; ".join(f"{fmt(n)} de {k} día{'s' if k != 1 else ''}" for k, n in per15["estadia"].items())
+        + "). Como son ingresos programados, ninguno cuenta como reingreso no planificado, en ningún escenario. Las categorías "
+        f"más frecuentes ({len(per15['categorias'])} de {per15['n_categorias']}):",
+        tabla_md(["Categoría", "Descripción", "Egresos", "Personas", "Casos de estudio que deja fuera"],
+                 [[cat, cie10.get(cat, ""), fmt(e), fmt(pe), fmt(ca)] for cat, e, pe, ca in per15["categorias"]]),
         "Justificación de cada criterio:",
         tabla_md(["Código", "Criterio", "Justificación"], [[c["codigo"], c["criterio"], c.get("justificacion", "")] for c in criterios]),
 

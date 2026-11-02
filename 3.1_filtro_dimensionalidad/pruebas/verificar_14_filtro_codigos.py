@@ -14,6 +14,11 @@ data/processed/filtro_codigos.parquet y en reportes/14_codigos_retenidos.csv:
      dirección, decisión y descripción (leída con openpyxl).
   4. Tabla completa y lista. En todos los códigos: la tasa sin el código cuadra con los totales, la V
      con el chi-cuadrado y la decisión con los umbrales; la lista tiene exactamente los que pasan.
+  5. Listas (D53). La regla de la lista C en toda la tabla; las cuatro listas de todo desarrollo; para
+     una muestra de categorías de diagnóstico, sus casos y reingresos marcando los casos que tienen
+     algún código de la categoría, columna por columna; y para una muestra de códigos (sobre todo los
+     que cambian entre pliegues), las listas de cada pliegue, contando directamente los casos de
+     entrenamiento de ese pliegue (todos los casos con dato menos los del pliegue).
 
 Solo lee el conjunto de desarrollo; con las rutas por defecto deja reportes/pruebas_filtro_codigos.md.
 
@@ -42,6 +47,9 @@ ACTIVIDAD = Path(__file__).resolve().parents[1]  # carpeta de la actividad
 RAIZ = ACTIVIDAD.parent                          # carpeta Codigo
 DESARROLLO = RAIZ / "data" / "processed" / "desarrollo.parquet"
 RESULTADO = RAIZ / "data" / "processed" / "filtro_codigos.parquet"
+LISTAS = RAIZ / "data" / "processed" / "listas_codigos.parquet"
+GRUPOS = RAIZ / "data" / "processed" / "validacion_temporal.parquet"
+REPORTE_14 = ACTIVIDAD / "reportes" / "14_filtro_codigos.md"
 REGISTRO = RAIZ / "docs" / "version_particion.csv"
 DIR_TABLAS = RAIZ.parent / "Datos" / "Tablas auxiliares"
 PARAMETROS = ACTIVIDAD / "reglas" / "parametros.csv"
@@ -50,8 +58,14 @@ SALIDA = ACTIVIDAD / "reportes" / "pruebas_filtro_codigos.md"
 COLUMNAS = {"DIAGNOSTICO": [f"DIAGNOSTICO{i}" for i in range(1, 36)],
             "PROCEDIMIENTO": [f"PROCEDIMIENTO{i}" for i in range(1, 31)]}
 TABLAS = {"DIAGNOSTICO": "CIE-10.xlsx", "PROCEDIMIENTO": "CIE-9.xlsx"}
-COLUMNAS_RESULTADO = ["VARIABLE", "BLOQUE", "CODIGO", "DESCRIPCION", "CASOS", "REINGRESOS", "TASA_CON_CODIGO",
-                      "TASA_SIN_CODIGO", "CHI2", "VALOR_P", "V", "DIRECCION", "PASA"]
+COLUMNAS_RESULTADO = ["VARIABLE", "BLOQUE", "NIVEL", "CODIGO", "DESCRIPCION", "CASOS", "REINGRESOS", "TASA_CON_CODIGO",
+                      "TASA_SIN_CODIGO", "CHI2", "VALOR_P", "V", "DIRECCION", "RIESGO_RELATIVO", "PASA", "PASA_C"]
+COLUMNAS_LISTA = ["VARIABLE", "BLOQUE", "CODIGO", "DESCRIPCION", "CASOS", "REINGRESOS", "TASA_CON_CODIGO", "TASA_SIN_CODIGO",
+                  "V", "DIRECCION"]
+COLUMNAS_LISTAS = ["VARIABLE", "LISTA", "PLIEGUE", "BLOQUE", "NIVEL", "CODIGO"]
+CATEGORIAS_EJEMPLO = ["R57", "C79", "J84", "D61"]
+TAMANO_MUESTRA_CATEGORIAS = 20
+TAMANO_MUESTRA_PLIEGUES = 60
 EJEMPLOS = ["N18.5", "K80.2", "U07.1", "Z37.0", "D61.3"]
 TAMANO_MUESTRA = 300
 SEMILLA = 2026
@@ -100,15 +114,17 @@ def main() -> None:
     registro = leer_csv(REGISTRO)[-1]
     comprobar(f"El conjunto de desarrollo tiene el hash de la versión {registro['version']} registrada de la partición",
               sha256(DESARROLLO) == registro["sha256_desarrollo"])
-    todo = pd.read_parquet(RESULTADO)
+    todo_niveles = pd.read_parquet(RESULTADO)
     lista = pd.read_csv(LISTA, sep=";", decimal=",", encoding="utf-8-sig", dtype={"CODIGO": str})
+    listas = pd.read_parquet(LISTAS)
     comprobar("filtro_codigos.parquet tiene las columnas esperadas, sin identificadores de egresos ni de pacientes",
-              list(todo.columns) == COLUMNAS_RESULTADO)
-    comprobar("La lista tiene las mismas columnas, salvo CHI2, VALOR_P y PASA",
-              list(lista.columns) == [c for c in COLUMNAS_RESULTADO if c not in ("CHI2", "VALOR_P", "PASA")])
+              list(todo_niveles.columns) == COLUMNAS_RESULTADO)
+    comprobar("La lista fija (A) y listas_codigos.parquet tienen las columnas esperadas",
+              list(lista.columns) == COLUMNAS_LISTA and list(listas.columns) == COLUMNAS_LISTAS)
+    todo = todo_niveles[todo_niveles["NIVEL"] == "COMPLETO"].reset_index(drop=True)   # códigos completos
 
     # ---------------------------------------------------------------- 2. totales contados directamente
-    t = pq.read_table(DESARROLLO, columns=[*variables, *COLUMNAS["DIAGNOSTICO"], *COLUMNAS["PROCEDIMIENTO"]],
+    t = pq.read_table(DESARROLLO, columns=["ID_EGRESO", *variables, *COLUMNAS["DIAGNOSTICO"], *COLUMNAS["PROCEDIMIENTO"]],
                       filters=[("ES_CASO_ESTUDIO", "==", True)])
     comprobar("Se leen tantos casos de estudio como los registrados en la partición",
               t.num_rows == int(registro["casos_desarrollo"]), f"({fmt(t.num_rows)} casos)")
@@ -213,6 +229,105 @@ def main() -> None:
     procedimientos = lista.loc[lista["BLOQUE"] == "PROCEDIMIENTO", "CODIGO"]
     comprobar("En la lista, los códigos de procedimiento conservan el cero inicial (dos dígitos antes del punto)",
               bool(procedimientos.str.fullmatch(r"\d\d(\.\d{1,2})?").all()))
+
+    # ---------------------------------------------------------------- 5. listas de todo desarrollo y de cada pliegue (D53)
+    riesgo = float(par["efecto_grande_riesgo"].replace(",", "."))
+    p_max = float(par["efecto_grande_p"].replace(",", "."))
+    pedidas = ["A", *[x.strip().upper() for x in par["listas_comparacion"].split("|") if x.strip()]]
+
+    def regla_c(casos, chi2, tasa_con, tasa_sin, pasa_a):
+        """Regla de la lista C, con el valor p de la distribución normal y el riesgo como cociente de las tasas."""
+        p = np.array([2 * (1 - NormalDist().cdf(math.sqrt(x))) for x in np.asarray(chi2, dtype=float)])
+        rr = np.where(np.asarray(tasa_sin) > 0, np.asarray(tasa_con, dtype=float) / np.where(np.asarray(tasa_sin) > 0, tasa_sin, 1), np.nan)
+        grande = ((rr >= riesgo) | (rr <= 1 / riesgo)) & (p < p_max)
+        return (np.asarray(casos) >= n_min) & (np.asarray(pasa_a) | grande)
+
+    tn = todo_niveles
+    pasa_a_tn = (tn["CASOS"] >= n_min) & (tn["V"] >= v_min)
+    pasa_c_tn = regla_c(tn["CASOS"], tn["CHI2"], tn["TASA_CON_CODIGO"], tn["TASA_SIN_CODIGO"], pasa_a_tn)
+    comprobar(f"Toda la tabla: PASA_C es la regla de la lista C (la A, o riesgo {dec(riesgo, 1)} veces mayor o menor con valor p menor "
+              f"que {dec(p_max, 3)}, con al menos {n_min} casos)", bool((tn["PASA_C"].to_numpy() == pasa_c_tn).all()),
+              f"({int(pasa_c_tn[tn['NIVEL'] == 'COMPLETO'].sum())} filas de códigos completos)")
+    clave_l = ["VARIABLE", "BLOQUE", "NIVEL", "CODIGO"]
+
+    def claves(df: pd.DataFrame) -> set:
+        return set(map(tuple, df[clave_l].astype(str).to_numpy().tolist()))
+    completo, categoria = tn["NIVEL"] == "COMPLETO", tn["NIVEL"] == "CATEGORIA"
+    esperado0 = {"A": tn[completo & pasa_a_tn], "C": tn[completo & pasa_c_tn],
+                 "AGRUPADA": tn[((categoria & (tn["BLOQUE"] == "DIAGNOSTICO")) | (completo & (tn["BLOQUE"] == "PROCEDIMIENTO"))) & pasa_a_tn],
+                 "SIN_FILTRO": tn[completo & (tn["CASOS"] >= n_min)]}
+    malas0 = [x for x in pedidas if claves(listas[(listas["LISTA"] == x) & (listas["PLIEGUE"] == 0)]) != claves(esperado0[x])]
+    comprobar("Listas de todo desarrollo: cada una tiene exactamente los códigos de su regla", not malas0,
+              "(" + "; ".join(f"{x}: {fmt(len(esperado0[x]))} filas" for x in pedidas) + (f"; distintas: {malas0}" if malas0 else "") + ")")
+
+    # Categorías de diagnóstico: casos que tienen algún código que empieza con la categoría, columna por columna.
+    cats = sorted(set(tn.loc[categoria, "CODIGO"]))
+    muestra_cat = set(CATEGORIAS_EJEMPLO) & set(cats)
+    muestra_cat |= {cats[i] for i in rng.choice(len(cats), min(TAMANO_MUESTRA_CATEGORIAS, len(cats)), replace=False)}
+    ref_cat = tn[categoria].set_index(["VARIABLE", "CODIGO"])
+    malas_cat = 0
+    for cat in sorted(muestra_cat):
+        tiene = np.zeros(t.num_rows, dtype=bool)
+        for filas_columna, codigos_columna in no_vacias["DIAGNOSTICO"]:
+            tiene[filas_columna[pc.starts_with(codigos_columna, cat).to_numpy(zero_copy_only=False)]] = True
+        for k in variables:
+            n1, a = int((tiene & con_dato[k]).sum()), int((tiene & reingresa[k]).sum())
+            malas_cat += int((ref_cat.loc[(k, cat), "CASOS"], ref_cat.loc[(k, cat), "REINGRESOS"]) != (n1, a))
+    comprobar("Muestra de categorías de diagnóstico: casos y reingresos iguales, marcando columna por columna", malas_cat == 0,
+              f"({len(muestra_cat)} categorías × {len(variables)} variables, entre ellas {', '.join(sorted(set(CATEGORIAS_EJEMPLO) & muestra_cat))})")
+
+    # Listas de cada pliegue: para una muestra de códigos se cuentan directamente los casos de entrenamiento (con dato y fuera
+    # del pliegue), y se decide si pasan las reglas de la A y de la C.
+    pliegue_de = pd.read_parquet(GRUPOS, columns=["ID_EGRESO", "PLIEGUE"]).set_index("ID_EGRESO")["PLIEGUE"]
+    pliegue = pliegue_de.reindex(t["ID_EGRESO"].to_numpy()).to_numpy()
+    comprobar("Todo caso de estudio tiene su pliegue en validacion_temporal.parquet", not np.isnan(pliegue.astype(float)).any())
+    pliegues = sorted(int(f) for f in np.unique(pliegue))
+    miembros = {g: set(map(tuple, d[["BLOQUE", "NIVEL", "CODIGO"]].to_numpy().tolist()))
+                for g, d in listas[listas["PLIEGUE"] > 0].groupby(["VARIABLE", "LISTA", "PLIEGUE"])}
+    # Los códigos que cambian entre pliegues (los más difíciles) y otros al azar con el mínimo de casos.
+    inestables = set()
+    for (k, nombre, f), cods in miembros.items():
+        base = set(map(tuple, listas.loc[(listas["VARIABLE"] == k) & (listas["LISTA"] == nombre) & (listas["PLIEGUE"] == 0),
+                                         ["BLOQUE", "NIVEL", "CODIGO"]].to_numpy().tolist()))
+        inestables |= set(sorted(base ^ cods)[:3])
+    candidatos = sorted(set(map(tuple, tn.loc[tn["CASOS"] >= n_min, ["BLOQUE", "NIVEL", "CODIGO"]].to_numpy().tolist())))
+    muestra_pl = inestables | {candidatos[i] for i in rng.choice(len(candidatos), TAMANO_MUESTRA_PLIEGUES, replace=False)}
+    print(f"Recalculando las listas de cada pliegue para {len(muestra_pl)} códigos...", flush=True)
+    malas_pl, revisadas = [], 0
+    for b, nivel, codigo in sorted(muestra_pl):
+        tiene = np.zeros(t.num_rows, dtype=bool)
+        for filas_columna, codigos_columna in no_vacias[b]:
+            iguala = pc.starts_with(codigos_columna, codigo) if nivel == "CATEGORIA" else pc.equal(codigos_columna, codigo)
+            tiene[filas_columna[iguala.to_numpy(zero_copy_only=False)]] = True
+        for k in variables:
+            for f in pliegues:
+                entrena = con_dato[k] & (pliegue != f)
+                n_e, r_e = int(entrena.sum()), int((entrena & reingresa[k]).sum())
+                n1, a = int((tiene & entrena).sum()), int((tiene & entrena & reingresa[k]).sum())
+                bb, c, d = n1 - a, r_e - a, (n_e - r_e) - (n1 - a)
+                den = n1 * (n_e - n1) * r_e * (n_e - r_e)
+                chi2 = n_e * (a * d - bb * c) ** 2 / den if den > 0 else 0.0
+                pasa_a = n1 >= n_min and math.sqrt(chi2 / n_e) >= v_min
+                pasa_c = bool(regla_c([n1], [chi2], [100 * a / n1 if n1 else np.nan], [100 * c / (n_e - n1)], [pasa_a])[0])
+                esperado = {"A": pasa_a and nivel == "COMPLETO", "C": pasa_c and nivel == "COMPLETO",
+                            "AGRUPADA": pasa_a and ((b == "DIAGNOSTICO") == (nivel == "CATEGORIA"))}
+                for nombre in [x for x in ("A", "C", "AGRUPADA") if x in pedidas]:
+                    revisadas += 1
+                    if ((b, nivel, codigo) in miembros.get((k, nombre, f), set())) != esperado[nombre]:
+                        malas_pl.append(f"{k} {nombre} pliegue {f} {codigo}")
+    comprobar("Muestra de códigos: las listas de cada pliegue coinciden con el recálculo con los casos de entrenamiento", not malas_pl,
+              f"({len(muestra_pl)} códigos, {fmt(revisadas)} decisiones revisadas, {len(inestables)} de ellos cambian entre pliegues"
+              + (f"; distintas: {', '.join(malas_pl[:5])}" if malas_pl else "") + ")")
+    if REPORTE_14.exists():
+        del_reporte = {}
+        for linea in REPORTE_14.read_text(encoding="utf-8").split("## 3.")[1].split("## 4.")[0].splitlines():
+            celdas = [x.strip().strip("`") for x in linea.strip().strip("|").split("|")]
+            if len(celdas) == len(variables) + 1 and celdas[0] in pedidas:
+                del_reporte[celdas[0]] = [int(x.replace(".", "")) for x in celdas[1:]]
+        conteo0 = {x: [len(listas[(listas["LISTA"] == x) & (listas["PLIEGUE"] == 0) & (listas["VARIABLE"] == k)]) for k in variables]
+                   for x in pedidas}
+        comprobar(f"La tabla de listas de {REPORTE_14.name} coincide con listas_codigos.parquet", del_reporte == conteo0,
+                  "(" + "; ".join(f"{x}: {' / '.join(fmt(n) for n in v)}" for x, v in conteo0.items()) + ")")
 
     # ---------------------------------------------------------------- reporte
     todo_bien = all(ok for _, ok in resultados)

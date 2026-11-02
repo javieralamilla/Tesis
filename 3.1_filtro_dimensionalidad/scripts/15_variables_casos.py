@@ -15,9 +15,12 @@ reingreso: la propuesta deja la selección a los modelos (bitácora de la 3.1, D
      hospitales tiene, si pasó por una UCI o UTI, su intervención y si empezó con un ingreso no planificado.
   4. Variables del caso. Las que salen del egreso del caso de estudio y las que describen todo el episodio.
   5. Historia de 12 meses. Cuenta lo que terminó en los 365 días antes del ingreso índice, sin el propio episodio
-     (D42), y marca los casos cuya ventana empieza antes del inicio de su bloque de identificador (D44).
-  6. Índice de comorbilidad. Elixhauser con los códigos de Quan et al. (2005); Charlson con los pesos de Quan et al.
-     (2011) se calcula siempre, como comparación.
+     (D42), y marca los casos cuya ventana empieza antes del inicio de su bloque de identificador (D44). Los
+     tratamientos periódicos (criterio E15 de la 2.2) cuentan como sesiones, no como hospitalizaciones (D50).
+  6. Índice de comorbilidad. Las condiciones de Elixhauser con los códigos de Quan et al. (2005), buscadas en los
+     diagnósticos secundarios y resumidas con los pesos del índice de reingreso de Moore et al. (2017). El conteo
+     simple, los pesos de van Walraven et al. (2009) y el puntaje de Charlson con los pesos de Quan et al. (2011) se
+     calculan siempre, con y sin el diagnóstico principal, como comparación (D48 y D54).
   7. Valores poco frecuentes. En las columnas del CMBD tomadas tal cual, los valores con menos de 100 casos pasan a
      OTRO.
   8. Salida. data/processed/variables_casos.parquet (una fila por caso de estudio) y reportes/15_variables_casos.md.
@@ -48,17 +51,22 @@ REGISTRO = RAIZ / "docs" / "version_particion.csv"
 DIR_REGLAS = ACTIVIDAD / "reglas"
 ARCHIVO_PARAMETROS = DIR_REGLAS / "parametros.csv"
 ARCHIVO_COMORBILIDAD = DIR_REGLAS / "comorbilidad_quan2005.csv"
+ARCHIVO_PESOS = DIR_REGLAS / "pesos_elixhauser.csv"
 ARCHIVO_PREVISION = DIR_REGLAS / "prevision_grupos.csv"
 ARCHIVO_REGIONES = DIR_REGLAS / "provincia_region.csv"
 PARAMETROS_22 = RAIZ / "2.2_depuracion_etiquetado" / "reglas" / "parametros.csv"
 REPORTE = ACTIVIDAD / "reportes" / "15_variables_casos.md"
 
 PARAMETROS = ["ventana_historia_dias", "inicio_bloques", "dias_sin_hospitalizacion", "indice_comorbilidad",
-              "casos_minimos_categoria", "servicios_criticos", "servicios_criticos_excluidos", "etnia_sin_pueblo",
-              "nacionalidad_local"]
+              "comorbilidad_diagnosticos", "casos_minimos_categoria", "servicios_criticos", "servicios_criticos_excluidos",
+              "etnia_sin_pueblo", "nacionalidad_local"]
 PARAMETROS_REGLA_22 = ["ingresos_no_planificados", "grd_parto", "diagnosticos_sesion"]  # regla de D20 y D33
-INDICES = {"ELIXHAUSER": "número de condiciones de Elixhauser presentes (códigos de Quan et al., 2005)",
+INDICES = {"MOORE": "índice de reingreso de Moore et al. (2017): suma de los pesos de las condiciones de Elixhauser presentes",
+           "CONTEO": "número de condiciones de Elixhauser presentes",
+           "VAN_WALRAVEN": "puntaje de van Walraven et al. (2009): suma de sus pesos, hechos para la mortalidad hospitalaria",
            "CHARLSON": "puntaje de Charlson con los pesos de Quan et al. (2011)"}
+DIAGNOSTICOS_COMORBILIDAD = {"SECUNDARIOS": "los diagnósticos secundarios del egreso, sin el principal",
+                             "TODOS": "todos los diagnósticos del egreso, también el principal"}
 DIAGNOSTICOS = [f"DIAGNOSTICO{i}" for i in range(1, 36)]
 PROCEDIMIENTOS = [f"PROCEDIMIENTO{i}" for i in range(1, 31)]
 SERVICIOS = ["SERVICIOINGRESO", *[f"SERVICIOTRASLADO{i}" for i in range(1, 10)], "SERVICIOALTA"]
@@ -79,9 +87,11 @@ VARIABLES = [
     ("HOSP_PREVIAS_NO_PLANIF", "D47", "De ellas, las que empezaron con un ingreso no planificado (D20 y D33)"),
     ("DIAS_ULTIMA_HOSP", "D47", "Días desde el alta de la última hospitalización de la ventana hasta el ingreso índice"),
     ("CMA_PREVIAS", "D47", "Cirugías mayores ambulatorias terminadas en la ventana"),
-    ("SESIONES_PREVIAS", "D47", "Sesiones de tratamiento (diagnóstico principal Z51) terminadas en la ventana"),
+    ("SESIONES_PREVIAS", "D47, D50", "Sesiones de tratamiento (diagnóstico principal Z51) y tratamientos periódicos (E15) "
+                                     "terminados en la ventana"),
     ("VENTANA_CORTADA", "D47", "1 si la ventana empieza antes del inicio del bloque del identificador (D42 y D44)"),
-    ("INDICE_COMORBILIDAD", "D48", "Índice de comorbilidad con todos los diagnósticos del egreso"),
+    ("INDICE_COMORBILIDAD", "D48, D54", "Índice de comorbilidad: el de `indice_comorbilidad` (reingreso de Moore), con los "
+                                        "diagnósticos de `comorbilidad_diagnosticos` (secundarios)"),
     ("TIPO_ALTA", "D49", "Destino al alta, tal cual"),
     ("SEVERIDAD", "D49", "Nivel de severidad del GRD (1 a 3; es el último dígito del código)"),
     ("RIESGO_MORTALIDAD", "D49", "Nivel de riesgo de mortalidad del GRD (1 a 3)"),
@@ -124,7 +134,8 @@ def cargar_parametros() -> dict:
         return [v.strip() for v in texto.split("|") if v.strip()]
 
     par = {"ventana": int(valor["ventana_historia_dias"]), "sin_hosp": int(valor["dias_sin_hospitalizacion"]),
-           "indice": valor["indice_comorbilidad"].upper(), "minimo": int(valor["casos_minimos_categoria"]),
+           "indice": valor["indice_comorbilidad"].upper(), "diagnosticos": valor["comorbilidad_diagnosticos"].upper(),
+           "minimo": int(valor["casos_minimos_categoria"]),
            "criticos": lista(valor["servicios_criticos"]), "criticos_excluidos": lista(valor["servicios_criticos_excluidos"]),
            "sin_pueblo": lista(valor["etnia_sin_pueblo"]), "local": valor["nacionalidad_local"],
            "inicio_bloques": {b.split("=")[0].strip(): date.fromisoformat(b.split("=")[1].strip())
@@ -132,7 +143,10 @@ def cargar_parametros() -> dict:
            "no_planificados": lista(regla["ingresos_no_planificados"]), "grd_parto": lista(regla["grd_parto"]),
            "sesiones": lista(regla["diagnosticos_sesion"])}
     if par["indice"] not in INDICES:
-        raise SystemExit(f"indice_comorbilidad: se esperaba {' o '.join(INDICES)} y dice '{valor['indice_comorbilidad']}'.")
+        raise SystemExit(f"indice_comorbilidad: se esperaba {', '.join(INDICES)} y dice '{valor['indice_comorbilidad']}'.")
+    if par["diagnosticos"] not in DIAGNOSTICOS_COMORBILIDAD:
+        raise SystemExit(f"comorbilidad_diagnosticos: se esperaba {' o '.join(DIAGNOSTICOS_COMORBILIDAD)} y dice "
+                         f"'{valor['comorbilidad_diagnosticos']}'.")
     if par["sin_hosp"] <= par["ventana"]:
         raise SystemExit("dias_sin_hospitalizacion debe ser mayor que ventana_historia_dias: si no, se confunde con una hospitalización.")
     par["descripcion"] = {nombre: (valor[nombre], filas[nombre]["descripcion"]) for nombre in PARAMETROS}
@@ -141,12 +155,17 @@ def cargar_parametros() -> dict:
 
 
 def cargar_reglas() -> dict:
-    """Las tres tablas de reglas: grupos de previsión, región de cada provincia y códigos de comorbilidad."""
+    """Las tablas de reglas: grupos de previsión, región de cada provincia, códigos de comorbilidad y pesos de Elixhauser."""
     comorbilidad = pd.DataFrame(leer_csv(ARCHIVO_COMORBILIDAD))
     comorbilidad["peso"] = comorbilidad["peso"].astype(int)
+    pesos = pd.DataFrame(leer_csv(ARCHIVO_PESOS))
+    for col in ("moore_reingreso", "van_walraven"):
+        pesos[col] = pesos[col].astype(int)
+    if pesos["condicion"].tolist() != comorbilidad.loc[comorbilidad["indice"] == "ELIXHAUSER", "condicion"].tolist():
+        raise SystemExit(f"{ARCHIVO_PESOS.name} debe tener las condiciones de Elixhauser de {ARCHIVO_COMORBILIDAD.name}, en el mismo orden.")
     return {"prevision": {f["prevision"]: f["grupo"] for f in leer_csv(ARCHIVO_PREVISION)},
             "region": {f["provincia"]: f["region"] for f in leer_csv(ARCHIVO_REGIONES)},
-            "comorbilidad": comorbilidad}
+            "comorbilidad": comorbilidad, "pesos": pesos.set_index("condicion")}
 
 
 def sha256(ruta: Path) -> str:
@@ -178,6 +197,7 @@ def leer_egresos() -> pd.DataFrame:
     Los que no tienen episodio no se pueden seguir (sin identificador o sin fechas) o son los E04 de 2019, que la
     decisión 2 deja fuera de la historia."""
     columnas = ["ID_EGRESO", "ID_PERSONA", "ID_EPISODIO", "ES_CASO_ESTUDIO", "EXC_ACTIVIDAD_2019", "EXC_CMA", "EXC_SESION",
+                "EXC_TRATAMIENTO_PERIODICO",
                 "COD_HOSPITAL", "FECHA_INGRESO", "FECHAALTA", "TIPO_INGRESO", "IR_29301_COD_GRD", "DIAGNOSTICO1",
                 "ESPECIALIDADINTERVENCION", *SERVICIOS]
     e = pd.read_parquet(DESARROLLO, columns=columnas)
@@ -203,7 +223,8 @@ def unidad_critica(e: pd.DataFrame, par: dict) -> np.ndarray:
 def armar_episodios(e: pd.DataFrame, par: dict) -> pd.DataFrame:
     """Una fila por episodio asistencial, con lo que describe a toda la hospitalización."""
     e["CRITICA"] = unidad_critica(e, par)
-    e["HOSPITALIZACION"] = ~(e["EXC_CMA"] | e["EXC_SESION"])  # ni cirugía mayor ambulatoria ni sesión Z51
+    # Ni cirugía mayor ambulatoria, ni sesión Z51, ni tratamiento periódico (E15, que cuenta como sesión: D50).
+    e["HOSPITALIZACION"] = ~(e["EXC_CMA"] | e["EXC_SESION"] | e["EXC_TRATAMIENTO_PERIODICO"])
     g = e.groupby("ID_EPISODIO", sort=True)
     epi = pd.DataFrame({"ID_PERSONA": g["ID_PERSONA"].first(), "PERSONAS": g["ID_PERSONA"].nunique(),
                         "INICIO": g["INICIO"].min(), "FIN": g["FIN"].max(), "EGRESOS": g.size(),
@@ -279,6 +300,7 @@ def variables_caso(c: pd.DataFrame, epi: pd.DataFrame, par: dict, reglas: dict) 
     v["UCI_UTI"] = ep["CRITICA"].to_numpy(dtype="int8")
     v["TRASLADO"] = (ep["HOSPITALES"].to_numpy() > 1).astype("int8")
     filas_dx, codigos_dx = tabla_larga(c, DIAGNOSTICOS)
+    filas_sec, codigos_sec = tabla_larga(c, DIAGNOSTICOS[1:])   # sin el diagnóstico principal, para el índice (D54)
     filas_px, _ = tabla_larga(c, PROCEDIMIENTOS)
     v["N_DIAGNOSTICOS"] = contar_por_caso(filas_dx, len(c))
     v["N_PROCEDIMIENTOS"] = contar_por_caso(filas_px, len(c))
@@ -292,7 +314,7 @@ def variables_caso(c: pd.DataFrame, epi: pd.DataFrame, par: dict, reglas: dict) 
     v["HOSPITAL"] = c["COD_HOSPITAL"].to_numpy()
     info["intervencion_de_tramo"] = int((c["ESPECIALIDADINTERVENCION"].isna() & ep["INTERVENCION"].notna().to_numpy()).sum())
     info["uci_de_tramo"] = None  # se completa en main con los egresos
-    return v, {**info, "filas_dx": filas_dx, "codigos_dx": codigos_dx}
+    return v, {**info, "diagnosticos": {"TODOS": (filas_dx, codigos_dx), "SECUNDARIOS": (filas_sec, codigos_sec)}}
 
 
 # ------------------------------------------------------------------ 5. historia de 12 meses
@@ -341,7 +363,9 @@ def historia(c: pd.DataFrame, e: pd.DataFrame, epi: pd.DataFrame, par: dict) -> 
 
     # Cirugías mayores ambulatorias y sesiones: se cuentan egresos, sin los del propio episodio (D42). Un egreso del
     # propio episodio solo cae en la ventana si termina el mismo día del ingreso índice.
-    eventos = {"CMA_PREVIAS": e["EXC_CMA"].to_numpy(), "SESIONES_PREVIAS": (e["EXC_SESION"] & ~e["EXC_CMA"]).to_numpy()}
+    # Un tratamiento periódico (E15) cuenta como sesión (D50). Un egreso que es cirugía y sesión cuenta como cirugía.
+    sesion = (e["EXC_SESION"] | e["EXC_TRATAMIENTO_PERIODICO"]) & ~e["EXC_CMA"]
+    eventos = {"CMA_PREVIAS": e["EXC_CMA"].to_numpy(), "SESIONES_PREVIAS": sesion.to_numpy()}
     salida = {"HOSP_PREVIAS": previas, "HOSP_PREVIAS_NO_PLANIF": no_planif, "DIAS_ULTIMA_HOSP": dias}
     for nombre, es in eventos.items():
         ev = e[es]
@@ -361,9 +385,10 @@ def historia(c: pd.DataFrame, e: pd.DataFrame, epi: pd.DataFrame, par: dict) -> 
 
 
 # ------------------------------------------------------------------ 6. índice de comorbilidad
-def comorbilidad(filas: np.ndarray, codigos: np.ndarray, n: int, tabla: pd.DataFrame) -> tuple[dict, dict]:
-    """Marca cada condición en los casos que tienen alguno de sus códigos, en cualquier posición, aplica las
-    jerarquías (una condición más grave reemplaza a su versión leve) y suma los pesos."""
+def comorbilidad(filas: np.ndarray, codigos: np.ndarray, n: int, tabla: pd.DataFrame, pesos: pd.DataFrame) -> tuple[dict, dict]:
+    """Marca cada condición en los casos que tienen alguno de sus códigos entre los diagnósticos dados, aplica las
+    jerarquías (una condición más grave reemplaza a su versión leve) y calcula los cuatro índices: el de reingreso de
+    Moore, el conteo simple de Elixhauser, los pesos de van Walraven y el puntaje de Charlson (D48 y D54)."""
     ident, distintos = pd.factorize(codigos)
     distintos = pd.Series(distintos, dtype="str")
     marcas = {}
@@ -376,9 +401,17 @@ def comorbilidad(filas: np.ndarray, codigos: np.ndarray, n: int, tabla: pd.DataF
     antes = {k: v.copy() for k, v in marcas.items()}
     for r in tabla[tabla["reemplaza_a"] != ""].itertuples():
         marcas[(r.indice, r.reemplaza_a)] &= ~marcas[(r.indice, r.condicion)]
-    puntaje = {i: sum(r.peso * marcas[(i, r.condicion)].astype("int16") for r in tabla[tabla["indice"] == i].itertuples())
-               for i in INDICES}
-    return {i: p.astype("int8") for i, p in puntaje.items()}, {"marcas": marcas, "antes": antes}
+    elix = tabla[tabla["indice"] == "ELIXHAUSER"]
+    charlson = tabla[tabla["indice"] == "CHARLSON"]
+    puntaje = {
+        "MOORE": sum(int(pesos.at[r.condicion, "moore_reingreso"]) * marcas[("ELIXHAUSER", r.condicion)].astype("int16")
+                     for r in elix.itertuples()),
+        "CONTEO": sum(marcas[("ELIXHAUSER", r.condicion)].astype("int16") for r in elix.itertuples()),
+        "VAN_WALRAVEN": sum(int(pesos.at[r.condicion, "van_walraven"]) * marcas[("ELIXHAUSER", r.condicion)].astype("int16")
+                            for r in elix.itertuples()),
+        "CHARLSON": sum(r.peso * marcas[("CHARLSON", r.condicion)].astype("int16") for r in charlson.itertuples()),
+    }
+    return {i: p.astype("int16") for i, p in puntaje.items()}, {"marcas": marcas, "antes": antes}
 
 
 # ------------------------------------------------------------------ 7. valores poco frecuentes
@@ -425,9 +458,14 @@ def verificar(v: pd.DataFrame, c: pd.DataFrame, e: pd.DataFrame, epi: pd.DataFra
          bool(all((v[k] >= 0).all() for k in ["HOSP_PREVIAS", "CMA_PREVIAS", "SESIONES_PREVIAS"]))),
         ("La marca de ventana cortada coincide con la regla de D42 calculada con fechas de calendario",
          bool((v["VENTANA_CORTADA"].to_numpy() == np.logical_or.reduce(cortada)).all())),
-        ("El índice de Elixhauser está entre 0 y 28 condiciones y el de Charlson entre 0 y 24 puntos",
-         bool(info["puntaje"]["ELIXHAUSER"].min() >= 0 and info["puntaje"]["ELIXHAUSER"].max() <= 28
-              and info["puntaje"]["CHARLSON"].min() >= 0 and info["puntaje"]["CHARLSON"].max() <= 24)),
+        ("El conteo de Elixhauser está entre 0 y 28 condiciones, el puntaje de Charlson entre 0 y 24 y el índice de Moore entre la "
+         "suma de sus pesos negativos y la de sus pesos positivos",
+         bool(info["puntaje"]["CONTEO"].min() >= 0 and info["puntaje"]["CONTEO"].max() <= 28
+              and info["puntaje"]["CHARLSON"].min() >= 0 and info["puntaje"]["CHARLSON"].max() <= 24
+              and info["puntaje"]["MOORE"].min() >= info["pesos"]["moore_reingreso"].clip(upper=0).sum()
+              and info["puntaje"]["MOORE"].max() <= info["pesos"]["moore_reingreso"].clip(lower=0).sum())),
+        ("INDICE_COMORBILIDAD es el índice de `indice_comorbilidad` calculado con los diagnósticos de `comorbilidad_diagnosticos`",
+         bool((v["INDICE_COMORBILIDAD"].to_numpy() == info["puntajes"][par["diagnosticos"]][par["indice"]]).all())),
         ("Después de las jerarquías, ningún caso tiene a la vez una condición y la versión que esta reemplaza",
          all(not (info["comorb"]["marcas"][(r.indice, r.condicion)] & info["comorb"]["marcas"][(r.indice, r.reemplaza_a)]).any()
              for r in info["tabla_comorbilidad"].itertuples() if r.reemplaza_a)),
@@ -532,21 +570,28 @@ def escribir_reporte(v: pd.DataFrame, c: pd.DataFrame, info: dict, par: dict, ve
         filas_otras.append([f"`{col}`", *[f"{fmt((t == k).sum())} ({tasa((t == k).to_numpy() & ~marca)})" for k in ["0", "1", "2 o más"]]])
 
     # 3. Comorbilidad
-    tabla = info["tabla_comorbilidad"]
+    tabla, pesos = info["tabla_comorbilidad"], info["pesos"]
     marcas = info["comorb"]["marcas"]
     elix = tabla[tabla["indice"] == "ELIXHAUSER"]
-    filas_cond = [[r.orden, r.descripcion, fmt(marcas[("ELIXHAUSER", r.condicion)].sum()),
+    filas_cond = [[r.orden, r.descripcion, fmt(pesos.at[r.condicion, "moore_reingreso"]), fmt(marcas[("ELIXHAUSER", r.condicion)].sum()),
                    pct(marcas[("ELIXHAUSER", r.condicion)].sum(), n), tasa(marcas[("ELIXHAUSER", r.condicion)])]
                   for r in elix.itertuples()]
-    pe, pc = info["puntaje"]["ELIXHAUSER"], info["puntaje"]["CHARLSON"]
-    alguna = {i: np.logical_or.reduce([marcas[(i, r.condicion)] for r in tabla[tabla["indice"] == i].itertuples()]) for i in INDICES}
+    pe, pc = info["puntaje"]["CONTEO"], info["puntaje"]["CHARLSON"]
+    alguna = {i: np.logical_or.reduce([marcas[(i, r.condicion)] for r in tabla[tabla["indice"] == i].itertuples()])
+              for i in ("ELIXHAUSER", "CHARLSON")}
     te = tramos(pd.Series(pe), [0, 1, 2, 3, 4, 100], ["0", "1", "2", "3", "4", "5 o más"])
     filas_cuenta = [[k, fmt((te == k).sum()), pct((te == k).sum(), n, 1), tasa((te == k).to_numpy())]
                     for k in ["0", "1", "2", "3", "4", "5 o más"]]
-    filas_comp = [["Elixhauser (número de condiciones)", pct(alguna["ELIXHAUSER"].sum(), n, 1), dec(pe.mean()), dec(auroc(pe.astype(float), y), 3)],
-                  ["Charlson (pesos de Quan 2011)", pct(alguna["CHARLSON"].sum(), n, 1), dec(pc.mean()), dec(auroc(pc.astype(float), y), 3)],
-                  ["Número de diagnósticos (para comparar)", "—", dec(v["N_DIAGNOSTICOS"].mean()),
-                   dec(auroc(v["N_DIAGNOSTICOS"].to_numpy(dtype=float), y), 3)]]
+    nombre_indice = {"MOORE": "Moore (reingreso)", "CONTEO": "Conteo de condiciones de Elixhauser",
+                     "VAN_WALRAVEN": "van Walraven (mortalidad)", "CHARLSON": "Charlson (pesos de Quan 2011)"}
+    filas_comp = [[nombre_indice[i] + (" (en uso)" if (i, k) == (par["indice"], par["diagnosticos"]) else ""),
+                   "Solo secundarios" if k == "SECUNDARIOS" else "Todos", dec(info["puntajes"][k][i].mean()),
+                   dec(auroc(info["puntajes"][k][i].astype(float), y), 3)]
+                  for i in INDICES for k in ("SECUNDARIOS", "TODOS")]
+    filas_comp.append(["Número de diagnósticos (para comparar)", "Todos", dec(v["N_DIAGNOSTICOS"].mean()),
+                       dec(auroc(v["N_DIAGNOSTICOS"].to_numpy(dtype=float), y), 3)])
+    agrega_principal = int((info["puntajes"]["TODOS"]["CONTEO"] > info["puntajes"]["SECUNDARIOS"]["CONTEO"]).sum())
+    w = pesos["moore_reingreso"]
     ceros = ", ".join(r.descripcion.lower() for r in tabla[(tabla["indice"] == "CHARLSON") & (tabla["peso"] == 0)].itertuples())
     filas_anio_comorb = [[str(a), pct(alguna["ELIXHAUSER"][(c["ANIO_ARCHIVO"] == a).to_numpy()].sum(), (c["ANIO_ARCHIVO"] == a).sum(), 1),
                           pct(alguna["CHARLSON"][(c["ANIO_ARCHIVO"] == a).to_numpy()].sum(), (c["ANIO_ARCHIVO"] == a).sum(), 1)] for a in anios]
@@ -601,7 +646,8 @@ def escribir_reporte(v: pd.DataFrame, c: pd.DataFrame, info: dict, par: dict, ve
         f"{fmt(info['historia']['propio_dentro'])} casos el propio episodio dura 0 días: como termina el mismo día del ingreso "
         "índice, se descuenta para no contarlo como hospitalización previa.",
         f"**Valores extremos.** `HOSP_PREVIAS` llega a {fmt(v['HOSP_PREVIAS'].max())}. {fmt(info['extremos']['casos'])} casos, de "
-        f"{fmt(info['extremos']['personas'])} personas, tienen 50 o más; de los egresos de esas personas, el "
+        f"{fmt(info['extremos']['personas'])} {'persona' if info['extremos']['personas'] == 1 else 'personas'}, tienen 50 o más; "
+        f"de los egresos de {'esa persona' if info['extremos']['personas'] == 1 else 'esas personas'}, el "
         f"{pct(info['extremos']['cero_dias'], info['extremos']['egresos'], 1)} dura 0 días y el "
         f"{pct(info['extremos']['programados'], info['extremos']['egresos'], 1)} es programado.",
         "Hospitalizaciones previas y reingreso a 30 días, sin y con la marca de ventana cortada:",
@@ -610,20 +656,33 @@ def escribir_reporte(v: pd.DataFrame, c: pd.DataFrame, info: dict, par: dict, ve
         tabla_md(["Año", "Casos de estudio", "Con la ventana cortada", "%"], filas_marca),
         "Días desde la última hospitalización (reingreso a 30 días de los casos sin marca):",
         tabla_md(["Días", "Casos", "Reingreso a 30 días sin marca"], filas_dias),
-        "Cirugías mayores ambulatorias y sesiones previas (casos y reingreso a 30 días sin marca):",
+        "Cirugías mayores ambulatorias y sesiones previas, que incluyen las sesiones Z51 y los tratamientos periódicos del "
+        "criterio E15 (casos y reingreso a 30 días sin marca):",
         tabla_md(["Variable", "0", "1", "2 o más"], filas_otras),
 
         "## 3. Índice de comorbilidad",
-        "Las 31 condiciones de Elixhauser con los códigos de Quan et al. (2005), buscadas en todos los diagnósticos del egreso. Las "
-        "jerarquías ya están aplicadas: la diabetes con complicaciones reemplaza a la sin complicaciones, el cáncer metastásico al "
-        "tumor sólido y la hipertensión con complicaciones a la sin complicaciones. Los códigos están en "
+        f"Las 31 condiciones de Elixhauser con los códigos de Quan et al. (2005), buscadas en {DIAGNOSTICOS_COMORBILIDAD[par['diagnosticos']]}"
+        + (". El diagnóstico principal es el motivo de la hospitalización y no una comorbilidad: entra a los modelos por sus "
+           "códigos (D45), la CDM, el peso GRD y la severidad (D54). Con él, el número de condiciones subiría en "
+           f"{fmt(agrega_principal)} casos ({pct(agrega_principal, n, 1)}), sobre todo por el mismo cáncer o la misma insuficiencia "
+           "cardíaca por la que la persona se hospitalizó" if par["diagnosticos"] == "SECUNDARIOS" else "")
+        + ". Las jerarquías ya están aplicadas: la diabetes con complicaciones reemplaza a la sin complicaciones, el cáncer "
+        "metastásico al tumor sólido y la hipertensión con complicaciones a la sin complicaciones. Los códigos están en "
         f"`{ruta}/reglas/{ARCHIVO_COMORBILIDAD.name}`.",
-        tabla_md(["N.º", "Condición", "Casos", "% de los casos", "Reingreso a 30 días"], filas_cond),
+        f"**Índice en uso: {nombre_indice[par['indice']]}.** Es el {INDICES[par['indice']]}."
+        + (f" Cada condición suma su peso, de `{ruta}/reglas/{ARCHIVO_PESOS.name}`: por ejemplo, insuficiencia cardíaca {w['ICC']}, "
+           f"insuficiencia renal {w['INSUFICIENCIA_RENAL']}, cáncer metastásico {w['METASTASIS']} y obesidad {w['OBESIDAD']}. Moore "
+           "et al. (2017) estimaron los pesos para predecir el reingreso a 30 días con las 29 medidas de AHRQ: las arritmias no tienen "
+           "peso y las dos hipertensiones comparten el mismo, que se suma una sola vez porque la jerarquía deja solo una."
+           if par["indice"] == "MOORE" else ""),
+        tabla_md(["N.º", "Condición", "Peso de Moore", "Casos", "% de los casos", "Reingreso a 30 días"], filas_cond),
         "Número de condiciones de Elixhauser:",
         tabla_md(["Condiciones", "Casos", "%", "Reingreso a 30 días"], filas_cuenta),
-        "Comparación con Charlson (sensibilidad). El área bajo la curva ROC mide qué tan bien el índice, solo, ordena a los casos "
-        "que reingresan a 30 días por sobre los que no (0,5 es el azar):",
-        tabla_md(["Índice", "Casos con al menos una condición", "Promedio", "Área bajo la curva ROC"], filas_comp),
+        "Comparación de los índices, con y sin el diagnóstico principal. El área bajo la curva ROC mide qué tan bien el índice, "
+        "solo, ordena a los casos que reingresan a 30 días por sobre los que no (0,5 es el azar):",
+        tabla_md(["Índice", "Diagnósticos", "Promedio", "Área bajo la curva ROC"], filas_comp),
+        f"Tienen al menos una condición de Elixhauser el {pct(alguna['ELIXHAUSER'].sum(), n, 1)} de los casos y al menos una de "
+        f"Charlson el {pct(alguna['CHARLSON'].sum(), n, 1)}.",
         f"Con los pesos de Quan et al. (2011) cinco condiciones de Charlson valen 0 puntos ({ceros}): por eso solo el "
         f"{pct((pc > 0).sum(), n, 1)} de los casos tiene un puntaje de Charlson mayor que 0.",
         "Casos con al menos una condición, por año del alta:",
@@ -678,9 +737,14 @@ def main() -> None:
                         "cero_dias": int((de_ellas["FIN"] == de_ellas["INICIO"]).sum()),
                         "programados": int((de_ellas["TIPO_INGRESO"] == "PROGRAMADA").sum())}
     print(f"Índice de comorbilidad ({time.time() - inicio:.0f} s)...", flush=True)
-    tabla = reglas["comorbilidad"]
-    info["puntaje"], info["comorb"] = comorbilidad(info.pop("filas_dx"), info.pop("codigos_dx"), len(c), tabla)
-    info["tabla_comorbilidad"] = tabla
+    tabla, pesos = reglas["comorbilidad"], reglas["pesos"]
+    diagnosticos = info.pop("diagnosticos")
+    # Los índices se calculan con y sin el diagnóstico principal: el de los parámetros va a la tabla y los dos, al reporte.
+    calculos = {k: comorbilidad(*diagnosticos[k], len(c), tabla, pesos) for k in DIAGNOSTICOS_COMORBILIDAD}
+    info["puntaje"], info["comorb"] = calculos[par["diagnosticos"]]
+    info["puntajes"] = {k: puntaje for k, (puntaje, _) in calculos.items()}
+    info["tabla_comorbilidad"], info["pesos"] = tabla, pesos
+    del calculos, diagnosticos
     v["INDICE_COMORBILIDAD"] = info["puntaje"][par["indice"]]
     info["juntados"] = agrupar_raros(v, par["minimo"])
     v = v[["ID_EGRESO", *[col for col, _, _ in VARIABLES]]]

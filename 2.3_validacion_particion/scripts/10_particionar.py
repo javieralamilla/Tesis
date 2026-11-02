@@ -12,7 +12,9 @@ la evaluación final (bitácora D27 a D29):
      objetivo: qué reingresos tuvo alguno de sus casos de estudio.
   4. Reparto. Dentro de cada estrato se ordenan por su número de reingresos de la variable
      principal y por su número de casos de estudio, y uno de cada cinco va a prueba, con un punto
-     de partida al azar fijado por la semilla del proyecto.
+     de partida al azar fijado por la semilla del proyecto. Con el parámetro reparto = REGISTRADO
+     no se vuelve a sortear: cada identificador queda en el conjunto de la lista registrada, para
+     que un cambio del conjunto analítico no cambie a los pacientes del conjunto de prueba (H34, D51).
   5. Salidas. data/processed/particion.parquet indica el conjunto de cada egreso y
      data/processed/particion_identificadores.parquet, el de cada identificador.
      data/processed/desarrollo.parquet y data/reserva/prueba.parquet contienen los egresos de cada
@@ -79,9 +81,12 @@ def leer_csv(ruta: Path) -> list[dict]:
 def cargar_parametros() -> dict:
     filas = {fila["parametro"]: fila for fila in leer_csv(ARCHIVO_PARAMETROS)}
     par = {"semilla": int(filas["semilla"]["valor"]), "prueba_una_de_cada": int(filas["prueba_una_de_cada"]["valor"]),
-           "variable_principal": filas["variable_principal"]["valor"].strip()}
+           "variable_principal": filas["variable_principal"]["valor"].strip(),
+           "reparto": filas["reparto"]["valor"].strip().upper() if "reparto" in filas else "NUEVO"}
     if par["prueba_una_de_cada"] < 2:
         raise SystemExit("prueba_una_de_cada debe ser 2 o más.")
+    if par["reparto"] not in ("NUEVO", "REGISTRADO"):
+        raise SystemExit(f"reparto: se esperaba NUEVO o REGISTRADO y dice '{par['reparto']}'.")
     par["descripcion"] = {nombre: (fila["valor"].strip(), fila["descripcion"]) for nombre, fila in filas.items()}
     return par
 
@@ -151,6 +156,16 @@ def repartir(u: pd.DataFrame, par: dict) -> pd.Series:
     return u["PRUEBA"].sort_index()
 
 
+def lista_registrada() -> tuple[pd.DataFrame, str]:
+    """La lista de identificadores de la última versión registrada de la partición y su hash, que debe ser el registrado (D51)."""
+    if not (REGISTRO.exists() and IDENTIFICADORES.exists()):
+        raise SystemExit("reparto = REGISTRADO, pero no hay una partición registrada: use reparto = NUEVO.")
+    registrado = leer_csv(REGISTRO)[-1]["sha256_identificadores"]
+    if sha256(IDENTIFICADORES) != registrado:
+        raise SystemExit(f"{IDENTIFICADORES.name} no tiene el hash registrado en {REGISTRO.name}: no se puede conservar el reparto.")
+    return pq.read_table(IDENTIFICADORES).to_pandas(), registrado
+
+
 def conteo(valores: pd.Series) -> dict:
     return {k: int(v) for k, v in valores.value_counts(dropna=False).items()}
 
@@ -168,7 +183,22 @@ def particionar(par: dict) -> tuple[np.ndarray, pd.DataFrame, dict]:
     p["ID_PACIENTE"] = p["ID_PACIENTE"].astype("int64")
 
     u = resumir_identificadores(p, objetivos, principal)
-    u["PRUEBA"] = repartir(u, par)
+    sorteo = repartir(u, par)                                # el reparto que daría un sorteo con estos datos
+    reparto = {"modo": par["reparto"], "identificadores": len(u)}
+    if par["reparto"] == "REGISTRADO":
+        # Cada identificador queda en el conjunto de la lista registrada: el conjunto de prueba reúne a los mismos pacientes.
+        registrada, reparto["sha256_registrado"] = lista_registrada()
+        registrada = registrada.set_index("ID_PACIENTE")
+        faltan, sobran = u.index.difference(registrada.index), registrada.index.difference(u.index)
+        if len(faltan) or len(sobran):
+            raise SystemExit(f"reparto = REGISTRADO, pero la tabla tiene {len(faltan)} identificadores que no están en la lista registrada "
+                             f"y la lista tiene {len(sobran)} que no están en la tabla: hay que repartir de nuevo (reparto = NUEVO).")
+        if not (registrada["BLOQUE_ID"].reindex(u.index).to_numpy() == u["BLOQUE_ID"].to_numpy()).all():
+            raise SystemExit("La lista registrada asigna a algún identificador un bloque distinto del de la tabla.")
+        u["PRUEBA"] = (registrada["CONJUNTO"].reindex(u.index) == "PRUEBA").to_numpy()
+    else:
+        u["PRUEBA"] = sorteo
+    reparto["cambiaria"] = int((sorteo != u["PRUEBA"]).sum())   # 0 si se sorteó
     u["CONJUNTO"] = np.where(u["PRUEBA"], "PRUEBA", "DESARROLLO")
     p["CONJUNTO"] = u["CONJUNTO"].reindex(p["ID_PACIENTE"]).to_numpy()
     conjunto = np.full(len(d), None, dtype=object)
@@ -198,7 +228,7 @@ def particionar(par: dict) -> tuple[np.ndarray, pd.DataFrame, dict]:
         return salida
 
     info = {
-        "objetivos": objetivos, "principal": principal,
+        "objetivos": objetivos, "principal": principal, "reparto": reparto,
         "egresos_tabla": len(d), "sin_persona": int((~con_persona).sum()),
         "identificadores": conteo(u["CONJUNTO"]), "con_varias_personas": int((u["PERSONAS"] > 1).sum()),
         "identificadores_bloque": {b: conteo(u.loc[u["BLOQUE_ID"] == b, "CONJUNTO"]) for b in sorted(u["BLOQUE_ID"].unique())},
@@ -235,7 +265,10 @@ def particionar(par: dict) -> tuple[np.ndarray, pd.DataFrame, dict]:
         ("Ningún identificador de paciente aparece en los dos bloques", int(p.groupby("ID_PACIENTE")["BLOQUE_ID"].nunique().max()) == 1),
         ("Todos los casos de estudio quedaron asignados a un conjunto", int(d["ES_CASO_ESTUDIO"].sum()) == total_casos),
         (f"En cada estrato va a prueba uno de cada {par['prueba_una_de_cada']} identificadores (la diferencia con esa proporción es menor que un identificador)",
-         bool(((e["prueba"] - e["identificadores"] / par["prueba_una_de_cada"]).abs() < 1).all())),
+         bool(((e["prueba"] - e["identificadores"] / par["prueba_una_de_cada"]).abs() < 1).all()))
+        if par["reparto"] == "NUEVO" else
+        ("Cada identificador quedó en el conjunto que tenía en la lista registrada de la partición",
+         bool((u["CONJUNTO"].to_numpy() == registrada["CONJUNTO"].reindex(u.index).to_numpy()).all())),
         (f"El conjunto de prueba tiene entre {esperado - MARGEN_TAMANO:.1f} % y {esperado + MARGEN_TAMANO:.1f} % de los casos de estudio".replace(".", ","),
          abs(parte - esperado) < MARGEN_TAMANO),
         (f"La tasa de cada variable objetivo difiere en menos de {MARGEN_TASA} puntos porcentuales entre los dos conjuntos".replace(".", ","),
@@ -396,6 +429,13 @@ def escribir_reporte(info: dict, par: dict, version: dict, registro: dict) -> No
         f"**Reparto:** dentro de cada estrato, los identificadores se ordenan por su número de casos de estudio con `{principal}` y por "
         f"su número de casos de estudio, y uno de cada {n} va al conjunto de prueba. El punto de partida de cada estrato se sortea "
         f"con la semilla del proyecto ({par['semilla']}), así que la partición es la misma cada vez que se ejecuta el script.",
+        *([f"**Esta versión conserva el reparto registrado** (parámetro `reparto` = REGISTRADO; bitácora H34 y D51): cada "
+           "identificador queda en el conjunto que tenía en la lista registrada, así que el conjunto de prueba reúne a los mismos "
+           f"pacientes. Un sorteo nuevo con la misma semilla cambiaría de conjunto a {fmt(info['reparto']['cambiaria'])} de los "
+           f"{fmt(info['reparto']['identificadores'])} identificadores ({pct(info['reparto']['cambiaria'], info['reparto']['identificadores'])}), "
+           "porque el reparto depende del lugar de cada identificador en la fila ordenada de su estrato, y ese lugar cambia cuando "
+           "cambian sus casos de estudio. Por eso, en la sección 5, la parte de cada estrato que va a prueba puede alejarse un poco "
+           "del 20 %."] if info["reparto"]["modo"] == "REGISTRADO" else []),
 
         "## 2. Tamaño de los conjuntos",
         tabla_md(["", "Desarrollo", "Prueba", "Total", "% en prueba"], [
@@ -486,6 +526,9 @@ def main() -> None:
           f"({time.time() - inicio:.0f} s)", flush=True)
     print("Escribiendo...", flush=True)
     info["verificaciones"] += escribir(conjunto, lista)
+    if info["reparto"]["modo"] == "REGISTRADO":
+        info["verificaciones"].append(("La lista de identificadores escrita tiene el mismo hash que la registrada: el reparto no cambió",
+                                       sha256(IDENTIFICADORES) == info["reparto"]["sha256_registrado"]))
     registro, es_nueva = registrar(par, version, info)
     print(f"Versión {registro['version']} de la partición ({'nueva' if es_nueva else 'ya registrada'})", flush=True)
     escribir_reporte(info, par, version, registro)

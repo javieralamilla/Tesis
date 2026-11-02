@@ -5,17 +5,19 @@ data/processed/variables_casos.parquet:
 
   1. Versión y archivo. El conjunto de desarrollo es el registrado; la tabla tiene las 31 columnas esperadas, sin
      identificadores de pacientes ni variables objetivo, y exactamente una fila por caso de estudio.
-  2. Tablas de reglas. Los grupos de previsión, las regiones y los códigos de comorbilidad coinciden con una
-     segunda transcripción escrita en este programa (los códigos, con los rangos tal como los imprime Quan et al.,
-     2005, por ejemplo I42.5–I42.9).
+  2. Tablas de reglas. Los grupos de previsión, las regiones, los códigos de comorbilidad y los pesos de Elixhauser
+     coinciden con una segunda transcripción escrita en este programa (los códigos, con los rangos tal como los
+     imprime Quan et al., 2005, por ejemplo I42.5–I42.9; los pesos de Moore, por el nombre de la medida de AHRQ).
   3. Tabla completa. Para todos los casos, recalcula con pyarrow (el script usa pandas) las variables que no
      dependen de la historia: las de la decisión 1, el episodio (estadía, traslado, UCI o UTI, intervención), la
      marca de ventana cortada, el número de diagnósticos y de procedimientos (que además debe sumar los pares
-     caso–código del script 14), el índice de Elixhauser con expresiones regulares y los valores juntados en OTRO.
+     caso–código del script 14), el índice de comorbilidad con expresiones regulares (con o sin el diagnóstico
+     principal, según los parámetros) y los valores juntados en OTRO.
   4. Muestra de casos. Para 2.000 casos al azar (semilla 2026), los ejemplos del reporte y casos en los bordes
      (episodios de 0 días, hospitalizaciones que terminan el mismo día del ingreso índice o 365 días antes, los
-     valores más altos, traslados), arma la historia de 12 meses recorriendo uno por uno los egresos de cada
-     persona, sin ordenar ni buscar como lo hace el script.
+     valores más altos, traslados, tratamientos periódicos previos), arma la historia de 12 meses recorriendo uno
+     por uno los egresos de cada persona, sin ordenar ni buscar como lo hace el script. Un tratamiento periódico
+     (criterio E15 de la 2.2) cuenta como sesión y no como hospitalización (D50).
 
 Solo lee el conjunto de desarrollo; con las rutas por defecto deja reportes/pruebas_variables_casos.md.
 
@@ -152,6 +154,28 @@ PESOS_QUAN_2011 = {"INFARTO": 0, "ICC": 2, "VASCULAR_PERIFERICA": 0, "CEREBROVAS
                    "PULMONAR_CRONICA": 1, "REUMATICA": 1, "ULCERA_PEPTICA": 0, "HEPATICA_LEVE": 2,
                    "DIABETES_SIN_COMPLICACIONES": 0, "DIABETES_CON_COMPLICACIONES": 1, "HEMIPLEJIA": 2, "RENAL": 1,
                    "CANCER": 2, "HEPATICA_GRAVE": 4, "METASTASIS": 6, "VIH": 4}
+# Pesos del índice de reingreso de Moore et al. (2017), por medida de AHRQ, como en el programa de índices de HCUP, y la medida
+# de AHRQ de cada condición de Quan (las arritmias no están entre las 29 de AHRQ; las dos hipertensiones son una sola, HTN_C).
+MOORE_AHRQ = {"AIDS": 19, "ALCOHOL": 6, "ANEMDEF": 9, "ARTH": 4, "BLDLOSS": 3, "CHF": 13, "CHRNLUNG": 8, "COAG": 7, "DEPRESS": 4,
+              "DM": 6, "DMCX": 9, "DRUG": 14, "HTN_C": -1, "HYPOTHY": 0, "LIVER": 10, "LYMPH": 16, "LYTES": 8, "METS": 21, "NEURO": 7,
+              "OBESE": -3, "PARA": 6, "PERIVASC": 4, "PSYCH": 10, "PULMCIRC": 5, "RENLFAIL": 15, "TUMOR": 15, "ULCER": 0,
+              "VALVE": 0, "WGHTLOSS": 10}
+AHRQ_DE_QUAN = {"ICC": "CHF", "ARRITMIA": None, "VALVULAR": "VALVE", "CIRCULACION_PULMONAR": "PULMCIRC",
+                "VASCULAR_PERIFERICA": "PERIVASC", "HTA_SIN_COMPLICACIONES": "HTN_C", "HTA_CON_COMPLICACIONES": "HTN_C",
+                "PARALISIS": "PARA", "OTRA_NEUROLOGICA": "NEURO", "PULMONAR_CRONICA": "CHRNLUNG", "DIABETES_SIN_COMPLICACIONES": "DM",
+                "DIABETES_CON_COMPLICACIONES": "DMCX", "HIPOTIROIDISMO": "HYPOTHY", "INSUFICIENCIA_RENAL": "RENLFAIL",
+                "HEPATICA": "LIVER", "ULCERA_PEPTICA": "ULCER", "VIH": "AIDS", "LINFOMA": "LYMPH", "METASTASIS": "METS",
+                "TUMOR_SOLIDO": "TUMOR", "REUMATICA": "ARTH", "COAGULOPATIA": "COAG", "OBESIDAD": "OBESE", "PERDIDA_DE_PESO": "WGHTLOSS",
+                "LIQUIDOS_ELECTROLITOS": "LYTES", "ANEMIA_POR_PERDIDA": "BLDLOSS", "ANEMIA_POR_DEFICIENCIA": "ANEMDEF",
+                "ALCOHOL": "ALCOHOL", "DROGAS": "DRUG", "PSICOSIS": "PSYCH", "DEPRESION": "DEPRESS"}
+# Pesos de van Walraven et al. (2009), por condición, como en el paquete comorbidity de R.
+VAN_WALRAVEN = {"ICC": 7, "ARRITMIA": 5, "VALVULAR": -1, "CIRCULACION_PULMONAR": 4, "VASCULAR_PERIFERICA": 2,
+                "HTA_SIN_COMPLICACIONES": 0, "HTA_CON_COMPLICACIONES": 0, "PARALISIS": 7, "OTRA_NEUROLOGICA": 6,
+                "PULMONAR_CRONICA": 3, "DIABETES_SIN_COMPLICACIONES": 0, "DIABETES_CON_COMPLICACIONES": 0, "HIPOTIROIDISMO": 0,
+                "INSUFICIENCIA_RENAL": 5, "HEPATICA": 11, "ULCERA_PEPTICA": 0, "VIH": 0, "LINFOMA": 9, "METASTASIS": 12,
+                "TUMOR_SOLIDO": 4, "REUMATICA": 0, "COAGULOPATIA": 3, "OBESIDAD": -4, "PERDIDA_DE_PESO": 6,
+                "LIQUIDOS_ELECTROLITOS": 5, "ANEMIA_POR_PERDIDA": -2, "ANEMIA_POR_DEFICIENCIA": -2, "ALCOHOL": 0, "DROGAS": -7,
+                "PSICOSIS": 0, "DEPRESION": -3}
 JERARQUIAS = {  # la condición más grave (clave) reemplaza a su versión leve (valor)
     "ELIXHAUSER": {"DIABETES_CON_COMPLICACIONES": "DIABETES_SIN_COMPLICACIONES", "METASTASIS": "TUMOR_SOLIDO",
                    "HTA_CON_COMPLICACIONES": "HTA_SIN_COMPLICACIONES"},
@@ -265,6 +289,12 @@ def main() -> None:
     jerarquia_ok = all((r.reemplaza_a or None) == JERARQUIAS[r.indice].get(r.condicion) for r in tabla.itertuples())
     comprobar("Los pesos (1 en Elixhauser; Quan et al. 2011 en Charlson) y las jerarquías de la tabla son los esperados",
               pesos_ok and jerarquia_ok)
+    pesos_e = pd.DataFrame(leer_csv(REGLAS / "pesos_elixhauser.csv"))
+    moore_ok = all(int(f.moore_reingreso) == (MOORE_AHRQ[AHRQ_DE_QUAN[f.condicion]] if AHRQ_DE_QUAN[f.condicion] else 0)
+                   and (f.medida_ahrq or None) == AHRQ_DE_QUAN[f.condicion] for f in pesos_e.itertuples())
+    vw_ok = all(int(f.van_walraven) == VAN_WALRAVEN[f.condicion] for f in pesos_e.itertuples())
+    comprobar("Los pesos de Moore et al. (2017) y de van Walraven et al. (2009) coinciden con la segunda transcripción, condición por condición",
+              moore_ok and vw_ok and pesos_e["condicion"].tolist() == list(ELIXHAUSER_QUAN), f"({len(pesos_e)} condiciones)")
 
     # ---------------------------------------------------------------- 3. tabla completa, con pyarrow
     columnas_casos = ["ID_EGRESO", "ID_PERSONA", "ID_EPISODIO", "BLOQUE_ID", "COD_HOSPITAL", "SEXO", "FECHA_NACIMIENTO",
@@ -312,7 +342,7 @@ def main() -> None:
     # Episodios, con el group_by de pyarrow sobre todos los egresos que tienen episodio
     columnas_egresos = ["ID_EGRESO", "ID_PERSONA", "ID_EPISODIO", "ES_CASO_ESTUDIO", "COD_HOSPITAL", "FECHA_INGRESO",
                         "FECHAALTA", "TIPO_INGRESO", "IR_29301_COD_GRD", "DIAGNOSTICO1", "EXC_CMA", "EXC_SESION",
-                        "EXC_ACTIVIDAD_2019", "ESPECIALIDADINTERVENCION", *SERVICIOS]
+                        "EXC_TRATAMIENTO_PERIODICO", "EXC_ACTIVIDAD_2019", "ESPECIALIDADINTERVENCION", *SERVICIOS]
     eg = pq.read_table(DESARROLLO, columns=columnas_egresos)
     eg = eg.filter(pc.is_valid(eg["ID_EPISODIO"]))
     critico = np.zeros(eg.num_rows, dtype=bool)
@@ -352,31 +382,44 @@ def main() -> None:
     n_dx, n_px = distintos_por_caso(t, DIAGNOSTICOS), distintos_por_caso(t, PROCEDIMIENTOS)
     comparar_columnas("Número de diagnósticos y de procedimientos distintos iguales en todos los casos",
                       {"N_DIAGNOSTICOS": n_dx, "N_PROCEDIMIENTOS": n_px})
-    filtro = pd.read_parquet(FILTRO, columns=["VARIABLE", "BLOQUE", "CASOS"])
+    filtro = pd.read_parquet(FILTRO, columns=["VARIABLE", "BLOQUE", "NIVEL", "CASOS"])
+    filtro = filtro[filtro["NIVEL"] == "COMPLETO"]        # sin las categorías de la lista agrupada (D53)
     pares = filtro[filtro["VARIABLE"] == "REING_7D"].groupby("BLOQUE")["CASOS"].sum()  # REING_7D tiene dato en todos
     comprobar("Las sumas coinciden con los pares caso–código del filtro del script 14",
               int(n_dx.sum()) == int(pares["DIAGNOSTICO"]) and int(n_px.sum()) == int(pares["PROCEDIMIENTO"]),
               f"({fmt(n_dx.sum())} diagnósticos y {fmt(n_px.sum())} procedimientos)")
 
-    # Índice de comorbilidad con expresiones regulares de pyarrow, columna por columna
-    marcas = {k: np.zeros(n, dtype=bool) for k in esperado}
+    # Índice de comorbilidad con expresiones regulares de pyarrow, columna por columna: el diagnóstico principal y los
+    # secundarios se marcan por separado, y «todos» es la unión de los dos.
+    principal = {k: np.zeros(n, dtype=bool) for k in esperado}
+    secundarios = {k: np.zeros(n, dtype=bool) for k in esperado}
     patrones = {k: "^(" + "|".join(sorted(v)) + ")" for k, v in esperado.items()}
     for col in DIAGNOSTICOS:
         filas = np.flatnonzero(a_numpy(pc.is_valid(t[col])))
         if not len(filas):
             continue
         sin_punto = pc.replace_substring(t[col].drop_null(), ".", "")
+        destino = principal if col == "DIAGNOSTICO1" else secundarios
         for k, patron in patrones.items():
-            marcas[k][filas[a_numpy(pc.match_substring_regex(sin_punto, patron))]] = True
-    for indice, reglas in JERARQUIAS.items():
-        for grave, leve in reglas.items():
-            marcas[(indice, leve)] = marcas[(indice, leve)] & ~marcas[(indice, grave)]
-    elix = sum(marcas[("ELIXHAUSER", k)].astype(int) for k in ELIXHAUSER_QUAN)
-    charlson = sum(PESOS_QUAN_2011[k] * marcas[("CHARLSON", k)].astype(int) for k in CHARLSON_QUAN)
-    alguna_charlson = np.logical_or.reduce([marcas[("CHARLSON", k)] for k in CHARLSON_QUAN])
-    en_uso = elix if par["indice_comorbilidad"].upper() == "ELIXHAUSER" else charlson
-    comparar_columnas(f"Índice de comorbilidad ({par['indice_comorbilidad']}) igual en todos los casos", {"INDICE_COMORBILIDAD": en_uso})
-    print(f"  Elixhauser con alguna condición: {100 * (elix > 0).mean():.1f} %; Charlson con alguna: {100 * alguna_charlson.mean():.1f} %"
+            destino[k][filas[a_numpy(pc.match_substring_regex(sin_punto, patron))]] = True
+    conjuntos = {"SECUNDARIOS": secundarios, "TODOS": {k: principal[k] | secundarios[k] for k in esperado}}
+    puntajes = {}
+    for nombre, marcas in conjuntos.items():
+        for indice, reglas in JERARQUIAS.items():
+            for grave, leve in reglas.items():
+                marcas[(indice, leve)] = marcas[(indice, leve)] & ~marcas[(indice, grave)]
+        puntajes[nombre] = {
+            "CONTEO": sum(marcas[("ELIXHAUSER", k)].astype(int) for k in ELIXHAUSER_QUAN),
+            "MOORE": sum((MOORE_AHRQ[AHRQ_DE_QUAN[k]] if AHRQ_DE_QUAN[k] else 0) * marcas[("ELIXHAUSER", k)].astype(int)
+                         for k in ELIXHAUSER_QUAN),
+            "VAN_WALRAVEN": sum(VAN_WALRAVEN[k] * marcas[("ELIXHAUSER", k)].astype(int) for k in ELIXHAUSER_QUAN),
+            "CHARLSON": sum(PESOS_QUAN_2011[k] * marcas[("CHARLSON", k)].astype(int) for k in CHARLSON_QUAN),
+        }
+    indice, dx = par["indice_comorbilidad"].upper(), par["comorbilidad_diagnosticos"].upper()
+    comparar_columnas(f"Índice de comorbilidad ({indice}, diagnósticos {dx.lower()}) igual en todos los casos",
+                      {"INDICE_COMORBILIDAD": puntajes[dx][indice]})
+    alguna = {k: 100 * (p["CONTEO"] > 0).mean() for k, p in puntajes.items()}
+    print(f"  Elixhauser con alguna condición: {alguna['SECUNDARIOS']:.1f} % con los secundarios y {alguna['TODOS']:.1f} % con todos"
           f" ({time.time() - inicio:.0f} s)", flush=True)
 
     # Las demás columnas del CMBD, con los valores raros juntados en OTRO
@@ -410,7 +453,7 @@ def main() -> None:
     casos_m = t.select(["ID_EGRESO", "ID_PERSONA", "ID_EPISODIO", "BLOQUE_ID"]).to_pandas().set_index("ID_EGRESO").loc[muestra]
     personas = set(casos_m["ID_PERSONA"].astype("int64"))
     egm = eg.select(["ID_EGRESO", "ID_PERSONA", "ID_EPISODIO", "FECHA_INGRESO", "FECHAALTA", "TIPO_INGRESO", "IR_29301_COD_GRD",
-                     "DIAGNOSTICO1", "EXC_CMA", "EXC_SESION"]).to_pandas()
+                     "DIAGNOSTICO1", "EXC_CMA", "EXC_SESION", "EXC_TRATAMIENTO_PERIODICO"]).to_pandas()
     egm = egm[egm["ID_PERSONA"].isin(personas)]
     print(f"Recalculando la historia de {fmt(len(muestra))} casos ({fmt(len(personas))} personas, {fmt(len(egm))} egresos)...", flush=True)
     por_persona = {p: list(g.itertuples(index=False)) for p, g in egm.groupby("ID_PERSONA")}
@@ -425,14 +468,14 @@ def main() -> None:
             e = episodios.setdefault(x.ID_EPISODIO, {"alta": None, "hosp": False, "no_planif": False})
             alta = x.FECHAALTA.date()
             e["alta"] = alta if e["alta"] is None or alta > e["alta"] else e["alta"]
-            e["hosp"] = e["hosp"] or not (x.EXC_CMA or x.EXC_SESION)
+            e["hosp"] = e["hosp"] or not (x.EXC_CMA or x.EXC_SESION or x.EXC_TRATAMIENTO_PERIODICO)
             if x.ID_EGRESO == x.ID_EPISODIO:
                 parto = isinstance(x.IR_29301_COD_GRD, str) and any(x.IR_29301_COD_GRD.startswith(g) for g in partos)
                 sesion = isinstance(x.DIAGNOSTICO1, str) and any(x.DIAGNOSTICO1.startswith(s) for s in sesiones)
                 e["no_planif"] = x.TIPO_INGRESO in no_planificados and not parto and not sesion
         previas = [e for k, e in episodios.items() if k != propio and e["hosp"] and desde <= e["alta"] <= ingreso]
         cma = sum(1 for x in egresos if x.ID_EPISODIO != propio and x.EXC_CMA and desde <= x.FECHAALTA.date() <= ingreso)
-        ses = sum(1 for x in egresos if x.ID_EPISODIO != propio and x.EXC_SESION and not x.EXC_CMA
+        ses = sum(1 for x in egresos if x.ID_EPISODIO != propio and (x.EXC_SESION or x.EXC_TRATAMIENTO_PERIODICO) and not x.EXC_CMA
                   and desde <= x.FECHAALTA.date() <= ingreso)
         primer_dia = inicio_bloques[caso["BLOQUE_ID"]]
         calculado[id_caso] = {
@@ -468,7 +511,8 @@ def main() -> None:
         "# Prueba independiente de las variables de los casos de estudio",
         f"Generado por `{ruta}/pruebas/verificar_15_variables_casos.py` el {date.today():%d-%m-%Y}. El programa vuelve a calcular, "
         "sin usar ninguna función del script 15, lo que el script dejó en `data/processed/variables_casos.parquet`. Compara las tablas "
-        "de reglas con una segunda transcripción (los códigos de comorbilidad, con los rangos de Quan et al., 2005); recalcula con "
+        "de reglas con una segunda transcripción (los códigos de comorbilidad, con los rangos de Quan et al., 2005, y los pesos de "
+        "Moore et al., 2017, y de van Walraven et al., 2009); recalcula con "
         "pyarrow, para todos los casos, las variables que no dependen de la historia, y arma la historia de 12 meses recorriendo uno "
         f"por uno los egresos de cada persona en una muestra de {fmt(len(muestra))} casos ({TAMANO_MUESTRA} al azar con la semilla "
         f"{SEMILLA}, los ejemplos del reporte 15 y casos en los bordes de la ventana). Solo lee el conjunto de desarrollo.",

@@ -16,7 +16,7 @@ sensibilidad de las reglas de traslado y de derivación (punto 2.4). Las entrada
 calidad del identificador por año. En su revisión del 24 de octubre dio por subsanados esos puntos y
 aprobó D38 y D39; pidió explicar dos cifras de la sensibilidad, que se agregaron el 26 de octubre: por
 qué exigir la marca de traslado suma menos reingresos que episodios separa (observación O3, H29) y qué
-criterio deja fuera a los derivados que la fila de sensibilidad no agrega (observación O4, D39). Cada
+criterio deja fuera a los derivados que la fila de sensibilidad no agrega (observación O4, D39). En su revisión del 30 de octubre de 2026, sobre la actividad 3.1, pidió tratar como sesiones los tratamientos periódicos de un día que no se codifican con Z51, con una regla y midiendo cuántos casos cambian en la cohorte: es el criterio E15 (D50, 2 de noviembre de 2026). Cada
 exclusión se puede activar o desactivar en
 `reglas/criterios_exclusion.csv` y cada umbral se puede cambiar en `reglas/parametros.csv`, sin
 modificar el código.
@@ -30,7 +30,7 @@ modificar el código.
 
 ## Resumen de las definiciones
 
-Definiciones vigentes desde el 20 de octubre de 2026.
+Definiciones vigentes desde el 2 de noviembre de 2026.
 
 | Tema | Entrada | Definición |
 |---|---|---|
@@ -40,19 +40,19 @@ Definiciones vigentes desde el 20 de octubre de 2026.
 | Reingreso relacionado | D31, D38 | Algún ingreso de la ventana con la misma CDM que el caso de estudio, sin agrupar CDM. Los partos (CDM 14) quedan sin dato en estas dos variables, porque no pueden tener un reingreso de su misma CDM. La unión de las CDM 13 y 14 queda como análisis de sensibilidad. |
 | Sin identificador o sin fechas | D21 | Fuera como caso de estudio y como reingreso. |
 | Censura | D30 | Cada ventana exige sus días más 30 de margen antes del cierre del bloque: 37 días para las variables de 7 días y 60 para las de 30 días. |
-| Exclusiones | D23, D32, D33, D35 | Catorce criterios en una tabla, con su justificación; trece activos y uno desactivado. La cirugía mayor ambulatoria y las sesiones de tratamiento no son caso de estudio. |
+| Exclusiones | D23, D32, D33, D35, D50 | Quince criterios en una tabla, con su justificación; catorce activos y uno desactivado. La cirugía mayor ambulatoria, las sesiones de tratamiento y los tratamientos periódicos (programados, de 0 o 1 día, con al menos otros dos iguales de la misma persona en el año anterior) no son caso de estudio. |
 | Duplicados | D24 | Aplicación de D15: se conserva el registro más completo. |
 | Versión de los datos | D36 | El conjunto analítico es `grd_etiquetado.parquet`; su versión y su hash están registrados. |
 
-Resultado vigente: 4.192.410 casos de estudio. Las variables de 30 días se calculan sobre los 4.101.883
-que tienen 60 días de seguimiento, y las dos relacionadas no incluyen los partos (D38).
+Resultado vigente (versión 3 del conjunto analítico): 4.184.372 casos de estudio. Las variables de 30 días se calculan
+sobre los 4.094.011 que tienen 60 días de seguimiento, y las dos relacionadas no incluyen los partos (D38).
 
 | Variable | Definición | Casos con dato | Casos con reingreso | % |
 |---|---|---|---|---|
-| `REING_7D` | 7 días, por cualquier causa | 4.192.410 | 86.609 | 2,07 % |
-| `REING_7D_CDM` | 7 días, relacionado (misma CDM) | 3.577.243 | 45.195 | 1,26 % |
-| `REING_30D` | 30 días, por cualquier causa | 4.101.883 | 241.953 | 5,90 % |
-| `REING_30D_CDM` | 30 días, relacionado (misma CDM) | 3.498.460 | 124.256 | 3,55 % |
+| `REING_7D` | 7 días, por cualquier causa | 4.184.372 | 86.474 | 2,07 % |
+| `REING_7D_CDM` | 7 días, relacionado (misma CDM) | 3.569.205 | 45.122 | 1,26 % |
+| `REING_30D` | 30 días, por cualquier causa | 4.094.011 | 241.449 | 5,90 % |
+| `REING_30D_CDM` | 30 días, relacionado (misma CDM) | 3.490.588 | 123.996 | 3,55 % |
 
 ---
 
@@ -482,6 +482,7 @@ que tienen 60 días de seguimiento, y las dos relacionadas no incluyen los parto
 - **Visto bueno:** La persona a cargo de la tesis aprobó el 20 de octubre de 2026 la fila de traslados con marca y la de derivados al revés.
 - **Reafirma a:** D19 y D23 (criterios E07 y E08). Completa a H23.
 - **Evidencia:** `2.2_depuracion_etiquetado/reportes/08_depuracion.md`, sección 4; `2.2_depuracion_etiquetado/reportes/11_sensibilidad.md`, sección 9.
+- **Actualizada por:** D50 (2 de noviembre de 2026). Con el criterio E15, 26 derivados más quedan fuera por E15 y la fila de derivados agrega 93.763.
 - **Estado:** Adoptada. Aprobada por el profesor guía el 24 de octubre de 2026, que pidió explicar la diferencia de 5.784 casos entre los derivados excluidos y los agregados (observación O4): se agregó el 26 de octubre, en el campo «Derivados que no se agregan».
 
 ### H28 · 2026-10-20 · La calidad del identificador no explica el aumento de 2023 y 2024
@@ -524,6 +525,43 @@ que tienen 60 días de seguimiento, y las dos relacionadas no incluyen los parto
 - **Conclusión:** El efecto de exigir la marca sigue siendo pequeño (2,5 % más casos con `REING_7D`) y está explicado caso por caso. Se mantiene la regla D19.
 - **Completa a:** H27.
 - **Evidencia:** `2.2_depuracion_etiquetado/scripts/11_sensibilidad.py` → `2.2_depuracion_etiquetado/reportes/11_sensibilidad.md`, sección 8 («Por qué los casos con `REING_7D` no aumentan tanto como los ingresos que dejan de unirse»), con el desglose en las cuatro variables; contraste independiente en `pruebas/verificar_11_sensibilidad.py`.
+- **Actualizada por:** D50 (2 de noviembre de 2026). Con el criterio E15, 10 de las altas anteriores quedan fuera por E15 y el aumento de casos con `REING_7D` pasa a 2.132 (2.123 + 9).
+
+### D50 · 2026-11-02 · Los tratamientos periódicos no son caso de estudio (criterio E15)
+- **Actividad:** 2.2 (resuelve H33 de la bitácora de la 3.1)
+- **Decisión:** Un egreso es un tratamiento periódico si cumple a la vez cuatro condiciones, y entonces no es caso de estudio, igual que una sesión Z51 (criterio E14):
+
+  | Condición | Valor | Por qué |
+  |---|---|---|
+  | Tipo de ingreso | Programado | Un tratamiento periódico se agenda. Una urgencia de esas mismas personas (por ejemplo, un sangrado en un paciente con hemofilia) sigue siendo caso de estudio y puede ser reingreso |
+  | Estadía | 0 o 1 día | Cubre los tratamientos de día y los de una noche: 4 de las 13 personas de H33 casi siempre se quedan una noche |
+  | No es otra cosa | No es cirugía mayor ambulatoria (E13), sesión Z51 (E14) ni de los tipos de actividad de 2019 (E04) | Para no marcar dos veces |
+  | Serie | La misma persona tuvo al menos otros 2 ingresos así, con la misma categoría de diagnóstico principal (sus tres primeros caracteres), en los 365 días anteriores a su ingreso, sin contar el mismo día | Lo que hace periódico a un tratamiento es la serie: desde el tercer ingreso en un año, ya no es un control aislado |
+
+- **Solo mira hacia atrás:** Usa los ingresos anteriores, como las variables de historia (D42 de la bitácora de la 2.3), así que se puede saber al momento del alta. Los dos primeros ingresos de cada serie siguen siendo casos de estudio. Se calcula con las marcas de los demás criterios y no con los criterios activos, así que es el mismo en todos los escenarios del script 11.
+- **Por qué al menos 2 ingresos anteriores:** De los 342.953 egresos candidatos (programados, de 0 o 1 día, sin E04, E13 ni E14), 321.381 no tienen ningún ingreso igual en el año anterior, 13.007 tienen 1, y la cifra cae a 2.062 con 2; hay 2.079 con 3 a 5, 1.748 con 6 a 11 y 2.676 con 12 o más. Uno puede ser un control o una segunda etapa; desde dos ya es una serie.
+- **Resultado:** Cumplen el criterio 8.565 egresos de 1.812 personas (6.329 de 0 días y 2.236 de 1 día). Quita 8.038 casos de estudio: los casos pasan de 4.192.410 a 4.184.372 (1.987, 937, 737, 1.529, 1.290 y 1.558 de 2019 a 2024). En el conjunto de desarrollo son 6.466, la cifra de la exploración. Las categorías más frecuentes:
+
+  | Categoría | Tratamiento | Egresos | Personas | Casos de estudio que deja fuera |
+  |---|---|---|---|---|
+  | Z29 Otras medidas profilácticas | Inmunoglobulina (99.14) | 2.107 | 280 | 2.043 |
+  | E76 Trastornos de los glucosaminoglicanos | Terapia de reemplazo enzimático (99.29) | 1.043 | 38 | 1.023 |
+  | F20 Esquizofrenia | Terapia electroconvulsiva (94.27) | 516 | 33 | 396 |
+  | D66 Deficiencia hereditaria del factor VIII | Factor de coagulación (99.06) | 474 | 6 | 462 |
+  | C91 Leucemia linfoide | Quimioterapia sin Z51 (99.25) | 329 | 128 | 320 |
+  | E78 Trastornos de las lipoproteínas | Aféresis (99.71) | 219 | 2 | 214 |
+  | K91 Trastornos digestivos posprocedimiento | Nutrición parenteral (99.15) | 184 | 14 | 183 |
+
+- **Los reingresos no cambian:** Los egresos marcados son ingresos programados, y un ingreso programado nunca cuenta como reingreso no planificado (D20). Las 155 columnas que no dependen de los casos de estudio quedaron idénticas, y ningún caso que sigue en la cohorte cambia su valor en las cuatro variables. Tasas: `REING_7D` 2,07 % (86.474 de 4.184.372), `REING_7D_CDM` 1,26 % (45.122 de 3.569.205), `REING_30D` 5,90 % (241.449 de 4.094.011) y `REING_30D_CDM` 3,55 % (123.996 de 3.490.588).
+- **Sensibilidad:** Una fila nueva del reporte 11, «Con los tratamientos periódicos» (E15 desactivado), recupera exactamente los 4.192.410 casos anteriores, con las mismas tasas y 0 casos comunes con alguna variable distinta. De los 8.038 casos que vuelve a agregar, el 73,4 % dura 0 días, 64 personas tienen 20 casos o más (40,7 % de esos casos) y el 68,9 % va seguido de otro ingreso, programado, dentro de 30 días; su reingreso no planificado a 30 días es 6,40 %.
+- **Otros efectos:** E15 también deja fuera a 10 de las altas anteriores del desglose de traslados (H29) y a 26 de los derivados que la fila de derivados no agrega (D39). Por eso el aumento de casos con `REING_7D` al exigir la marca de traslado pasa de 2.133 a 2.132 (2.123 + 9). En la historia de la actividad 3.1, estos egresos cuentan como sesiones y no como hospitalizaciones: el máximo de hospitalizaciones previas baja de 342 a 64.
+- **Alternativas descartadas:** (1) Solo estadías de 0 días: dejaría fuera a 4 de las 13 personas de H33, que se quedan una noche. (2) Al menos 3 ingresos anteriores: 4.889 casos en desarrollo; el máximo de hospitalizaciones previas quedaría en 65. (3) Mirar también hacia adelante para marcar los dos primeros ingresos de cada serie: usaría información posterior al alta. (4) Corregir a mano a las 13 personas de H33: el profesor guía pidió una regla.
+- **Fundamento:** Revisión del profesor guía del 30 de octubre de 2026, respuesta sobre los tratamientos periódicos: «Deben tratarse como sesiones, igual que en la actividad 2.2. Hay que definir una regla que los identifique, en vez de corregir a mano a las trece personas, y medir cuántos casos cambian en la cohorte».
+- **Parámetros:** `periodico_tipo_ingreso` (PROGRAMADA), `periodico_estadia_max_dias` (1), `periodico_previos_min` (2) y `periodico_ventana_dias` (365), en `reglas/parametros.csv`; criterio E15 en `reglas/criterios_exclusion.csv`. El script se detiene si `periodico_tipo_ingreso` incluye un tipo de ingreso no planificado.
+- **Verificación:** La prueba independiente del script 08 recalcula E15 por otro camino, recorriendo los ingresos de cada persona y categoría con una cola de fechas, y coincide en los 8.565 egresos. Con una copia con 5 marcas cambiadas a propósito, falla justo en E15 («diferencias 5»).
+- **Visto bueno:** La persona a cargo de la tesis aprobó la regla el 1 de noviembre de 2026 y los borradores del código el 2 de noviembre («si, los apruebo»).
+- **Evidencia:** `2.2_depuracion_etiquetado/reportes/08_depuracion.md`, sección 5; `2.2_depuracion_etiquetado/reportes/11_sensibilidad.md`, sección 10. Conjunto analítico, versión 3.
+- **Estado:** Adoptada, por recomendación del profesor guía.
 
 ---
 
@@ -601,6 +639,23 @@ Las tres nuevas recalculan por otro camino los ingresos que separa el escenario 
 que deja fuera a cada alta anterior, el aumento de casos con `REING_7D`, y el criterio posterior que deja
 fuera a cada derivado no agregado, y los comparan con las tablas del reporte 11.
 
+## Verificación de la ejecución del 2 de noviembre de 2026
+
+Los scripts 08, 09, 11 y 12 se ejecutaron el 2 de noviembre de 2026 con el criterio E15 (D50). Antes se
+habían probado completos con la salida en una carpeta temporal, sin tocar el proyecto. Las tablas depurada y
+etiquetada tienen el mismo hash que en la prueba, y los reportes 08, 09 y 11 y las dos tablas por hospital
+son idénticos a los de la prueba. Ninguno de los cuatro scripts tuvo verificaciones fallidas.
+
+El script 12 registró la versión 3 del conjunto analítico: 5.800.973 egresos, 164 columnas (se agregó
+`EXC_TRATAMIENTO_PERIODICO`) y 4.184.372 casos de estudio, con SHA-256
+`3bf2bb4e7513daf6d580a9e025cdd00d55456602ccb7d78d60b722e8fe402bd2`.
+
+Sobre la versión 3 se cumplen las 79 comprobaciones de los contrastes independientes
+(`reportes/pruebas_independientes.md`): depuración (44; la nueva recalcula E15 con una cola de fechas por
+persona y categoría y coincide en los 8.565 egresos), etiquetado (20) y análisis de sensibilidad (15; la
+nueva es el escenario con los tratamientos periódicos). Con una copia con 5 marcas de E15 cambiadas a
+propósito, la prueba falla justo en esa comprobación.
+
 ---
 
 ## Pendientes
@@ -612,6 +667,7 @@ fuera a cada derivado no agregado, y los comparan con las tablas del reporte 11.
 - [x] Presentar al profesor guía, en el próximo avance, H26, H27, H28, D38 y D39. Los revisó el 24 de octubre de 2026: aprobó D38 y D39 y pidió explicar dos cifras de la sensibilidad (observaciones O3 y O4).
 - [x] Explicar las dos cifras de la revisión del 24 de octubre: el aumento de casos con `REING_7D` al exigir la marca de traslado (O3, H29 y reporte 11, sección 8) y los derivados que la fila de sensibilidad no agrega (O4, D39 y reporte 11, sección 9). Hecho el 26 de octubre de 2026.
 - [ ] Presentar al profesor guía, en el próximo avance, H29 y el agregado a D39.
+- [ ] Presentar al profesor guía, en el próximo avance, el criterio E15 y cuántos casos cambian en la cohorte (D50).
 - [x] Ejecutar el script 08 sobre la carpeta de datos y confirmar las cifras de esta bitácora con su reporte. Hecho el 6 de octubre de 2026 y repetido el 8 de octubre.
 - [x] Script 09: etiquetado del reingreso (D20, D25 y D26) y tasas por año y por definición. Hecho el 6 de octubre de 2026 y repetido el 8 de octubre.
 - [x] Decidir con profesor guía si la cirugía mayor ambulatoria es caso de estudio (D23). Resuelto el 8 de octubre de 2026: no lo es (D32).

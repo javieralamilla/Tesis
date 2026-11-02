@@ -1,9 +1,11 @@
-"""Contraste independiente del script 13 (grupos de la validación temporal).
+"""Contraste independiente del script 13 (grupos de la validación temporal y pliegues).
 
 Vuelve a calcular, sin usar ninguna función del script 13 y con otro camino, el período de cada caso
 de estudio de desarrollo y si el paciente ya fue visto: el año se toma de la fecha de alta (no del
 año del archivo) y los pacientes ya vistos se obtienen agrupando por identificador con pyarrow.
-Compara el resultado con data/processed/validacion_temporal.parquet y con la tabla del reporte 13.
+Los pliegues de la validación cruzada se reconstruyen con conteos por identificador (bincount) y un
+recorrido estrato por estrato. Compara el resultado con data/processed/validacion_temporal.parquet
+y con las tablas del reporte 13.
 Solo lee el conjunto de desarrollo; con las rutas por defecto deja
 reportes/pruebas_validacion_temporal.md.
 
@@ -66,8 +68,8 @@ registro = leer_csv(REGISTRO)[-1]
 comprobar(f"El conjunto de desarrollo tiene el hash de la versión {registro['version']} registrada de la partición",
           sha256(DESARROLLO) == registro["sha256_desarrollo"])
 grupos = pq.read_table(GRUPOS)
-comprobar("El archivo de grupos tiene solo las columnas esperadas, sin nada que dependa de las variables objetivo",
-          grupos.column_names == ["ID_EGRESO", "ID_PACIENTE", "PERIODO", "PACIENTE_VISTO"], str(grupos.column_names))
+comprobar("El archivo de grupos tiene solo las columnas esperadas, sin las variables objetivo",
+          grupos.column_names == ["ID_EGRESO", "ID_PACIENTE", "PERIODO", "PACIENTE_VISTO", "PLIEGUE"], str(grupos.column_names))
 
 # ------------------------------------------------------------------ 2. recálculo con otro camino
 t = pq.read_table(DESARROLLO, columns=["ID_EGRESO", "ID_PACIENTE", "BLOQUE_ID", "FECHAALTA", "ES_CASO_ESTUDIO", *VARIABLES])
@@ -127,6 +129,49 @@ for nombre, (n, pacientes, tasas) in esperado.items():
     comprobar(f"Reporte 13, fila «{nombre}»: casos, pacientes y tasas iguales al recálculo",
               fila is not None and fila[0] == n and fila[1] == pacientes and all(abs(a - b) < 0.0051 for a, b in zip(fila[2], tasas)),
               f"({n} casos; {pacientes} pacientes; tasas {tasas})")
+
+# ------------------------------------------------------------------ 4. pliegues de la validación cruzada (D52), con otra implementación
+N_PLIEGUES, SEMILLA, PRINCIPAL = int(par["pliegues_validacion_cruzada"]), int(par["semilla"]), par["variable_principal"]
+identificador, codigo = np.unique(casos["ID_PACIENTE"].to_numpy().astype("int64"), return_inverse=True)   # en orden creciente
+n_id = len(identificador)
+casos_id = np.bincount(codigo, minlength=n_id)
+reing = {k: np.bincount(codigo, weights=np.nan_to_num(casos[k].to_numpy(zero_copy_only=False).astype("float64")), minlength=n_id)
+         for k in VARIABLES}
+bloque_id = np.empty(n_id, dtype=object)
+bloque_id[codigo] = casos["BLOQUE_ID"].to_numpy(zero_copy_only=False)
+tiene = {k: reing[k] > 0 for k in VARIABLES}
+tiene["REING_30D"] = tiene["REING_30D"] | tiene["REING_7D"]              # un reingreso a 7 días también lo es a 30
+tiene["REING_30D_CDM"] = tiene["REING_30D_CDM"] | tiene["REING_7D_CDM"]
+patron = ["".join("1" if tiene[k][i] else "0" for k in ("REING_30D", "REING_30D_CDM", "REING_7D", "REING_7D_CDM")) for i in range(n_id)]
+rng = np.random.default_rng(SEMILLA)
+azar = rng.random(n_id)
+estratos = sorted(set(zip(bloque_id.tolist(), patron)))
+partida = rng.integers(0, N_PLIEGUES, len(estratos))
+miembros = {e: [] for e in estratos}
+for i, clave in enumerate(zip(bloque_id.tolist(), patron)):
+    miembros[clave].append(i)
+pliegue_id = np.zeros(n_id, dtype="int64")
+for numero, e in enumerate(estratos):
+    fila = np.array(miembros[e])
+    orden = fila[np.lexsort((azar[fila], casos_id[fila], reing[PRINCIPAL][fila]))]      # por reingresos, luego casos, luego azar
+    pliegue_id[orden] = (np.arange(len(orden)) + partida[numero]) % N_PLIEGUES + 1
+pliegue_calc = pliegue_id[codigo]
+pliegue_archivo = grupos["PLIEGUE"].to_numpy()[posicion]
+comprobar(f"PLIEGUE del archivo coincide caso por caso con el recálculo ({N_PLIEGUES} pliegues, semilla {SEMILLA})",
+          bool((pliegue_archivo == pliegue_calc).all()), f"({len(estratos)} estratos; {n_id} pacientes)")
+pacientes_por_pliegue = [set(identificador[pliegue_id == f]) for f in range(1, N_PLIEGUES + 1)]
+comprobar("Ningún paciente está en dos pliegues", sum(len(s) for s in pacientes_por_pliegue) == len(set().union(*pacientes_por_pliegue)))
+esperado_pl = {str(f): cifras(pliegue_calc == f) for f in range(1, N_PLIEGUES + 1)}
+del_reporte = {}
+for linea in REPORTE_13.read_text(encoding="utf-8").split("## 2.")[1].split("## 3.")[0].splitlines():
+    celdas = [x.strip() for x in linea.strip().strip("|").split("|")]
+    if len(celdas) == 8 and celdas[0] in esperado_pl:
+        del_reporte[celdas[0]] = (int(celdas[1].replace(".", "")), int(celdas[3].replace(".", "")),
+                                  [float(x.replace(" %", "").replace(",", ".")) for x in celdas[4:]])
+comprobar("Reporte 13, tabla de pliegues: casos, pacientes y tasas iguales al recálculo",
+          len(del_reporte) == N_PLIEGUES and all(del_reporte[f][0] == n and del_reporte[f][1] == p and all(abs(a - b) < 0.0051 for a, b in zip(del_reporte[f][2], t))
+                                                 for f, (n, p, t) in esperado_pl.items()),
+          "(" + "; ".join(f"pliegue {f}: {n} casos" for f, (n, _, _) in esperado_pl.items()) + ")")
 
 todo_bien = all(ok for _, ok in resultados)
 print(f"\nRESULTADO: {'todas las comprobaciones se cumplen' if todo_bien else 'HAY FALLAS'} ({time.time() - inicio:.0f} s)")
