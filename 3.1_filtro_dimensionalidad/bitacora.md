@@ -3,7 +3,7 @@
 Registro de los hallazgos y decisiones de la actividad 3.1 de la Carta Gantt, que corresponde a la Etapa 3
 del procedimiento de la propuesta (ingeniería de variables y reducción de la dimensionalidad). Continúa la
 numeración de las bitácoras anteriores (`docs/bitacora.md`, `2.2_depuracion_etiquetado/bitacora.md` y
-`2.3_validacion_particion/bitacora.md`): aquí están los hallazgos H30 a H33 y las decisiones D45 a D49 y D53 a D55. Una entrada no
+`2.3_validacion_particion/bitacora.md`): aquí están los hallazgos H30 a H33 y las decisiones D45 a D49, D53 a D55 y D57. Una entrada no
 se borra: si una decisión cambia, se agrega una nueva entrada que la reemplaza y se indica en el campo
 **Estado**.
 
@@ -16,7 +16,7 @@ de desarrollo; el conjunto de prueba no se abre. Al terminar se pedirá una sola
 incluirá la consulta sobre el umbral de V (H30), el índice de comorbilidad (D48) y el hospital como predictora
 (D49).
 
-Los dos pasos se presentaron antes del cierre, en el informe de avance 5. En su revisión del 30 de octubre de 2026 el profesor guía consideró que el filtro y las 30 variables están bien construidos y verificados, aprobó la lista A como principal y dejó seis observaciones (O5 a O10, que siguen la numeración de la revisión anterior). Se incorporaron el 2 de noviembre: las listas para comparar y las listas de cada pliegue (O5 y O7, D53), el índice de Moore (O8, D54) y el uso del modelo con el hospital (O9, D55); los pliegues por paciente (O6) y la calibración por año (O10) están en D52 y D56 de la bitácora de la 2.3, y los tratamientos periódicos (H33), en D50 de la bitácora de la 2.2.
+Los dos pasos se presentaron antes del cierre, en el informe de avance 5. En su revisión del 30 de octubre de 2026 el profesor guía consideró que el filtro y las 30 variables están bien construidos y verificados, aprobó la lista A como principal y dejó seis observaciones (O5 a O10, que siguen la numeración de la revisión anterior). Se incorporaron el 2 de noviembre: las listas para comparar y las listas de cada pliegue (O5 y O7, D53), el índice de Moore (O8, D54) y el uso del modelo con el hospital (O9, D55); los pliegues por paciente (O6) y la calibración por año (O10) están en D52 y D56 de la bitácora de la 2.3, y los tratamientos periódicos (H33), en D50 de la bitácora de la 2.2. El cierre, registrado ese mismo día, arma las tablas que usarán los modelos (D57).
 
 **Tipos de entrada:** `H` = hallazgo (algo que se observó en los datos),
 `D` = decisión (algo que se resolvió hacer).
@@ -39,6 +39,7 @@ Los dos pasos se presentaron antes del cierre, en el informe de avance 5. En su 
 | Índice de comorbilidad | D48, D54 | Índice de reingreso de Moore et al. (2017) con las condiciones de Elixhauser (Quan et al., 2005) de los diagnósticos secundarios, con tres jerarquías; el conteo, van Walraven y Charlson, como comparación. |
 | Demás columnas del CMBD | D49 | Entran sin filtro las 15 columnas que describen al paciente o su hospitalización; en las tomadas tal cual, los valores con menos de 100 casos pasan a OTRO. |
 | Uso del modelo y hospital | D55 | El modelo describe y predice el reingreso en estos mismos hospitales: el hospital entra en el análisis principal y se entrena también sin él. |
+| Tablas para los modelos | D57 | Una tabla de casos (una fila por caso: identificadores, columnas de la validación, las 30 predictoras y las cuatro variables objetivo) y una de códigos en formato largo (una fila por caso y código de alguna lista), con su diccionario y su registro de versión. |
 | Tratamientos periódicos | H33 | Trece personas con tratamientos de un día sin código Z51 sumaban 697 casos con 50 o más hospitalizaciones previas. Resuelto con el criterio E15 (D50 de la bitácora de la 2.2): cuentan como sesiones. |
 
 ---
@@ -343,12 +344,47 @@ Los dos pasos se presentaron antes del cierre, en el informe de avance 5. En su 
 - **Evidencia:** cifras de la versión 3 del conjunto de desarrollo (1 de noviembre de 2026).
 - **Estado:** Adoptada, por recomendación del profesor guía.
 
+### D57 · 2026-11-02 · Tablas para los modelos
+- **Actividad:** 3.1 (cierre de la Etapa 3 de la propuesta)
+- **Decisión:** El script 16 junta lo que dejaron los scripts 13, 14 y 15 en dos tablas, que son, con las listas de códigos de D53 (`data/processed/listas_codigos.parquet`), lo único que leen los modelos de la actividad 3.2. No calcula variables nuevas: cada columna se copia de su origen sin cambiar su tipo.
+- **Tabla de casos:** `data/processed/modelos_casos.parquet`, con una fila por caso de estudio de desarrollo (3.347.652) y 40 columnas, y una sola tabla para las cuatro variables objetivo. Cada modelo usa los casos que tienen dato en la suya; los demás no son 0:
+
+  | Variable | Casos con dato | Tasa | Sin dato | Por qué |
+  |---|---|---|---|---|
+  | `REING_7D` | 3.347.652 | 2,07 % | 0 | — |
+  | `REING_7D_CDM` | 2.855.319 | 1,27 % | 492.333 | Partos (D38) |
+  | `REING_30D` | 3.275.432 | 5,90 % | 72.220 | Alta a menos de 60 días del cierre del bloque (D30) |
+  | `REING_30D_CDM` | 2.792.482 | 3,55 % | 555.170 | Partos o sin dato a 30 días |
+
+- **Papel de cada columna:** Está en `reglas/columnas_modelos.csv`, con su descripción y su origen. Solo las 30 de papel PREDICTORA entran a los modelos:
+
+  | Papel | Columnas | Para qué |
+  |---|---|---|
+  | IDENTIFICADOR | `ID_EGRESO` e `ID_PACIENTE` | Unir las dos tablas, y los intervalos con remuestreo de pacientes (D41) |
+  | VALIDACION | `ANIO_ALTA`, `PERIODO`, `PACIENTE_VISTO` y `PLIEGUE` | Validación cruzada (D52), validación temporal (D40), calibración por año (D56), sensibilidad con 2020 y 2022 (D44) y hospitales sin casos antes de 2023 (D55) |
+  | PREDICTORA | Las 30 variables del script 15 | Las variables del modelo (D46 a D49 y D54) |
+  | OBJETIVO | Las cuatro `REING_*` | Lo que predice el modelo |
+
+- **Tabla de códigos:** `data/processed/modelos_codigos.parquet`, en formato largo: una fila por caso y código distinto (59.214.795 filas), con las columnas `ID_EGRESO`, `BLOQUE`, `NIVEL` y `CODIGO`. Tiene solo los códigos de alguna lista, de cualquier variable y pliegue: 5.228 diagnósticos y 1.956 procedimientos completos y 264 categorías de diagnóstico de la lista agrupada. Ningún modelo usa los demás: quedan fuera 0,5 % de los pares de códigos completos, de códigos con menos de 100 casos en todas las variables. 139 casos no tienen ninguna fila.
+- **Por qué en formato largo:** Por tres razones. Primero, cada pliegue de la validación cruzada usa su propia lista (D53): con una columna sí/no por código habría que guardar una tabla por cada variable, lista y pliegue (76 tablas), mientras que la tabla larga sirve para todas y cada matriz se arma en el momento. Segundo, los archivos se suben a mano al servidor donde se entrenarán los modelos: las dos tablas ocupan 187 MB, frente a unos 23 GB de una sola tabla ancha con la lista sin filtro de `REING_30D` (3.275.432 filas × 7.116 columnas, con solo el 0,2 % de las celdas en 1). Tercero, conviene entrenar con matrices dispersas, que guardan solo los 1: con números decimales de 8 bytes por celda, como los usan los modelos, esa misma matriz entera ocuparía unos 186 GB, y dispersa, unos 260 MB. La regresión logística, Random Forest y XGBoost aceptan matrices dispersas directamente. El formato largo no cierra ninguna puerta: si en la actividad 3.2 conviene, se arma desde él una tabla ancha, por ejemplo con la lista A (424 columnas).
+- **Un código, tres datos:** Una columna de la matriz se identifica con `BLOQUE`, `NIVEL` y `CODIGO` juntos. 31 textos están con los dos niveles: por ejemplo, I10 es a la vez un código completo y una categoría.
+- **Ejemplo:** El caso `20230000956` (hombre de 73 años, alta en 2023, pliegue 4) tiene 13 filas: 10 códigos completos y 3 categorías. En la matriz de la lista A de `REING_30D` tiene 1 en 8 de sus 424 columnas; H40.9 y 90.02 no están en esa lista, pero sí en la sin filtro.
+- **El conjunto de prueba:** No se arma ahora, porque sus variables obligan a leer `prueba.parquet`. En la evaluación final se aplican a ese archivo las mismas funciones de los scripts 15 y 16, con las listas de todo desarrollo (`PLIEGUE` = 0). Como la partición es por paciente, toda la historia de cada paciente de prueba está en ese archivo.
+- **Diccionario y versión:** `docs/diccionario_tablas_modelos.md` describe cada columna (papel, tipo, valores, casos sin dato y origen), cómo se usan las tablas y una receta para armar la matriz dispersa. `docs/version_tablas_modelos.csv` registra el hash de las dos tablas, de sus entradas, de la tabla de columnas y del script, y solo agrega una fila cuando alguno cambia. Ninguno se escribe si falla una verificación.
+- **Verificación:** El script hace 15 verificaciones. Entre ellas, que cada código tenga en la tabla los mismos casos con dato que en `filtro_codigos.parquet` (las columnas de cada matriz suman lo mismo que el filtro), y que en las listas de cada pliegue todo código tenga al menos 100 casos en el entrenamiento del pliegue. La prueba independiente (`pruebas/verificar_16_tablas_modelos.py`, 18 comprobaciones) hace estas tres cosas: vuelve a sacar los códigos con pyarrow y compara los 59.214.795 pares uno por uno; empareja cada caso con su origen por su `ID_EGRESO`; y ejecuta la receta del diccionario. Se probó con una copia con cuatro errores puestos a propósito: 5 casos cambiados de pliegue, 3 reingresos cambiados, 10 filas de códigos borradas y un papel cambiado en el diccionario. Falló justo en las comprobaciones de esos errores, y en la del registro, porque los archivos ya no tenían el hash registrado.
+- **Visto bueno:** La persona a cargo de la tesis pidió escribirlo directamente en el proyecto, sin borrador, el 2 de noviembre de 2026, a partir del diseño explicado ese día.
+- **Completa a:** D45 a D49 y D53 a D55.
+- **Ejecución en el proyecto:** La persona a cargo de la tesis ejecutó el script y su prueba el 3 de noviembre de 2026: 0 verificaciones fallidas y 18 de 18 comprobaciones. Las dos tablas son idénticas byte a byte a las de la prueba en la carpeta temporal, y el reporte 16 y el diccionario solo difieren en la fecha. Quedó registrada la versión 1 de las tablas (`docs/version_tablas_modelos.csv`), sobre la versión 3 de la partición: `modelos_casos.parquet`, SHA-256 `3a0274aa1b6315693582b67e7c5421ba91c17dfb0bf9a955b9d5676050673a44`; `modelos_codigos.parquet`, SHA-256 `039d4dfcd8a8b45703e4c8ff1cc8ea73efaed41e7856b98d7de4ea89fce62c66`.
+- **Evidencia:** `reportes/16_tablas_modelos.md`; `reportes/pruebas_tablas_modelos.md`; `docs/diccionario_tablas_modelos.md`; `docs/version_tablas_modelos.csv`.
+- **Estado:** Adoptada. Pendiente de validar con profesor guía.
+
 ---
 
 ## Pendientes
 
-- Cierre de la actividad: armar las tablas que usarán los modelos (para cada variable de reingreso, las 30 variables de D46 a D49 y D54, los indicadores de los códigos de las cuatro listas de D53, el pliegue de D52 y la variable objetivo), con su prueba, su diccionario y su registro de versión.
+- Cierre de la actividad (D57, script 16): hecho. Escrito el 2 de noviembre de 2026 y ejecutado en el proyecto el 3 de noviembre, con su prueba (18 de 18). Versión 1 de las tablas para los modelos.
+- En la evaluación final, armar el conjunto de prueba con las mismas funciones de los scripts 15 y 16, sobre `prueba.parquet` y con las listas de todo desarrollo (`PLIEGUE` = 0) (D57).
 - Revisión del profesor guía de los dos pasos (informe de avance 5): hecha el 30 de octubre de 2026; sus observaciones quedaron en D50 (2.2), D52 y D56 (2.3) y D53 a D55.
-- Presentar al profesor guía, en el próximo avance, D53 a D55 y las entradas nuevas de las bitácoras de la 2.2 y la 2.3.
+- Presentar al profesor guía, en el próximo avance, D53 a D55, D57 y las entradas nuevas de las bitácoras de la 2.2 y la 2.3.
 - Revisar la tabla 2 de Quan et al. (2005) y los pesos de Moore et al. (2017) con los artículos completos, cuando se consigan por la biblioteca (D54).
 - Para la actividad 3.2: comparar las listas A, C, agrupada y sin filtro con los mismos modelos y la misma validación cruzada, cada pliegue con su lista (D53); entrenar con y sin el hospital y evaluar los 7 hospitales nuevos aparte en la validación temporal (D55); informar la calibración por año (D56); decidir con cada modelo cómo se codifican las categorías y si se transforman los números con valores extremos, como las sesiones previas (hasta 340, D50 y H33); y tener en cuenta que las variables parecidas se reparten la importancia (D49).

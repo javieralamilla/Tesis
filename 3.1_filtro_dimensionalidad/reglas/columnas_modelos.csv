@@ -1,0 +1,45 @@
+tabla;columna;rol;origen;descripcion
+modelos_casos;ID_EGRESO;IDENTIFICADOR;Script 06 (actividad 2.1);Identificador del egreso del caso de estudio. Une esta tabla con modelos_codigos.parquet
+modelos_casos;ID_PACIENTE;IDENTIFICADOR;Datos del DEIS (D27);Identificador del paciente dentro de su bloque. Sirve para los intervalos con remuestreo de pacientes (D41) y para comprobar que un paciente no quede en dos pliegues
+modelos_casos;ANIO_ALTA;VALIDACION;Año del archivo, que es el del alta (D56);Año del alta del caso. Sirve para la calibración por año (D56), para la sensibilidad que entrena solo con 2020 y 2022 (D44) y para separar los hospitales sin casos antes de 2023 (D55). El año no es una variable del modelo (D49)
+modelos_casos;PERIODO;VALIDACION;Script 13 (D40);ENTRENAMIENTO (alta de 2019 a 2022) o EVALUACION (alta en 2023 o 2024) en la validación temporal interna
+modelos_casos;PACIENTE_VISTO;VALIDACION;Script 13 (D40);En los casos de evaluación, verdadero si el paciente tiene algún egreso en 2021 o 2022. Sin dato en los casos de entrenamiento
+modelos_casos;PLIEGUE;VALIDACION;Script 13 (D52);Pliegue de la validación cruzada (1 a 5). Todos los casos de un paciente están en el mismo pliegue. Elige también la lista de códigos de cada vuelta (D53)
+modelos_casos;EDAD;PREDICTORA;Script 15 (D46);Edad en años, con decimales, al ingreso del propio egreso
+modelos_casos;SEXO;PREDICTORA;Script 15 (D46);Sexo, tal cual
+modelos_casos;PREVISION_GRUPO;PREDICTORA;Script 15 (D46);Previsión en 8 grupos (reglas/prevision_grupos.csv)
+modelos_casos;REGION;PREDICTORA;Script 15 (D46);Región de residencia, desde la provincia (reglas/provincia_region.csv)
+modelos_casos;TIPO_INGRESO;PREDICTORA;Script 15 (D46);Tipo de ingreso del propio egreso, tal cual
+modelos_casos;ESTADIA;PREDICTORA;Script 15 (D46);Días desde el ingreso índice (el que abre el episodio) hasta el alta del caso
+modelos_casos;CDM;PREDICTORA;Script 15 (D46);Categoría diagnóstica mayor, tal cual
+modelos_casos;PESO_GRD;PREDICTORA;Script 15 (D46);Peso del GRD. El peso 0 queda sin dato
+modelos_casos;HOSP_PREVIAS;PREDICTORA;Script 15 (D47, D50);Hospitalizaciones de la misma persona (episodios) terminadas en los 365 días antes del ingreso índice
+modelos_casos;HOSP_PREVIAS_NO_PLANIF;PREDICTORA;Script 15 (D47);De ellas, las que empezaron con un ingreso no planificado (D20 y D33)
+modelos_casos;DIAS_ULTIMA_HOSP;PREDICTORA;Script 15 (D47);Días desde el alta de la última hospitalización de la ventana hasta el ingreso índice. Vale 366 si no hubo ninguna
+modelos_casos;CMA_PREVIAS;PREDICTORA;Script 15 (D47);Cirugías mayores ambulatorias terminadas en la ventana
+modelos_casos;SESIONES_PREVIAS;PREDICTORA;Script 15 (D47, D50);Sesiones de tratamiento (diagnóstico principal Z51) y tratamientos periódicos (criterio E15) terminados en la ventana
+modelos_casos;VENTANA_CORTADA;PREDICTORA;Script 15 (D44, D47);1 si la ventana de 365 días empieza antes del inicio del bloque del identificador (D42 y D44)
+modelos_casos;INDICE_COMORBILIDAD;PREDICTORA;Script 15 (D48, D54);Índice de reingreso de Moore et al. (2017) con las condiciones de Elixhauser de los diagnósticos secundarios
+modelos_casos;TIPO_ALTA;PREDICTORA;Script 15 (D49);Destino al alta, tal cual
+modelos_casos;SEVERIDAD;PREDICTORA;Script 15 (D49);Nivel de severidad del GRD (1 a 3)
+modelos_casos;RIESGO_MORTALIDAD;PREDICTORA;Script 15 (D49);Nivel de riesgo de mortalidad del GRD (1 a 3)
+modelos_casos;ESPECIALIDAD_INTERVENCION;PREDICTORA;Script 15 (D49);Especialidad de la intervención del episodio, o SIN INTERVENCIÓN
+modelos_casos;UCI_UTI;PREDICTORA;Script 15 (D49);1 si algún egreso del episodio pasó por una unidad de cuidados intensivos o intermedios
+modelos_casos;TRASLADO;PREDICTORA;Script 15 (D49);1 si el episodio pasó por más de un hospital (D19)
+modelos_casos;N_DIAGNOSTICOS;PREDICTORA;Script 15 (D49);Diagnósticos distintos del egreso
+modelos_casos;N_PROCEDIMIENTOS;PREDICTORA;Script 15 (D49);Procedimientos distintos del egreso
+modelos_casos;ESPECIALIDAD;PREDICTORA;Script 15 (D49);Especialidad médica del episodio, tal cual
+modelos_casos;TIPO_PROCEDENCIA;PREDICTORA;Script 15 (D49);De dónde llega el paciente, tal cual
+modelos_casos;SERVICIO_INGRESO;PREDICTORA;Script 15 (D49);Servicio clínico de ingreso, tal cual
+modelos_casos;SERVICIO_ALTA;PREDICTORA;Script 15 (D49);Servicio clínico de alta, tal cual
+modelos_casos;PUEBLO_ORIGINARIO;PREDICTORA;Script 15 (D49);SÍ si la etnia nombra un pueblo originario, NO si dice NINGUNO u OTRO
+modelos_casos;NACIONALIDAD_EXTRANJERA;PREDICTORA;Script 15 (D49);SÍ si la nacionalidad no es chilena
+modelos_casos;HOSPITAL;PREDICTORA;Script 15 (D49, D55);Código del hospital del egreso. Entra en el análisis principal, y los modelos se entrenan también sin él (D55)
+modelos_casos;REING_7D;OBJETIVO;Script 09 (D20, D26, D30);Reingreso no planificado a 7 días por cualquier causa: 1 sí, 0 no. Todos los casos de estudio tienen dato
+modelos_casos;REING_7D_CDM;OBJETIVO;Script 09 (D31, D38);Reingreso no planificado a 7 días con la misma CDM. Sin dato en los partos (CDM 14)
+modelos_casos;REING_30D;OBJETIVO;Script 09 (D20, D30);Reingreso no planificado a 30 días por cualquier causa. Sin dato si el alta ocurrió menos de 60 días antes del cierre del bloque
+modelos_casos;REING_30D_CDM;OBJETIVO;Script 09 (D31, D38);Reingreso no planificado a 30 días con la misma CDM. Sin dato en los partos y en las altas sin dato a 30 días
+modelos_codigos;ID_EGRESO;IDENTIFICADOR;Script 06 (actividad 2.1);Caso de estudio al que pertenece el código. Une esta tabla con modelos_casos.parquet
+modelos_codigos;BLOQUE;CODIGO;Script 16 (D45);DIAGNOSTICO (CIE-10, columnas DIAGNOSTICO1 a DIAGNOSTICO35) o PROCEDIMIENTO (CIE-9-MC, columnas PROCEDIMIENTO1 a PROCEDIMIENTO30)
+modelos_codigos;NIVEL;CODIGO;Script 16 (D45, D53);COMPLETO = el código tal como viene. CATEGORIA = el diagnóstico en su categoría (lo que va antes del punto), que solo usa la lista agrupada
+modelos_codigos;CODIGO;CODIGO;Script 16 (D45, D53);El código. Un caso tiene una fila por código distinto, esté en la posición que esté. Solo están los códigos de alguna lista de listas_codigos.parquet. Cada código de la lista elegida pasa a ser una columna sí/no del modelo
