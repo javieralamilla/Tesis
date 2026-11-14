@@ -1,8 +1,8 @@
 # Bitácora de la actividad 3.2: entrenamiento de LR, RF y XGBoost con validación cruzada
 
-Registro de los hallazgos y decisiones de la actividad 3.2 de la Carta Gantt («Entrenamiento LR, RF y XGBoost (CV)»), que corresponde a las Etapas 4 (esquema de partición y validación) y 5 (entrenamiento y comparación de modelos) del procedimiento de la propuesta. Continúa la numeración de las bitácoras anteriores (`docs/bitacora.md`, `2.2_depuracion_etiquetado/bitacora.md`, `2.3_validacion_particion/bitacora.md` y `3.1_filtro_dimensionalidad/bitacora.md`): aquí están las decisiones D58 a D66 y los hallazgos H35 y H36. Una entrada no se borra: si una decisión cambia, se agrega una nueva entrada que la reemplaza y se indica en el campo **Estado**.
+Registro de los hallazgos y decisiones de la actividad 3.2 de la Carta Gantt («Entrenamiento LR, RF y XGBoost (CV)»), que corresponde a las Etapas 4 (esquema de partición y validación) y 5 (entrenamiento y comparación de modelos) del procedimiento de la propuesta. Continúa la numeración de las bitácoras anteriores (`docs/bitacora.md`, `2.2_depuracion_etiquetado/bitacora.md`, `2.3_validacion_particion/bitacora.md` y `3.1_filtro_dimensionalidad/bitacora.md`): aquí están las decisiones D58 a D67 y los hallazgos H35 y H36. Una entrada no se borra: si una decisión cambia, se agrega una nueva entrada que la reemplaza y se indica en el campo **Estado**.
 
-Las decisiones D58 a D64 se tomaron el 7 y el 8 de noviembre de 2026, antes de escribir el código, una por una y con el visto bueno de la persona a cargo; D65, el 14 de noviembre, con el diagnóstico del servidor, y D66, el mismo día, con el script 17 escrito y probado. Fijan dónde se entrena y cómo se prepara el servidor (D58 y D65), qué le toca a esta actividad y qué a las siguientes (D59), cómo entra cada variable a cada modelo (D60), cómo se trata el desbalance (D61), con qué hiperparámetros se entrena (D62), cómo se calculan las métricas (D63), cómo se hacen y se juzgan las comparaciones que pidió el profesor guía en su revisión del 30 de octubre de 2026 (D64) y cómo se programa el entrenamiento (D66). Los hallazgos H35 y H36 salieron al probar el script 17: cómo se pide la multa L1 en la versión de scikit-learn de la propuesta y por qué la regresión logística se calcula con liblinear. Los modelos leen solo las tablas para los modelos de D57 (bitácora de la 3.1), que tienen solo el conjunto de desarrollo. El conjunto de prueba no se abre: se usa una sola vez, en la actividad 4.1. Los resultados se presentarán en el informe de avance 6, junto con D50 a D57, H34 y la respuesta a la observación O6.
+Las decisiones D58 a D64 se tomaron el 7 y el 8 de noviembre de 2026, antes de escribir el código, una por una y con el visto bueno de la persona a cargo; D65, el 14 de noviembre, con el diagnóstico del servidor, y D66 y D67, el mismo día, con los scripts 17 y 18 escritos y probados. Fijan dónde se entrena y cómo se prepara el servidor (D58 y D65), qué le toca a esta actividad y qué a las siguientes (D59), cómo entra cada variable a cada modelo (D60), cómo se trata el desbalance (D61), con qué hiperparámetros se entrena (D62), cómo se calculan las métricas (D63), cómo se hacen y se juzgan las comparaciones que pidió el profesor guía en su revisión del 30 de octubre de 2026 (D64) y cómo se programan el entrenamiento (D66) y las métricas (D67). Los hallazgos H35 y H36 salieron al probar el script 17: cómo se pide la multa L1 en la versión de scikit-learn de la propuesta y por qué la regresión logística se calcula con liblinear. Los modelos leen solo las tablas para los modelos de D57 (bitácora de la 3.1), que tienen solo el conjunto de desarrollo. El conjunto de prueba no se abre: se usa una sola vez, en la actividad 4.1. Los resultados se presentarán en el informe de avance 6, junto con D50 a D57, H34 y la respuesta a la observación O6.
 
 **Tipos de entrada:** `H` = hallazgo (algo que se observó en los datos),
 `D` = decisión (algo que se resolvió hacer).
@@ -26,6 +26,7 @@ Las decisiones D58 a D64 se tomaron el 7 y el 8 de noviembre de 2026, antes de e
 | Valores por defecto | H35 | Confirmados con scikit-learn 1.9.0 y XGBoost 3.3.0. La multa L1 se pide con `l1_ratio` = 1, porque `penalty` está obsoleto, y los valores de D62 se escriben explícitos en `reglas/parametros.csv`. |
 | Método de cálculo de la regresión logística | H36 | liblinear, con `intercept_scaling` = 100, en vez de saga, que no llega a la solución con las columnas sí/no divididas por su desviación típica (D60). Da el mismo modelo. |
 | Script 17 | D66 | Entrena por etapas, en el orden de D64, y guarda la predicción fuera de pliegue de cada caso, en una tabla por combinación (63). Comprueba la versión de las tablas, no repite lo ya guardado y verifica cada vuelta; su prueba independiente tiene 19 comprobaciones. |
+| Script 18 | D67 | Calcula las métricas de D63 con 1.000 sorteos de pacientes, los mismos en todas las combinaciones, y da los veredictos del ensayo (D61) y de las comparaciones (D64). Para el logit de la calibración, un 0 exacto se cuenta como 0,0001; la caída se mide siempre desde la otra lista hacia la A. Su prueba independiente tiene 15 comprobaciones. |
 
 ---
 
@@ -167,6 +168,7 @@ Las decisiones D58 a D64 se tomaron el 7 y el 8 de noviembre de 2026, antes de e
 - **Visto bueno:** La persona a cargo de la tesis lo aprobó el 8 de noviembre de 2026 («Sí, apruébala»).
 - **Precisa a:** D41, D43 y D56 (bitácora de la 2.3).
 - **Evidencia:** exploración de solo lectura del 8 de noviembre de 2026 sobre `modelos_casos.parquet` (árboles de juguete, solo para ilustrar).
+- **Precisada por:** D67 (14 de noviembre de 2026): cómo se programan los sorteos (el sorteo b sale solo de la semilla y de su número), la AUPRC con los empates contados juntos y la calibración por el método de Newton, y que para el logit de la calibración una probabilidad exactamente 0 o 1 se cuenta como 0,0001 o 0,9999.
 - **Estado:** Adoptada. Pendiente de validar con profesor guía.
 
 ### D64 · 2026-11-08 · Las comparaciones que pidió el profesor guía: cuántas, en qué orden y cómo se juzgan
@@ -217,6 +219,7 @@ Las decisiones D58 a D64 se tomaron el 7 y el 8 de noviembre de 2026, antes de e
 - **Visto bueno:** La persona a cargo de la tesis lo aprobó el 8 de noviembre de 2026 («Sí, apruébala»).
 - **Completa a:** D53 y D55 (bitácora de la 3.1). Responde a la propuesta de H30.
 - **Evidencia:** exploración de solo lectura del 8 de noviembre de 2026 sobre `modelos_casos.parquet` y `listas_codigos.parquet` (árboles de juguete, solo para ilustrar).
+- **Precisada por:** D67 (14 de noviembre de 2026): la caída se mide siempre desde la otra lista hacia la A, como proporción del valor de la otra lista, también frente a la agrupada, y el veredicto se lee en los extremos del intervalo.
 - **Estado:** Adoptada. Pendiente de validar con profesor guía.
 
 ### D65 · 2026-11-14 · El entorno del servidor: carpeta propia, Python 3.14.5 con conda y entrenamientos en tmux
@@ -350,12 +353,60 @@ Las decisiones D58 a D64 se tomaron el 7 y el 8 de noviembre de 2026, antes de e
 - **Precisa a:** D60 y D62, en el método de cálculo de la regresión logística (H36).
 - **Estado:** Adoptada. Pendiente de validar con profesor guía. La ejecución en el servidor, pendiente.
 
+### D67 · 2026-11-14 · El script 18: las métricas con sus intervalos y los veredictos del ensayo y de las listas
+- **Actividad:** 3.2
+- **Decisión:** Las métricas de D63 y los veredictos de D61 y D64 se programan en `scripts/18_metricas.py`, con sus valores en `reglas/parametros.csv` (7 parámetros nuevos) y su prueba independiente en `pruebas/verificar_18_metricas.py`. El script lee las predicciones fuera de pliegue que guarda el script 17 (D66) y no entrena nada.
+
+  | Punto | Cómo |
+  |---|---|
+  | Qué lee | Las tablas de predicciones del script 17 y, de `modelos_casos.parquet`, la respuesta, el paciente, el año del alta y el pliegue de cada caso, solo si las tablas para los modelos son la versión registrada (D57). Usa el script 17 para leer sus parámetros, la versión y los nombres de las combinaciones, así los dos scripts leen lo mismo. Nunca abre el conjunto de prueba |
+  | Qué combinaciones | Mientras `ensayo_resuelto` valga NO, solo las 6 del ensayo; después, las 63 de D64. Si hay otra tabla de predicciones, se detiene |
+  | Métricas | Las de D41 con el intercepto de D43: la prevalencia, la AUPRC como precisión promedio (D63), el AUROC, el Brier, el intercepto con el logit como offset y la pendiente, y el intercepto y la pendiente de cada año del alta (D56). Al lado, el cociente entre la AUPRC y la prevalencia, el Brier de referencia, la AUPRC y el AUROC de cada vuelta y, por año, el porcentaje observado y el predicho |
+  | Sorteos | Los 2.509.082 pacientes de desarrollo se sortean con reposición, 1.000 veces. El sorteo b sale de `numpy.random.default_rng([2026, b])`, así que es el mismo en todas las combinaciones, se calcule donde se calcule. Cada caso cuenta tantas veces como salió su paciente. El intervalo son los percentiles 2,5 y 97,5 (D41) |
+  | Cómo se calcula | La AUPRC y el AUROC con sumas acumuladas, ordenando los casos una sola vez y contando juntos los empates, como scikit-learn. La calibración, por el método de Newton, con pasos de a lo más 1 y los seis años a la vez; en cada sorteo parte del valor sin sorteo |
+  | Comparaciones | De a pares, sorteo por sorteo con los mismos pacientes: el ensayo (mejora relativa de la AUPRC al ponderar), las listas (la A frente a la sin filtro, la agrupada y la C) y la A sin hospital frente a la A con hospital, solo para informar |
+  | Qué deja | Una tabla por combinación en `data/processed/metricas_3.2/` (fuera de Git), con el valor sin sorteo y los de cada sorteo y lo que los produjo anotado adentro; `reportes/18_metricas.csv`, `reportes/18_comparaciones.csv` y el reporte `reportes/18_metricas.md`, que dice además qué fijar en `parametros.csv` después del ensayo |
+  | Si se repite | No recalcula una combinación cuyas métricas salen de la misma tabla de predicciones (misma huella), del mismo script y con los mismos parámetros |
+  | Dónde y cuánto | En el servidor, con hasta `procesadores` combinaciones a la vez (32, D65). Con el tamaño real, cada sorteo tarda unos 3,5 segundos (medido en el portátil con datos inventados de 3,3 millones de casos), casi una hora por combinación: cerca de una hora para el ensayo y unas dos horas para las 63, si cada procesador del servidor rinde como uno del portátil |
+  | Verificaciones | En cada combinación, cuatro: la tabla de predicciones tiene exactamente los casos con dato en su variable, con su pliegue y probabilidades entre 0 y 1; lo anotado en ella coincide con su nombre, la semilla y la versión; sin sorteo, la AUPRC, el AUROC y el Brier coinciden con scikit-learn, y la calibración llegó a la solución en todos los sorteos. Además, que todas las combinaciones usen los mismos pacientes y sorteos, que cada comparación junte dos combinaciones con los mismos casos y, con el ensayo resuelto, que la ponderación fijada coincida con su veredicto. Si algo falla, esa combinación no se guarda y el script se detiene |
+
+- **Las probabilidades 0 y 1 (decisión nueva):** La calibración usa el logit de cada probabilidad, ln(p / (1 − p)), que no existe para 0 ni para 1. La regresión logística y XGBoost no dan 0 (sus mínimos en la muestra del 2 %, con `REING_7D_CDM`, fueron 0,00000013 y 0,000029), pero Random Forest sí, cuando sus 100 árboles dejan al caso en hojas sin reingresos: en la muestra, con `REING_7D_CDM`, a 8.279 de 57.244 casos (14,5 %), de los que reingresaron 44 (0,53 %). Para el logit, un 0 exacto se cuenta como 0,0001 y un 1 exacto, como 0,9999; las demás probabilidades quedan tal cual, y la AUPRC, el AUROC y el Brier las usan sin cambios. 0,0001 es el valor redondo más grande que queda por debajo de la menor probabilidad positiva que puede dar un bosque de 100 árboles, cerca de 0,0004 (un árbol con un reingreso entre unos 25 casos de su hoja: 1/25 × 1/100, justo el mínimo de la muestra), así que un 0 sigue siendo el riesgo más bajo. El intercepto casi no depende de la regla, pero la pendiente sí, y por eso el reporte informa al lado cuántos casos tienen 0 y cuántos de ellos reingresaron. En la muestra:
+
+  | Qué se hace con los 0 | Intercepto | Pendiente |
+  |---|---|---|
+  | Se cuentan como 10⁻¹⁵ | +0,006 | 0,04 |
+  | Se cuentan como 0,000001 | +0,006 | 0,19 |
+  | Se cuentan como 0,0001 (la regla) | +0,005 | 0,35 |
+  | Se cuentan como 0,001 (quedan sobre riesgos positivos) | −0,007 | 0,48 |
+  | Se dejan fuera | −0,064 | 0,50 |
+
+  Dejarlos fuera esconde el problema y mueve el intercepto, como si el modelo sobreestimara el riesgo.
+- **La dirección de las comparaciones (precisa a D64):** La caída se mide siempre desde la otra lista hacia la A: la del AUROC en puntos y la de la AUPRC como proporción del valor de la otra lista, también frente a la agrupada, que tiene menos códigos que la A en tres variables (46 frente a 57, 348 frente a 424 y 168 frente a 191). Así el veredicto responde siempre lo mismo: si la A predice peor que esa lista más allá del margen. Sin hospital se mide la caída de la A sin hospital frente a la A con hospital.
+- **Los veredictos, con los extremos del intervalo:** D64 se aplica así: pierde si el extremo inferior de alguna de las dos caídas pasa su margen (0,02 o 10 %); no pierde si los extremos superiores de las dos quedan dentro; si no, no se puede afirmar. En el ensayo (D61), un modelo se pondera si el extremo inferior de la mejora pasa de 10 %.
+- **La prueba independiente:** No usa funciones del script 18. Tiene 15 comprobaciones en seis grupos: (1) la versión de las tablas, y los parámetros del script 18 y la semilla, contra una segunda transcripción; (2) una tabla de métricas por cada tabla de predicciones, hecha con la que hay ahora (misma huella), con el valor sin sorteo y los 1.000 sorteos, sin vacíos; (3) sin sorteo, la AUPRC, el AUROC, el Brier y la prevalencia recalculados con scikit-learn, los casos con 0 recontados, y el intercepto y la pendiente, en general y de cada año, recalculados con scipy (el método de Brent y L-BFGS-B) y la regla de los 0 escrita de nuevo; (4) el primer y el último sorteo de cada combinación, rehechos desde cero con la receta escrita de nuevo, dan las métricas guardadas, lo que muestra también que todas usaron los mismos sorteos, y en una combinación de cada modelo se revisa además la calibración de cada año de esos sorteos; (5) cada fila de `18_metricas.csv`, recalculada desde las tablas de métricas (los percentiles con pandas) o desde las predicciones; (6) todas las comparaciones posibles, con sus valores, intervalos y veredictos recalculados con una segunda transcripción de D61 y D64. Termina con código 1 si alguna falla y deja `reportes/pruebas_metricas.md`.
+- **Cómo se probó:** En la carpeta temporal del portátil, con la muestra del 2 % de los pacientes y las 16 tablas de predicciones que dejó con ella el borrador del script 17:
+
+  | Prueba | Resultado |
+  |---|---|
+  | Script 18 | Las 16 combinaciones, con 1.000 sorteos, en 6,6 minutos con 4 procesos, y se cumplen todas sus verificaciones. Al ejecutarlo de nuevo no recalcula nada; con `ensayo_resuelto` = NO rechaza las 10 tablas que no son del ensayo, y con un caso de menos en una tabla de predicciones no guarda esa combinación y se detiene |
+  | Prueba independiente, con las salidas correctas | 15 de 15 |
+  | El script sortea con otra semilla en una combinación, sin anotarlo | Falla la comprobación de los sorteos rehechos |
+  | La caída de AUPRC dividida por la AUPRC de la A, o la del AUROC al revés | Falla la comprobación de las comparaciones |
+  | Los intervalos de la AUPRC con los percentiles 5 y 95 | Falla la comprobación del CSV de métricas |
+  | La regla de los 0 con 0,000001 en un Random Forest, sin anotarlo | Fallan la calibración sin sorteo, la de cada año y los sorteos rehechos |
+  | Una probabilidad cambiada después de calcular las métricas | Fallan la huella y otras cinco comprobaciones |
+
+- **Visto bueno:** La persona a cargo de la tesis aprobó el diseño el 14 de noviembre de 2026 («Sí, apruébalo»), con las tres decisiones nuevas: la regla de los 0, la dirección de las comparaciones y que se calcule en el servidor con varias combinaciones a la vez. El mismo día se le explicaron el script y su prueba bloque por bloque, con las cifras de la muestra, y aprobó crearlos en el proyecto con esta entrada («Sí, créalo»).
+- **Precisa a:** D41 y D43 (bitácora de la 2.3), en el logit de una probabilidad 0 o 1, y D63 y D64, en cómo se calculan las métricas, la dirección de las comparaciones y cómo se lee el veredicto.
+- **Evidencia:** pruebas del 14 de noviembre de 2026 en la carpeta temporal del portátil, con la muestra del 2 % de los pacientes (entorno de prueba de H35); el tiempo, con datos inventados del tamaño de `REING_30D`.
+- **Estado:** Adoptada. Pendiente de validar con profesor guía. La ejecución en el servidor, pendiente.
+
 ---
 
 ## Pendientes
 
 - Consultar al profesor guía cuántos procesadores se pueden usar y si conviene una cuenta propia en el servidor (D65).
-- Script 18: las métricas de D63 y los veredictos de D64, calculados con las predicciones que guarda el script 17, y su prueba independiente, probada también con errores puestos a propósito.
-- En el servidor, con el script 17 (D66): la prueba de tiempos y memoria (D62 y D64), el ensayo de la ponderación (D61), evaluado con el script 18, y los entrenamientos en el orden de D64.
+- En el servidor, con los scripts 17 (D66) y 18 (D67): la prueba de tiempos y memoria (D62 y D64), el ensayo de la ponderación (D61) y los entrenamientos en el orden de D64, con sus métricas y comparaciones.
+- Decidir cómo se traen al portátil los reportes que los scripts 17 y 18 y sus pruebas escriben en el servidor, porque el código se cambia solo en el portátil.
 - Si algún modelo se pondera, definir qué parte del entrenamiento se aparta para la recalibración de Platt (D61).
-- Informe de avance 6: los resultados de la 3.2, D50 a D57, H34, la respuesta a la O6 (cómo se separó el conjunto de prueba), D58 a D66, H35 y H36.
+- Informe de avance 6: los resultados de la 3.2, D50 a D57, H34, la respuesta a la O6 (cómo se separó el conjunto de prueba), D58 a D67, H35 y H36.
