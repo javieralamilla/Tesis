@@ -13,6 +13,7 @@ El trabajo se organiza en una carpeta por actividad de la Carta Gantt. Cada carp
 | `2.2_depuracion_etiquetado/` | Depuración y etiquetado del reingreso: scripts, reportes, su propia `bitacora.md`, las tablas `reglas/criterios_exclusion.csv` (qué exclusiones están activas, con su justificación) y `reglas/parametros.csv` (umbrales), y `pruebas/`, con los programas que contrastan los resultados con otro método. | Sí |
 | `2.3_validacion_particion/` | Partición inicial en desarrollo (80 %) y prueba (20 %), reserva del conjunto de prueba y grupos de la validación temporal: scripts, reportes, su propia `bitacora.md`, `reglas/parametros.csv` (semilla del proyecto, tamaño de la prueba, variable principal y años de la validación temporal) y `pruebas/`, con los programas que contrastan la partición y los grupos. | Sí |
 | `3.1_filtro_dimensionalidad/` | Ingeniería de variables y filtro de dimensionalidad (Etapa 3 de la propuesta): deja, para cada variable de reingreso, los códigos de diagnósticos y procedimientos con un tamaño de efecto (V de Cramér) mayor o igual a 0,01 y al menos 100 casos (lista A), más tres listas para comparar y las listas de cada pliegue de la validación cruzada, arma las demás variables de cada caso de estudio (las de la propuesta, la historia de 12 meses, el índice de comorbilidad y las demás columnas del CMBD) y junta todo en las tablas para los modelos. Scripts, reportes (entre ellos la lista fija de códigos retenidos, `reportes/14_codigos_retenidos.csv`), su propia `bitacora.md`, `reglas/` (`parametros.csv`, con los umbrales de los dos scripts; `prevision_grupos.csv`, `provincia_region.csv`, `comorbilidad_quan2005.csv`, con los códigos de Quan et al., 2005, `pesos_elixhauser.csv`, con los pesos de Moore et al., 2017, y de van Walraven et al., 2009, y `columnas_modelos.csv`, con el papel y la descripción de cada columna de las tablas para los modelos) y `pruebas/`, con los programas que contrastan el filtro, las variables y las tablas. | Sí |
+| `3.2_entrenamiento_modelos/` | Entrenamiento de la regresión logística con multa L1, Random Forest y XGBoost con la validación cruzada de cinco pliegues (Etapas 4 y 5 de la propuesta), sobre las tablas para los modelos de la actividad 3.1, y comparación de las listas de códigos y del modelo sin hospital. Tiene su propia `bitacora.md`, con las decisiones tomadas antes de escribir el código (D58 a D64); `scripts/`, `reportes/`, `reglas/` y `pruebas/` se llenan desde el script 17. | Sí |
 | `data/interim/` | Parquet intermedios generados por los scripts (`crudo_<año>`, `homog_<año>`, `ids_<año>`). Compartida por todas las actividades. | No |
 | `data/processed/` | Tabla integrada 2019–2024 (`grd_2019_2024.parquet`), tabla depurada (`grd_depurado.parquet`), tabla etiquetada con las variables objetivo (`grd_etiquetado.parquet`), conjunto de cada egreso (`particion.parquet`) y de cada identificador de paciente (`particion_identificadores.parquet`), conjunto de desarrollo (`desarrollo.parquet`), que es el único que usan las etapas de modelado, grupos de la validación temporal y pliegues de la validación cruzada de sus casos de estudio (`validacion_temporal.parquet`), asociación de cada código de diagnóstico o procedimiento con cada variable de reingreso, pase o no el filtro (`filtro_codigos.parquet`), códigos de cada lista, de todo desarrollo y de cada pliegue (`listas_codigos.parquet`), las 30 variables de cada caso de estudio de desarrollo (`variables_casos.parquet`) y las tablas que leen los modelos: una fila por caso de estudio de desarrollo (`modelos_casos.parquet`) y una por caso y código (`modelos_codigos.parquet`). | No |
 | `data/reserva/` | Conjunto de prueba (`prueba.parquet`). Está apartado, como archivo de solo lectura: no se abre hasta la evaluación final. Su hash está registrado en `docs/version_particion.csv`. | No |
@@ -105,7 +106,7 @@ python -m venv .venv
 
 ## Bitácoras
 
-`docs/bitacora.md` registra los hallazgos y decisiones de las actividades 1.2 y 2.1. Desde la actividad 2.2, cada actividad lleva su propia bitácora dentro de su carpeta (`2.2_depuracion_etiquetado/bitacora.md`, `2.3_validacion_particion/bitacora.md` y `3.1_filtro_dimensionalidad/bitacora.md`), con códigos que continúan la numeración.
+`docs/bitacora.md` registra los hallazgos y decisiones de las actividades 1.2 y 2.1. Desde la actividad 2.2, cada actividad lleva su propia bitácora dentro de su carpeta (`2.2_depuracion_etiquetado/bitacora.md`, `2.3_validacion_particion/bitacora.md`, `3.1_filtro_dimensionalidad/bitacora.md` y `3.2_entrenamiento_modelos/bitacora.md`), con códigos que continúan la numeración.
 
 La versión Word se regenera cada vez que una bitácora cambia (requiere Node.js):
 
@@ -116,9 +117,10 @@ npm run generar
 npm run generar:2.2
 npm run generar:2.3
 npm run generar:3.1
+npm run generar:3.2
 ```
 
-`npm run generar` actualiza `docs/bitacora.docx`; `npm run generar:2.2`, `npm run generar:2.3` y `npm run generar:3.1` actualizan el `bitacora.docx` de la carpeta de cada actividad.
+`npm run generar` actualiza `docs/bitacora.docx`; `npm run generar:2.2`, `npm run generar:2.3`, `npm run generar:3.1` y `npm run generar:3.2` actualizan el `bitacora.docx` de la carpeta de cada actividad.
 
 ## Semilla del proyecto
 
