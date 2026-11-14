@@ -1,8 +1,8 @@
 # Bitácora de la actividad 3.2: entrenamiento de LR, RF y XGBoost con validación cruzada
 
-Registro de los hallazgos y decisiones de la actividad 3.2 de la Carta Gantt («Entrenamiento LR, RF y XGBoost (CV)»), que corresponde a las Etapas 4 (esquema de partición y validación) y 5 (entrenamiento y comparación de modelos) del procedimiento de la propuesta. Continúa la numeración de las bitácoras anteriores (`docs/bitacora.md`, `2.2_depuracion_etiquetado/bitacora.md`, `2.3_validacion_particion/bitacora.md` y `3.1_filtro_dimensionalidad/bitacora.md`): aquí están las decisiones D58 a D65. Una entrada no se borra: si una decisión cambia, se agrega una nueva entrada que la reemplaza y se indica en el campo **Estado**.
+Registro de los hallazgos y decisiones de la actividad 3.2 de la Carta Gantt («Entrenamiento LR, RF y XGBoost (CV)»), que corresponde a las Etapas 4 (esquema de partición y validación) y 5 (entrenamiento y comparación de modelos) del procedimiento de la propuesta. Continúa la numeración de las bitácoras anteriores (`docs/bitacora.md`, `2.2_depuracion_etiquetado/bitacora.md`, `2.3_validacion_particion/bitacora.md` y `3.1_filtro_dimensionalidad/bitacora.md`): aquí están las decisiones D58 a D66 y los hallazgos H35 y H36. Una entrada no se borra: si una decisión cambia, se agrega una nueva entrada que la reemplaza y se indica en el campo **Estado**.
 
-Las decisiones D58 a D64 se tomaron el 7 y el 8 de noviembre de 2026, antes de escribir el código, una por una y con el visto bueno de la persona a cargo; D65, el 14 de noviembre, con el diagnóstico del servidor. Fijan dónde se entrena y cómo se prepara el servidor (D58 y D65), qué le toca a esta actividad y qué a las siguientes (D59), cómo entra cada variable a cada modelo (D60), cómo se trata el desbalance (D61), con qué hiperparámetros se entrena (D62), cómo se calculan las métricas (D63) y cómo se hacen y se juzgan las comparaciones que pidió el profesor guía en su revisión del 30 de octubre de 2026 (D64). Los modelos leen solo las tablas para los modelos de D57 (bitácora de la 3.1), que tienen solo el conjunto de desarrollo. El conjunto de prueba no se abre: se usa una sola vez, en la actividad 4.1. Los resultados se presentarán en el informe de avance 6, junto con D50 a D57, H34 y la respuesta a la observación O6.
+Las decisiones D58 a D64 se tomaron el 7 y el 8 de noviembre de 2026, antes de escribir el código, una por una y con el visto bueno de la persona a cargo; D65, el 14 de noviembre, con el diagnóstico del servidor, y D66, el mismo día, con el script 17 escrito y probado. Fijan dónde se entrena y cómo se prepara el servidor (D58 y D65), qué le toca a esta actividad y qué a las siguientes (D59), cómo entra cada variable a cada modelo (D60), cómo se trata el desbalance (D61), con qué hiperparámetros se entrena (D62), cómo se calculan las métricas (D63), cómo se hacen y se juzgan las comparaciones que pidió el profesor guía en su revisión del 30 de octubre de 2026 (D64) y cómo se programa el entrenamiento (D66). Los hallazgos H35 y H36 salieron al probar el script 17: cómo se pide la multa L1 en la versión de scikit-learn de la propuesta y por qué la regresión logística se calcula con liblinear. Los modelos leen solo las tablas para los modelos de D57 (bitácora de la 3.1), que tienen solo el conjunto de desarrollo. El conjunto de prueba no se abre: se usa una sola vez, en la actividad 4.1. Los resultados se presentarán en el informe de avance 6, junto con D50 a D57, H34 y la respuesta a la observación O6.
 
 **Tipos de entrada:** `H` = hallazgo (algo que se observó en los datos),
 `D` = decisión (algo que se resolvió hacer).
@@ -23,6 +23,9 @@ Las decisiones D58 a D64 se tomaron el 7 y el 8 de noviembre de 2026, antes de e
 | Métricas | D63 | Una sola cuenta con las predicciones fuera de pliegue de las cinco vueltas; la AUPRC como precisión promedio; los mismos 1.000 sorteos de pacientes para todos los modelos; la calibración programada con numpy. Se guardan las predicciones, no los modelos. |
 | Comparaciones | D64 | 315 entrenamientos en un orden fijado. La lista A se compara con las otras tres con el margen del objetivo específico 3, mirando el intervalo completo: no pierde, no se puede afirmar o pierde. Sin hospital se informa la diferencia. |
 | Entorno del servidor | D65 | Una carpeta propia (`~/Tesis_Javiera/`), Python 3.14.5 con conda, las bibliotecas con versiones exactas, los entrenamientos largos dentro de tmux y como máximo 32 procesadores mientras el profesor guía no indique otra cosa. |
+| Valores por defecto | H35 | Confirmados con scikit-learn 1.9.0 y XGBoost 3.3.0. La multa L1 se pide con `l1_ratio` = 1, porque `penalty` está obsoleto, y los valores de D62 se escriben explícitos en `reglas/parametros.csv`. |
+| Método de cálculo de la regresión logística | H36 | liblinear, con `intercept_scaling` = 100, en vez de saga, que no llega a la solución con las columnas sí/no divididas por su desviación típica (D60). Da el mismo modelo. |
+| Script 17 | D66 | Entrena por etapas, en el orden de D64, y guarda la predicción fuera de pliegue de cada caso, en una tabla por combinación (63). Comprueba la versión de las tablas, no repite lo ya guardado y verifica cada vuelta; su prueba independiente tiene 19 comprobaciones. |
 
 ---
 
@@ -91,6 +94,7 @@ Las decisiones D58 a D64 se tomaron el 7 y el 8 de noviembre de 2026, antes de e
 - **Visto bueno:** La persona a cargo de la tesis lo aprobó el 8 de noviembre de 2026 («Sí, apruébala»). La estandarización de las columnas sí/no la pidió ella al revisar la primera versión, que las dejaba como 0 y 1 («si esto es necesario hay que hacerlo»).
 - **Resuelve:** El pendiente de la bitácora de la 3.1 sobre cómo se codifican las categorías con cada modelo y si se transforman los números con valores extremos, como las sesiones previas.
 - **Evidencia:** exploración de solo lectura del 7 y el 8 de noviembre de 2026 sobre `modelos_casos.parquet`.
+- **Precisada por:** D66 (14 de noviembre de 2026): la regresión logística se calcula con liblinear y no con saga, que no llega a la solución con estas columnas (H36). liblinear le cobra multa también al intercepto, pero con `intercept_scaling` = 100 esa multa deja de influir en las probabilidades. La forma de escalar las columnas no cambia.
 - **Estado:** Adoptada. Pendiente de validar con profesor guía.
 
 ### D61 · 2026-11-08 · El desbalance: un ensayo con ponderación antes de los demás entrenamientos
@@ -139,7 +143,8 @@ Las decisiones D58 a D64 se tomaron el 7 y el 8 de noviembre de 2026, antes de e
 - **Lo que depende del servidor:** Antes de lanzar todo se miden el tiempo y la memoria con un entrenamiento de prueba que incluye la lista sin filtro (D64). Si un valor no cabe, se cambia solo lo necesario y se anota con la medición. XGBoost puede usar el procesador o la tarjeta gráfica; los resultados son casi idénticos, pero no exactos, así que se usa la misma opción en todos los entrenamientos.
 - **Referencia:** Probst, P., Boulesteix, A.-L. y Bischl, B. (2019), *Journal of Machine Learning Research*, 20(53), 1–32.
 - **Visto bueno:** La persona a cargo de la tesis lo aprobó el 8 de noviembre de 2026 («Sí, apruébala»).
-- **Completada por:** D65 (14 de noviembre de 2026): cuántos procesadores usa cada entrenamiento y que la opción de procesador o tarjeta gráfica de XGBoost se decide con la prueba de tiempos.
+- **Completada por:** D65 (14 de noviembre de 2026): cuántos procesadores usa cada entrenamiento y que la opción de procesador o tarjeta gráfica de XGBoost se decide con la prueba de tiempos. H35 (14 de noviembre de 2026): los valores por defecto, confirmados con las versiones instaladas.
+- **Precisada por:** D66 (14 de noviembre de 2026): la regresión logística se calcula con liblinear, `intercept_scaling` = 100 y hasta 1.000 pasadas, como preveía el ajuste 2 (H36).
 - **Estado:** Adoptada. Pendiente de validar con profesor guía.
 
 ### D63 · 2026-11-08 · Cómo se calculan las métricas en la validación cruzada
@@ -261,17 +266,96 @@ Las decisiones D58 a D64 se tomaron el 7 y el 8 de noviembre de 2026, antes de e
 - **Visto bueno:** La persona a cargo de la tesis aprobó el plan el 14 de noviembre de 2026 («Sí, apruébalo»).
 - **Completa a:** D58 y D62 (cuántos procesadores usa cada entrenamiento y la opción de procesador o tarjeta gráfica).
 - **Evidencia:** diagnóstico del servidor del 14 de noviembre de 2026 (bloque de comandos de solo lectura en la Terminal de RStudio Server); versiones y tamaños, de PyPI y conda-forge.
-- **Estado:** Adoptada. Instalación hecha y comprobada el 14 de noviembre de 2026. Pendiente de validar con profesor guía, sobre todo los procesadores y la cuenta.
+- **Estado:** Adoptada. Instalación hecha y comprobada el 14 de noviembre de 2026; el mismo día se clonó el código en `~/Tesis_Javiera/Codigo` (commit `a64bed4`) y se subieron las tres tablas a su `data/processed/`, con el hash igual al registrado. Pendiente de validar con profesor guía, sobre todo los procesadores y la cuenta.
+
+### H35 · 2026-11-14 · En scikit-learn 1.9 la multa L1 se pide con l1_ratio = 1
+- **Actividad:** 3.2
+- **Hallazgo:** Al confirmar los valores por defecto de D62 con las versiones de la propuesta (scikit-learn 1.9.0 y XGBoost 3.3.0, las mismas que quedaron en el servidor, D65), se vio que el parámetro `penalty`, con el que se pedía la multa L1 de la regresión logística, está obsoleto desde scikit-learn 1.8 y desaparece en la 1.10. Si se usa `penalty='l1'`, la versión 1.9 avisa que el parámetro está obsoleto y que su valor no concuerda con el de `l1_ratio`, que por defecto es 0. La forma nueva es `l1_ratio`: 0 es la multa L2 y 1, la multa L1 (el LASSO). Se comprobó con datos de ejemplo que tenían 20 columnas sin ninguna relación con la respuesta: con `l1_ratio` = 1 quedan en cero 18 de sus 20 pesos, y con `l1_ratio` = 0, ninguno.
+- **Valores por defecto confirmados:**
+
+  | Modelo | Perilla | Por defecto | Se usa |
+  |---|---|---|---|
+  | Regresión logística | C | 1 | 1 |
+  | Regresión logística | Tipo de multa (`l1_ratio`) | 0 (multa L2) | 1 (multa L1) |
+  | Regresión logística | Método de cálculo | lbfgs, que no admite la multa L1 | liblinear (H36) |
+  | Regresión logística | Escala del intercepto (`intercept_scaling`, solo en liblinear) | 1 | 100 (H36) |
+  | Regresión logística | Pasadas máximas | 100 | 1.000 |
+  | Regresión logística | Tolerancia | 0,0001 | 0,0001 |
+  | Random Forest | Número de árboles | 100 | 100 |
+  | Random Forest | Columnas por pregunta | La raíz cuadrada del total | La raíz cuadrada del total |
+  | Random Forest | Tamaño mínimo para dividir | 2 | 10 (D62) |
+  | Random Forest | Semilla | Ninguna | 2026 |
+  | XGBoost | Número de árboles | 100 | 100 |
+  | XGBoost | Tasa de aprendizaje | 0,3 | 0,3 |
+  | XGBoost | Profundidad | 6 | 6 |
+  | XGBoost | Método para buscar las preguntas | auto, que es hist | hist |
+  | XGBoost | Procesador o tarjeta gráfica | Procesador | Procesador, mientras la prueba de tiempos no indique otra cosa (D65) |
+  | XGBoost | Semilla | 0 | 2026 |
+
+- **Consecuencia:** Los valores de D62 se escriben explícitos en `reglas/parametros.csv`, aunque coincidan con los de la biblioteca: si otra versión cambia un valor por defecto, como pasó con `penalty`, el modelo sigue siendo el mismo. El reporte del script 17 lista todos los valores de cada modelo, también los que no se escriben.
+- **Evidencia:** entorno de prueba del 14 de noviembre de 2026 en una carpeta temporal del portátil (scikit-learn 1.9.0 y XGBoost 3.3.0 sobre Python 3.14.5), sin tocar el `.venv` del proyecto.
+- **Resuelve:** El pendiente de D62 de confirmar los valores por defecto con las versiones instaladas.
+
+### H36 · 2026-11-14 · saga no llega a la solución con las columnas sí/no divididas por su desviación típica; liblinear da el mismo modelo
+- **Actividad:** 3.2
+- **Hallazgo:** D60 divide cada columna sí/no por su desviación típica, y la de una columna con pocos casos es muy chica, así que su 1 queda muy grande. En la vuelta 1 de `REING_30D` con la lista A, con las tablas completas (2.620.256 casos de entrenamiento), 38 de las 857 columnas sí/no quedan con su 1 sobre 100. Las dos más raras llegan a 1.145 (el valor SIN DATO de `PUEBLO_ORIGINARIO`, que tienen 3 casos de desarrollo, todos de 2019, y 2 en el entrenamiento de esa vuelta) y a 809 (el valor OTRO de `TIPO_PROCEDENCIA`, con 4 casos, todos de 2020). saga, el método que eligió D60, avanza con un paso del mismo tamaño para todas las columnas, y ese tamaño lo fija el caso con los valores más grandes: basta un caso así para que todos los pasos sean diminutos y se necesiten miles de pasadas por los datos. liblinear avanza de a una columna, con un paso propio para cada una, y esos valores no lo frenan. Una vuelta de `REING_30D` con la lista A, en dos muestras de los pacientes:
+
+  | Muestra | Método | Pasadas | Tiempo | ¿Llegó a la solución? |
+  |---|---|---|---|---|
+  | 2 % (52.738 casos de entrenamiento) | saga, hasta 1.000 pasadas | 1.000 | 3,2 minutos | No |
+  | 2 % (52.738 casos de entrenamiento) | saga, hasta 3.000 pasadas | 2.771 | 5,9 minutos | Sí |
+  | 2 % (52.738 casos de entrenamiento) | liblinear | 25 | 1,7 minutos | Sí |
+  | 25 % (655.815 casos de entrenamiento) | saga, 10 pasadas | 10 | 3,8 segundos por pasada | No |
+  | 25 % (655.815 casos de entrenamiento) | liblinear | 15 | 3,9 minutos | Sí |
+
+  Con la muestra del 25 %, si saga necesitara las mismas 2.771 pasadas, una sola vuelta tardaría casi tres horas.
+- **El mismo modelo:** En la muestra del 2 %, liblinear y saga (cuando llegó, con 2.771 pasadas) dan casi las mismas probabilidades: la diferencia promedio es 0,0002 y la más grande, 0,079. El AUROC es 0,7126 con liblinear y 0,7131 con saga, y la AUPRC, 0,1353 con los dos.
+- **El intercepto:** liblinear le cobra multa también al intercepto, y por eso D60 había elegido saga. Con `intercept_scaling` = 100 esa multa es 100 veces más chica que la de un peso y deja de influir: con 100 y con 1.000 las probabilidades difieren en promedio 0,00003 (como máximo 0,0033). El valor del intercepto sí cambia (−1,87 y −2,92), porque cada caso tiene exactamente un 1 entre las columnas de cada categoría y lo que pierde el intercepto lo absorben esas columnas; las probabilidades, que es lo que se guarda, no cambian. La escala de las columnas de D60 queda igual: cambia solo el método de cálculo.
+- **Con ponderación:** En la muestra, liblinear llegó a la solución en todas las vueltas: sin ponderar, en 24 a 58 pasadas (30 a 49 segundos); con ponderación, en 87 a 236 (3 a 8 minutos). En el ensayo de D61, la regresión logística ponderada tardará varias veces más que la sin ponderar.
+- **Consecuencia:** La regresión logística se calcula con liblinear, `intercept_scaling` = 100 y hasta 1.000 pasadas (D66). Es lo que preveía el ajuste 2 de D62: «si saga tarda demasiado, se usa otro método que da el mismo modelo y se deja anotado».
+- **Evidencia:** pruebas del 14 de noviembre de 2026 en la carpeta temporal del portátil, con muestras del 2 % y del 25 % de los pacientes de las tablas para los modelos (entorno de prueba de H35), y exploración de solo lectura de las tablas completas (columnas más raras de la vuelta 1).
+
+### D66 · 2026-11-14 · El script 17: entrena los modelos y guarda las predicciones fuera de pliegue
+- **Actividad:** 3.2
+- **Decisión:** Los entrenamientos de D59 a D65 se programan en `scripts/17_entrenar_modelos.py`, con sus valores en `reglas/parametros.csv` y su prueba independiente en `pruebas/verificar_17_entrenamiento.py`. El script entrena y guarda la predicción fuera de pliegue de cada caso: la probabilidad que le da el modelo que no lo vio. No calcula métricas, que son del script 18 (D63).
+
+  | Punto | Cómo |
+  |---|---|
+  | Qué lee | Las tres tablas de D57, solo si su hash es el de la última versión de `docs/version_tablas_modelos.csv`. También el papel de cada columna (`3.1_filtro_dimensionalidad/reglas/columnas_modelos.csv`) y la semilla y el número de pliegues (`2.3_validacion_particion/reglas/parametros.csv`) |
+  | Etapas | Siete, en el orden de D64, y se elige cuál ejecutar: `tiempos`, `ensayo`, `base`, `sin_filtro`, `agrupada`, `sin_hospital` y `c`. Mientras `ensayo_resuelto` valga NO, solo se pueden ejecutar `tiempos` y `ensayo` |
+  | Etapa de tiempos | Entrena solo la primera vuelta de cada modelo con `REING_30D` y la lista sin filtro, la más pesada, para medir el tiempo y la memoria; no guarda predicciones. Con esa medición, el reporte estima cuántas horas tomaría todo lo demás, como máximo |
+  | Combinaciones | 63, de cinco vueltas cada una (315 entrenamientos): 6 en el ensayo (`REING_7D_CDM`, los tres modelos, con y sin ponderación), 9 en la etapa base (las otras tres variables con la lista A; la de `REING_7D_CDM` sale del ensayo) y 12 en cada una de las otras cuatro etapas |
+  | Matriz de cada vuelta | Como D60, con la lista calculada sin el pliegue que se valida (la sin filtro es la de todo desarrollo; D53) y con las estadísticas sacadas solo del entrenamiento de la vuelta |
+  | Modelos | Los valores de D62, escritos explícitos (H35), y la semilla 2026. La regresión logística, con liblinear, `intercept_scaling` = 100 y hasta 1.000 pasadas (H36); usa un procesador. Random Forest y XGBoost, con como máximo los procesadores del parámetro `procesadores` (32, D65) |
+  | Ponderación | Si `ponderar_LR`, `ponderar_RF` o `ponderar_XGB` vale SI, el peso de cada reingreso es el número de casos sin reingreso dividido por el de reingresos, en el entrenamiento de la vuelta (D61) |
+  | Predicciones | Una tabla por combinación en `data/processed/predicciones_3.2/` (fuera de Git), con `ID_EGRESO`, `PLIEGUE` y `PROBABILIDAD`. Dentro de la tabla quedan anotados la combinación, la semilla, el commit del código, la versión de las tablas y las de scikit-learn y XGBoost. Se escribe con otro nombre y se renombra al terminar, para que un corte no deje una tabla a medias |
+  | Registro | `reportes/17_registro.csv`, una fila por vuelta: casos y reingresos del entrenamiento, casos de validación, columnas, códigos, peso de cada reingreso, segundos, memoria, pasadas y si la regresión logística llegó a la solución, avisos de las bibliotecas, commit del código y si los scripts o las reglas tenían cambios sin confirmar |
+  | Reporte | `reportes/17_entrenamiento.md`: las verificaciones, la prueba de tiempos, las combinaciones guardadas y los valores completos de cada modelo |
+  | Si se corta | Una combinación ya guardada no se repite: el mismo comando sigue con las que faltan |
+  | Verificaciones | En cada vuelta, cinco: la lista es la de la vuelta; entrenamiento y validación no comparten casos ni pacientes; la matriz tiene las columnas esperadas; cada código vale 0 o 1, y las medianas, los promedios, las desviaciones y las proporciones salen solo del entrenamiento, recalculadas desde las tablas. En cada combinación, tres más: entran solo las predictoras (sin `HOSPITAL` cuando corresponde); cada caso tiene exactamente una probabilidad, y todas están entre 0 y 1 (estas dos, salvo en la etapa de tiempos, que no guarda). Si alguna falla, esa combinación no se guarda y el script se detiene |
+  | Cómo se ejecuta | En el servidor, desde `~/Tesis_Javiera/Codigo`, con el Python del entorno de D65, dentro de tmux y con la etapa como argumento (`--etapa`). Se pueden limitar los modelos o las variables (`--modelos` y `--variables`) |
+
+- **La prueba independiente:** Revisa por otro camino lo que deja el script, con 19 comprobaciones en cinco grupos: (1) la versión de las tablas, los valores de los parámetros y las columnas de cada tipo, contra una segunda transcripción escrita en la prueba; (2) que cada tabla de predicciones sea una de las 63 combinaciones, con la información guardada dentro que le corresponde, exactamente los casos con dato en su variable, su pliegue y probabilidades entre 0 y 1; (3) el registro, recontado desde las tablas, que la regresión logística haya llegado a la solución en todas las vueltas y que cada vuelta tenga su commit; (4) la matriz: en 200 casos al azar de cada vuelta, los códigos (con la receta del diccionario de D57), las categorías y los números transformados se vuelven a calcular con pandas y se comparan con los del script, igual que las proporciones del entrenamiento; (5) la primera vuelta de un XGBoost entrenada otra vez, que debe dar las mismas probabilidades guardadas, también con las respuestas de los casos de validación desordenadas, lo que muestra que el modelo nunca las miró. Termina con código 1 si alguna falla y deja `reportes/pruebas_entrenamiento.md`.
+- **Cómo se probó:** En la carpeta temporal del portátil, con una muestra del 2 % de los pacientes (50.181 pacientes y 67.207 casos) y el entorno de prueba de H35:
+
+  | Prueba | Resultado |
+  |---|---|
+  | Script 17 | Random Forest y XGBoost, en las siete etapas, con una variable en cada una; la regresión logística, en la etapa de tiempos (lista sin filtro, 7.560 columnas) y en el ensayo, con y sin ponderación. Se guardaron 16 combinaciones; sin hospital hay 72 columnas menos; la reanudación no repite lo guardado, y la etapa base no se deja ejecutar antes de resolver el ensayo |
+  | Prueba independiente, con las salidas correctas | 19 de 19 |
+  | Datos alterados a propósito: un pliegue cambiado, un caso quitado y un registro con la cuenta de códigos de la lista de todo desarrollo | Fallan exactamente las tres comprobaciones que corresponden |
+  | Script cambiado para usar en cada vuelta la lista de todo desarrollo | Falla la comprobación de la lista, en 20 de las 25 vueltas revisadas (las otras 5 son de la lista sin filtro, que es la misma en todas), y las dos de volver a entrenar |
+  | Script cambiado para entrenar también con los casos de validación | Fallan las dos comprobaciones de volver a entrenar |
+
+- **Visto bueno:** La persona a cargo de la tesis aprobó el diseño el 14 de noviembre de 2026 («Sí, apruébalo») y, el mismo día, el cambio de saga a liblinear («Sí, apruébalo»). Se le explicaron los dos programas bloque por bloque, con el caso `20230000956` en la vuelta 4. También el 14 de noviembre aprobó crearlos en el proyecto, con esta entrada y con H35 y H36 («Sí, hazlo así»).
+- **Precisa a:** D60 y D62, en el método de cálculo de la regresión logística (H36).
+- **Estado:** Adoptada. Pendiente de validar con profesor guía. La ejecución en el servidor, pendiente.
 
 ---
 
 ## Pendientes
 
-- En el servidor (D65): clonar el código en `~/Tesis_Javiera/Codigo` y subir las tablas, comprobando su hash. El entorno ya está instalado y comprobado.
 - Consultar al profesor guía cuántos procesadores se pueden usar y si conviene una cuenta propia en el servidor (D65).
-- Entorno de prueba en una carpeta temporal del portátil, con scikit-learn, scipy y XGBoost, sin tocar el `.venv` del proyecto (necesita el permiso de la persona a cargo).
-- Script 17 (entrenamiento y predicciones fuera de pliegue) y, si conviene, un script 18 para las métricas (D63), cada uno con su prueba independiente, probada también con errores puestos a propósito.
-- En el servidor: la prueba de tiempos y memoria (D62 y D64), el ensayo de la ponderación (D61) y los entrenamientos en el orden de D64.
-- Confirmar los valores por defecto con las versiones instaladas (D62).
+- Script 18: las métricas de D63 y los veredictos de D64, calculados con las predicciones que guarda el script 17, y su prueba independiente, probada también con errores puestos a propósito.
+- En el servidor, con el script 17 (D66): la prueba de tiempos y memoria (D62 y D64), el ensayo de la ponderación (D61), evaluado con el script 18, y los entrenamientos en el orden de D64.
 - Si algún modelo se pondera, definir qué parte del entrenamiento se aparta para la recalibración de Platt (D61).
-- Informe de avance 6: los resultados de la 3.2, D50 a D57, H34, la respuesta a la O6 (cómo se separó el conjunto de prueba) y D58 a D65.
+- Informe de avance 6: los resultados de la 3.2, D50 a D57, H34, la respuesta a la O6 (cómo se separó el conjunto de prueba), D58 a D66, H35 y H36.
