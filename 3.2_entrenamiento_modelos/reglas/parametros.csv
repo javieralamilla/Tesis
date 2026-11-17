@@ -28,7 +28,7 @@ procesadores;32;Máximo de procesadores por entrenamiento de Random Forest y XGB
 ponderar_LR;NO;SI = cada reingreso pesa lo que los casos sin reingreso divididos por los reingresos del entrenamiento de la vuelta (D61). Se fija con el resultado del ensayo
 ponderar_RF;NO;Igual que ponderar_LR, para Random Forest (D61)
 ponderar_XGB;NO;Igual que ponderar_LR, para XGBoost (D61)
-ensayo_resuelto;NO;SI cuando el ensayo de la ponderación ya se evaluó y los tres parámetros anteriores quedaron fijados (D61). Mientras sea NO, solo se pueden ejecutar las etapas tiempos y ensayo
+ensayo_resuelto;SI;SI cuando el ensayo de la ponderación ya se evaluó y los tres parámetros anteriores quedaron fijados (D61). Mientras sea NO, solo se pueden ejecutar las etapas tiempos y ensayo
 carpeta_predicciones;data/processed/predicciones_3.2;Carpeta de las predicciones fuera de pliegue, una tabla por combinación, dentro de la carpeta Codigo y fuera de Git (D63)
 sorteos;1000;Script 18: sorteos de pacientes con reposición para los intervalos, los mismos en todas las combinaciones (D41 y D63)
 confianza;95;Script 18: nivel de los intervalos, en porcentaje. Con 95 se usan los percentiles 2,5 y 97,5 de los sorteos (D41)
