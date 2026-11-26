@@ -24,7 +24,7 @@ xgb_learning_rate;0,3;XGBoost: qué parte del error corrige cada árbol nuevo (D
 xgb_max_depth;6;XGBoost: preguntas seguidas que puede hacer cada árbol (D62)
 xgb_tree_method;hist;XGBoost: cómo busca las preguntas (el método que usa por defecto la versión 3.3)
 xgb_device;cpu;XGBoost: cpu = el procesador, cuda = la tarjeta gráfica. La misma opción en todos los entrenamientos (D62)
-procesadores;32;Máximo de procesadores por entrenamiento de Random Forest y XGBoost, para no molestar a otras personas del servidor (D65). La regresión logística usa uno
+procesadores;50;Máximo de procesadores por entrenamiento de Random Forest y XGBoost, y de combinaciones a la vez en el script 18, para no molestar a otras personas del servidor (D65 y D68). La regresión logística usa uno
 ponderar_LR;NO;SI = cada reingreso pesa lo que los casos sin reingreso divididos por los reingresos del entrenamiento de la vuelta (D61). Se fija con el resultado del ensayo
 ponderar_RF;NO;Igual que ponderar_LR, para Random Forest (D61)
 ponderar_XGB;NO;Igual que ponderar_LR, para XGBoost (D61)

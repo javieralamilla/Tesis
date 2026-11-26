@@ -1,8 +1,8 @@
 # Bitácora de la actividad 3.2: entrenamiento de LR, RF y XGBoost con validación cruzada
 
-Registro de los hallazgos y decisiones de la actividad 3.2 de la Carta Gantt («Entrenamiento LR, RF y XGBoost (CV)»), que corresponde a las Etapas 4 (esquema de partición y validación) y 5 (entrenamiento y comparación de modelos) del procedimiento de la propuesta. Continúa la numeración de las bitácoras anteriores (`docs/bitacora.md`, `2.2_depuracion_etiquetado/bitacora.md`, `2.3_validacion_particion/bitacora.md` y `3.1_filtro_dimensionalidad/bitacora.md`): aquí están las decisiones D58 a D67 y los hallazgos H35 a H38. Una entrada no se borra: si una decisión cambia, se agrega una nueva entrada que la reemplaza y se indica en el campo **Estado**.
+Registro de los hallazgos y decisiones de la actividad 3.2 de la Carta Gantt («Entrenamiento LR, RF y XGBoost (CV)»), que corresponde a las Etapas 4 (esquema de partición y validación) y 5 (entrenamiento y comparación de modelos) del procedimiento de la propuesta. Continúa la numeración de las bitácoras anteriores (`docs/bitacora.md`, `2.2_depuracion_etiquetado/bitacora.md`, `2.3_validacion_particion/bitacora.md` y `3.1_filtro_dimensionalidad/bitacora.md`): aquí están las decisiones D58 a D68 y los hallazgos H35 a H40. Una entrada no se borra: si una decisión cambia, se agrega una nueva entrada que la reemplaza y se indica en el campo **Estado**.
 
-Las decisiones D58 a D64 se tomaron el 7 y el 8 de noviembre de 2026, antes de escribir el código, una por una y con el visto bueno de la persona a cargo; D65, el 14 de noviembre, con el diagnóstico del servidor, y D66 y D67, el mismo día, con los scripts 17 y 18 escritos y probados. Fijan dónde se entrena y cómo se prepara el servidor (D58 y D65), qué le toca a esta actividad y qué a las siguientes (D59), cómo entra cada variable a cada modelo (D60), cómo se trata el desbalance (D61), con qué hiperparámetros se entrena (D62), cómo se calculan las métricas (D63), cómo se hacen y se juzgan las comparaciones que pidió el profesor guía en su revisión del 30 de octubre de 2026 (D64) y cómo se programan el entrenamiento (D66) y las métricas (D67). Los hallazgos H35 y H36 salieron al probar el script 17: cómo se pide la multa L1 en la versión de scikit-learn de la propuesta y por qué la regresión logística se calcula con liblinear. El hallazgo H37, del mismo día, es la prueba de tiempos en el servidor: cuánto tarda y cuánta memoria usa cada modelo, por qué XGBoost queda en el procesador y qué cambia con el número de procesadores. El hallazgo H38, del 16 de noviembre, es el resultado del ensayo de la ponderación: ningún modelo se pondera. Los modelos leen solo las tablas para los modelos de D57 (bitácora de la 3.1), que tienen solo el conjunto de desarrollo. El conjunto de prueba no se abre: se usa una sola vez, en la actividad 4.1. Los resultados se presentarán en el informe de avance 6, junto con D50 a D57, H34 y la respuesta a la observación O6.
+Las decisiones D58 a D64 se tomaron el 7 y el 8 de noviembre de 2026, antes de escribir el código, una por una y con el visto bueno de la persona a cargo; D65, el 14 de noviembre, con el diagnóstico del servidor, y D66 y D67, el mismo día, con los scripts 17 y 18 escritos y probados. Fijan dónde se entrena y cómo se prepara el servidor (D58 y D65), qué le toca a esta actividad y qué a las siguientes (D59), cómo entra cada variable a cada modelo (D60), cómo se trata el desbalance (D61), con qué hiperparámetros se entrena (D62), cómo se calculan las métricas (D63), cómo se hacen y se juzgan las comparaciones que pidió el profesor guía en su revisión del 30 de octubre de 2026 (D64) y cómo se programan el entrenamiento (D66) y las métricas (D67). Los hallazgos H35 y H36 salieron al probar el script 17: cómo se pide la multa L1 en la versión de scikit-learn de la propuesta y por qué la regresión logística se calcula con liblinear. El hallazgo H37, del mismo día, es la prueba de tiempos en el servidor: cuánto tarda y cuánta memoria usa cada modelo, por qué XGBoost queda en el procesador y qué cambia con el número de procesadores. El hallazgo H38, del 16 de noviembre, es el resultado del ensayo de la ponderación: ningún modelo se pondera. H39 y H40, del 17 y el 18 de noviembre, son los resultados con la lista A y la primera comparación de listas, la A frente a la sin filtro. El 20 de noviembre se perdió el acceso al servidor, con las etapas agrupada, sin hospital y C todavía pendientes. D68, del 25 de noviembre, traslada el entrenamiento a bioserver5, del DIINF de la USACH, con el mismo entorno y 50 procesadores, y fija qué se vuelve a entrenar. Los modelos leen solo las tablas para los modelos de D57 (bitácora de la 3.1), que tienen solo el conjunto de desarrollo. El conjunto de prueba no se abre: se usa una sola vez, en la actividad 4.1. Los resultados se presentarán en el informe de avance 6, junto con D50 a D57, H34 y la respuesta a la observación O6.
 
 **Tipos de entrada:** `H` = hallazgo (algo que se observó en los datos),
 `D` = decisión (algo que se resolvió hacer).
@@ -15,20 +15,23 @@ Las decisiones D58 a D64 se tomaron el 7 y el 8 de noviembre de 2026, antes de e
 
 | Tema | Entrada | Definición |
 |---|---|---|
-| Dónde se entrena | D58 | En el servidor del laboratorio SBCB de la UFRGS, entrando por RStudio Server, y no en el portátil. Se sube el código con `git clone` y las tres tablas para los modelos a mano; nunca el conjunto de prueba ni los archivos crudos de 2019. |
+| Dónde se entrena | D58 | En el servidor del laboratorio SBCB de la UFRGS, entrando por RStudio Server, y no en el portátil. Se sube el código con `git clone` y las tres tablas para los modelos a mano; nunca el conjunto de prueba ni los archivos crudos de 2019. Hasta el 20 de noviembre de 2026; desde el 25, en bioserver5 (D68). |
 | Qué se hace en la 3.2 | D59 | Los tres modelos con las cuatro variables objetivo y los cinco pliegues, con hiperparámetros fijos; las métricas, la calibración por año en las predicciones fuera de pliegue y las comparaciones de listas y del hospital. El ajuste de hiperparámetros, el subconjunto y la importancia son de la 3.3; la validación temporal y sus sensibilidades, de la 4.1. |
 | Cómo entra cada variable | D60 | Las categorías, como columnas sí/no (431). En la regresión logística, logaritmo en seis numéricas de cola larga, las 13 numéricas estandarizadas y las columnas sí/no divididas por su desviación típica; en los árboles, los valores tal cual. Todo se calcula con el entrenamiento de cada vuelta. |
 | Desbalance | D61 | Un ensayo con y sin ponderación en `REING_7D_CDM`, antes de los demás entrenamientos. Un modelo se pondera solo si su AUPRC mejora más de un 10 % relativo, con todo el intervalo sobre ese margen; si se pondera, se recalibra con Platt. |
 | Hiperparámetros de partida | D62 | Los valores por defecto de las bibliotecas, iguales en todas las comparaciones, con multa L1 en la regresión logística y un tamaño mínimo de 10 casos para dividir en Random Forest. |
 | Métricas | D63 | Una sola cuenta con las predicciones fuera de pliegue de las cinco vueltas; la AUPRC como precisión promedio; los mismos 1.000 sorteos de pacientes para todos los modelos; la calibración programada con numpy. Se guardan las predicciones, no los modelos. |
 | Comparaciones | D64 | 315 entrenamientos en un orden fijado. La lista A se compara con las otras tres con el margen del objetivo específico 3, mirando el intervalo completo: no pierde, no se puede afirmar o pierde. Sin hospital se informa la diferencia. |
-| Entorno del servidor | D65 | Una carpeta propia (`~/Tesis_Javiera/`), Python 3.14.5 con conda, las bibliotecas con versiones exactas, los entrenamientos largos dentro de tmux y como máximo 32 procesadores mientras el profesor guía no indique otra cosa. |
+| Entorno del servidor | D65 | Una carpeta propia (`~/Tesis_Javiera/`), Python 3.14.5 con conda, las bibliotecas con versiones exactas, los entrenamientos largos dentro de tmux y como máximo 32 procesadores mientras el profesor guía no indique otra cosa. En bioserver5, 50 procesadores (D68). |
 | Valores por defecto | H35 | Confirmados con scikit-learn 1.9.0 y XGBoost 3.3.0. La multa L1 se pide con `l1_ratio` = 1, porque `penalty` está obsoleto, y los valores de D62 se escriben explícitos en `reglas/parametros.csv`. |
 | Método de cálculo de la regresión logística | H36 | liblinear, con `intercept_scaling` = 100, en vez de saga, que no llega a la solución con las columnas sí/no divididas por su desviación típica (D60). Da el mismo modelo. |
 | Script 17 | D66 | Entrena por etapas, en el orden de D64, y guarda la predicción fuera de pliegue de cada caso, en una tabla por combinación (63). Comprueba la versión de las tablas, no repite lo ya guardado y verifica cada vuelta; su prueba independiente tiene 19 comprobaciones. |
 | Script 18 | D67 | Calcula las métricas de D63 con 1.000 sorteos de pacientes, los mismos en todas las combinaciones, y da los veredictos del ensayo (D61) y de las comparaciones (D64). Para el logit de la calibración, un 0 exacto se cuenta como 0,0001; la caída se mide siempre desde la otra lista hacia la A. Su prueba independiente tiene 15 comprobaciones. |
 | Tiempos y procesadores | H37 | Con la lista más pesada, una vuelta tarda 22,9 minutos con la regresión logística, 47,5 con Random Forest (32 procesadores) y 12 segundos con XGBoost, que queda en el procesador. El número de procesadores cambia solo el tiempo, no los modelos; se le preguntará al profesor guía si se pueden usar 40. |
 | Ponderación | H38 | El ensayo no mejora la AUPRC de ningún modelo (−3,9 %, −13,3 % y −1,2 %) y empeora mucho la calibración: los tres modelos se entrenan sin ponderar y no hace falta la recalibración de Platt. |
+| Resultado principal | H39 | Con la lista A, XGBoost tiene la AUPRC y el AUROC más altos en las cuatro variables (AUROC de 0,730 a 0,777). La regresión logística y XGBoost están calibrados; el Random Forest da predicciones demasiado extremas. |
+| La A frente a la sin filtro | H40 | La lista A no pierde en ninguna de las 12 comparaciones: su AUPRC cae a lo más un 3,1 % y su AUROC, a lo más 0,010. |
+| Servidor nuevo | D68 | Desde el 25 de noviembre de 2026, bioserver5, del DIINF de la USACH, por SSH: el entorno de D65, con conda instalado desde Miniforge, y 50 procesadores. Se vuelven a entrenar la lista A y el ensayo, porque lo del servidor de la UFRGS se perdió; la sin filtro no (H40). |
 
 ---
 
@@ -44,7 +47,7 @@ Las decisiones D58 a D64 se tomaron el 7 y el 8 de noviembre de 2026, antes de e
 - **Cómo se prueba el código:** El asistente no tiene acceso al servidor. Cada script se prueba antes en el portátil, con una muestra y en una carpeta temporal, junto con su prueba independiente, y la persona a cargo lo ejecuta en el servidor.
 - **Visto bueno:** La persona a cargo de la tesis contó el 12 de octubre de 2026 que los modelos se entrenarían en ese servidor y pidió el 7 de noviembre registrarlo como decisión en esta bitácora, con la regla de qué se sube y qué no. El 14 de noviembre aprobó corregir esta entrada, antes de subirla a Git, para que diga que se entra por RStudio Server («Sí, corrígela»).
 - **Completada por:** D65 (14 de noviembre de 2026): qué tiene el servidor, cómo se instalan las versiones y cómo se corren los entrenamientos largos sin depender de que el navegador quede abierto.
-- **Estado:** Adoptada. El profesor guía aprobó entrenar desde RStudio Server (lo informó la persona a cargo el 14 de noviembre de 2026); el resto de la entrada, pendiente de validar con él.
+- **Estado:** Adoptada. El profesor guía aprobó entrenar desde RStudio Server (lo informó la persona a cargo el 14 de noviembre de 2026); el resto de la entrada, pendiente de validar con él. Reemplazada en parte por D68 (25 de noviembre de 2026): desde el 20 de noviembre no hay acceso a ese servidor, y se entrena en bioserver5, del DIINF de la USACH, por SSH. Lo de qué se sube y qué no sigue vigente.
 
 ### D59 · 2026-11-08 · Qué se hace en la actividad 3.2 y qué queda para la 3.3 y la 4.1
 - **Actividad:** 3.2
@@ -223,6 +226,7 @@ Las decisiones D58 a D64 se tomaron el 7 y el 8 de noviembre de 2026, antes de e
 - **Completa a:** D53 y D55 (bitácora de la 3.1). Responde a la propuesta de H30.
 - **Evidencia:** exploración de solo lectura del 8 de noviembre de 2026 sobre `modelos_casos.parquet` y `listas_codigos.parquet` (árboles de juguete, solo para ilustrar).
 - **Precisada por:** D67 (14 de noviembre de 2026): la caída se mide siempre desde la otra lista hacia la A, como proporción del valor de la otra lista, también frente a la agrupada, y el veredicto se lee en los extremos del intervalo.
+- **Resultados:** H40 (18 de noviembre de 2026): la A no pierde frente a la sin filtro en las 12 comparaciones. Faltan la agrupada, la C y sin hospital.
 - **Estado:** Adoptada. Pendiente de validar con profesor guía.
 
 ### D65 · 2026-11-14 · El entorno del servidor: carpeta propia, Python 3.14.5 con conda y entrenamientos en tmux
@@ -273,7 +277,7 @@ Las decisiones D58 a D64 se tomaron el 7 y el 8 de noviembre de 2026, antes de e
 - **Completa a:** D58 y D62 (cuántos procesadores usa cada entrenamiento y la opción de procesador o tarjeta gráfica).
 - **Completada por:** H37 (14 de noviembre de 2026): XGBoost queda en el procesador y se le preguntará al profesor guía si se pueden usar 40 procesadores.
 - **Evidencia:** diagnóstico del servidor del 14 de noviembre de 2026 (bloque de comandos de solo lectura en la Terminal de RStudio Server); versiones y tamaños, de PyPI y conda-forge.
-- **Estado:** Adoptada. Instalación hecha y comprobada el 14 de noviembre de 2026; el mismo día se clonó el código en `~/Tesis_Javiera/Codigo` (commit `a64bed4`) y se subieron las tres tablas a su `data/processed/`, con el hash igual al registrado. Pendiente de validar con profesor guía, sobre todo los procesadores y la cuenta.
+- **Estado:** Adoptada. Instalación hecha y comprobada el 14 de noviembre de 2026; el mismo día se clonó el código en `~/Tesis_Javiera/Codigo` (commit `a64bed4`) y se subieron las tres tablas a su `data/processed/`, con el hash igual al registrado. Pendiente de validar con profesor guía, sobre todo los procesadores y la cuenta. Reemplazada en parte por D68 (25 de noviembre de 2026): en bioserver5 se usan 50 procesadores y conda se instala desde Miniforge; el resto del entorno es el mismo.
 
 ### H35 · 2026-11-14 · En scikit-learn 1.9 la multa L1 se pide con l1_ratio = 1
 - **Actividad:** 3.2
@@ -355,7 +359,7 @@ Las decisiones D58 a D64 se tomaron el 7 y el 8 de noviembre de 2026, antes de e
 
 - **Visto bueno:** La persona a cargo de la tesis aprobó el diseño el 14 de noviembre de 2026 («Sí, apruébalo») y, el mismo día, el cambio de saga a liblinear («Sí, apruébalo»). Se le explicaron los dos programas bloque por bloque, con el caso `20230000956` en la vuelta 4. También el 14 de noviembre aprobó crearlos en el proyecto, con esta entrada y con H35 y H36 («Sí, hazlo así»).
 - **Precisa a:** D60 y D62, en el método de cálculo de la regresión logística (H36).
-- **Estado:** Adoptada. Pendiente de validar con profesor guía. En el servidor, la etapa de tiempos se ejecutó el 14 de noviembre de 2026 (H37) y el ensayo de la ponderación, del 14 al 16 de noviembre (H38); las demás etapas, pendientes.
+- **Estado:** Adoptada. Pendiente de validar con profesor guía. En el servidor se ejecutaron la etapa de tiempos el 14 de noviembre de 2026 (H37), el ensayo de la ponderación del 14 al 16 (H38), la etapa base el 16 y el 17 (H39) y la sin filtro el 17 y el 18 (H40). Las etapas agrupada, sin hospital y C quedan pendientes: el 20 de noviembre se perdió el acceso al servidor.
 
 ### D67 · 2026-11-14 · El script 18: las métricas con sus intervalos y los veredictos del ensayo y de las listas
 - **Actividad:** 3.2
@@ -403,7 +407,7 @@ Las decisiones D58 a D64 se tomaron el 7 y el 8 de noviembre de 2026, antes de e
 - **Visto bueno:** La persona a cargo de la tesis aprobó el diseño el 14 de noviembre de 2026 («Sí, apruébalo»), con las tres decisiones nuevas: la regla de los 0, la dirección de las comparaciones y que se calcule en el servidor con varias combinaciones a la vez. El mismo día se le explicaron el script y su prueba bloque por bloque, con las cifras de la muestra, y aprobó crearlos en el proyecto con esta entrada («Sí, créalo»).
 - **Precisa a:** D41 y D43 (bitácora de la 2.3), en el logit de una probabilidad 0 o 1, y D63 y D64, en cómo se calculan las métricas, la dirección de las comparaciones y cómo se lee el veredicto.
 - **Evidencia:** pruebas del 14 de noviembre de 2026 en la carpeta temporal del portátil, con la muestra del 2 % de los pacientes (entorno de prueba de H35); el tiempo, con datos inventados del tamaño de `REING_30D`.
-- **Estado:** Adoptada. Pendiente de validar con profesor guía. En el servidor evaluó el ensayo el 16 de noviembre de 2026, en 42,6 minutos (H38); las demás etapas, pendientes.
+- **Estado:** Adoptada. Pendiente de validar con profesor guía. En el servidor evaluó el ensayo el 16 de noviembre de 2026, en 42,6 minutos (H38); la etapa base el 17, en 55,1 minutos (H39), y la sin filtro el 18, en 51,9 minutos (H40). Las demás etapas, pendientes.
 
 ### H37 · 2026-11-14 · La prueba de tiempos en el servidor: el Random Forest es el más lento y XGBoost queda en el procesador
 - **Actividad:** 3.2
@@ -486,11 +490,135 @@ Las decisiones D58 a D64 se tomaron el 7 y el 8 de noviembre de 2026, antes de e
 - **Visto bueno:** La persona a cargo de la tesis aprobó el 16 de noviembre de 2026 anotar esta entrada y fijar `ensayo_resuelto` = SI («Sí, hazlo»), una vez pasadas las dos pruebas.
 - **Resuelve:** El ensayo de D61.
 
+### H39 · 2026-11-17 · Resultados con la lista A: XGBoost queda arriba en las cuatro variables, y la regresión logística y XGBoost están calibrados
+- **Actividad:** 3.2
+- **Hallazgo:** La etapa base de D64 se entrenó en el servidor el 16 y el 17 de noviembre de 2026 (script 17, 704,7 minutos, 9 combinaciones), y el script 18 la evaluó el 17 (55,1 minutos). Junto con las tres combinaciones sin ponderar del ensayo (H38), completa las 12 del resultado principal: las cuatro variables y los tres modelos, con la lista A, con hospital y sin ponderar. Discriminación, con el intervalo de los 1.000 sorteos de pacientes:
+
+  | Variable | Casos | Prevalencia | Modelo | AUPRC (intervalo) | Veces la prevalencia | AUROC (intervalo) |
+  |---|---|---|---|---|---|---|
+  | `REING_7D` | 3.347.652 | 2,07 % | Regresión logística | 0,058 (0,057 a 0,060) | 2,81 | 0,713 (0,711 a 0,715) |
+  | `REING_7D` | 3.347.652 | 2,07 % | Random Forest | 0,064 (0,062 a 0,066) | 3,09 | 0,706 (0,704 a 0,708) |
+  | `REING_7D` | 3.347.652 | 2,07 % | XGBoost | 0,068 (0,066 a 0,070) | 3,28 | 0,730 (0,728 a 0,732) |
+  | `REING_7D_CDM` | 2.855.319 | 1,27 % | Regresión logística | 0,049 (0,047 a 0,051) | 3,84 | 0,740 (0,737 a 0,743) |
+  | `REING_7D_CDM` | 2.855.319 | 1,27 % | Random Forest | 0,057 (0,054 a 0,060) | 4,51 | 0,732 (0,729 a 0,735) |
+  | `REING_7D_CDM` | 2.855.319 | 1,27 % | XGBoost | 0,060 (0,057 a 0,062) | 4,71 | 0,767 (0,765 a 0,770) |
+  | `REING_30D` | 3.275.432 | 5,90 % | Regresión logística | 0,169 (0,167 a 0,171) | 2,86 | 0,749 (0,748 a 0,750) |
+  | `REING_30D` | 3.275.432 | 5,90 % | Random Forest | 0,178 (0,176 a 0,181) | 3,02 | 0,750 (0,749 a 0,751) |
+  | `REING_30D` | 3.275.432 | 5,90 % | XGBoost | 0,181 (0,179 a 0,184) | 3,07 | 0,757 (0,756 a 0,759) |
+  | `REING_30D_CDM` | 2.792.482 | 3,55 % | Regresión logística | 0,122 (0,120 a 0,124) | 3,43 | 0,758 (0,756 a 0,760) |
+  | `REING_30D_CDM` | 2.792.482 | 3,55 % | Random Forest | 0,133 (0,130 a 0,136) | 3,75 | 0,761 (0,759 a 0,763) |
+  | `REING_30D_CDM` | 2.792.482 | 3,55 % | XGBoost | 0,136 (0,133 a 0,139) | 3,83 | 0,777 (0,775 a 0,779) |
+
+- **Calibración:** El Brier de referencia es el de darle a todos la prevalencia; el intercepto ideal es 0 y la pendiente ideal, 1 (D43).
+
+  | Variable | Modelo | Brier (referencia) | Intercepto (intervalo) | Pendiente (intervalo) | Casos con probabilidad 0 (reingresan) |
+  |---|---|---|---|---|---|
+  | `REING_7D` | Regresión logística | 0,0199 (0,0202) | +0,000 (−0,007 a +0,009) | 0,98 (0,97 a 0,99) | 0 |
+  | `REING_7D` | Random Forest | 0,0199 (0,0202) | −0,020 (−0,027 a −0,012) | 0,63 (0,62 a 0,64) | 251.693 (1.159) |
+  | `REING_7D` | XGBoost | 0,0198 (0,0202) | +0,002 (−0,005 a +0,011) | 0,96 (0,95 a 0,97) | 0 |
+  | `REING_7D_CDM` | Regresión logística | 0,0123 (0,0125) | +0,001 (−0,010 a +0,012) | 0,98 (0,97 a 0,99) | 0 |
+  | `REING_7D_CDM` | Random Forest | 0,0123 (0,0125) | −0,025 (−0,035 a −0,014) | 0,63 (0,62 a 0,64) | 455.804 (1.221) |
+  | `REING_7D_CDM` | XGBoost | 0,0122 (0,0125) | +0,005 (−0,006 a +0,016) | 0,95 (0,94 a 0,96) | 0 |
+  | `REING_30D` | Regresión logística | 0,0524 (0,0555) | +0,000 (−0,004 a +0,006) | 0,99 (0,99 a 1,00) | 0 |
+  | `REING_30D` | Random Forest | 0,0522 (0,0555) | −0,001 (−0,006 a +0,004) | 0,89 (0,88 a 0,89) | 56.622 (401) |
+  | `REING_30D` | XGBoost | 0,0520 (0,0555) | +0,002 (−0,003 a +0,006) | 1,00 (0,99 a 1,00) | 0 |
+  | `REING_30D_CDM` | Regresión logística | 0,0328 (0,0343) | +0,001 (−0,006 a +0,008) | 0,99 (0,98 a 1,00) | 0 |
+  | `REING_30D_CDM` | Random Forest | 0,0326 (0,0343) | −0,017 (−0,024 a −0,010) | 0,87 (0,86 a 0,88) | 156.822 (532) |
+  | `REING_30D_CDM` | XGBoost | 0,0325 (0,0343) | +0,004 (−0,003 a +0,011) | 1,00 (1,00 a 1,01) | 0 |
+
+- **Lectura:** XGBoost tiene la AUPRC y el AUROC más altos en las cuatro variables. En AUROC su intervalo no toca el de ningún otro modelo en ninguna variable; por ejemplo, en `REING_30D_CDM` va de 0,775 a 0,779, y el del Random Forest, de 0,759 a 0,763. En AUPRC las diferencias son chicas, y los intervalos de XGBoost y del Random Forest se tocan en las cuatro variables. El script 18 no compara los modelos entre sí sorteo por sorteo, así que no se afirma qué modelo es mejor en AUPRC. Los modelos superan a la prevalencia entre 2,8 y 4,7 veces, más en las variables de misma CDM. Los tres quedan bajo el Brier de referencia. La regresión logística y XGBoost están calibrados: el intercepto queda cerca de 0 y la pendiente, entre 0,95 y 1,00. El Random Forest da predicciones demasiado extremas, con pendiente 0,63 en las variables de 7 días y de 0,87 a 0,89 en las de 30, y deja muchos casos con probabilidad 0. Se informa (D63); sus hiperparámetros se ajustan en la actividad 3.3.
+- **Lo que no se alcanzó a leer:** El reporte del script 18 trae también la calibración de cada año del alta (D56; la pidió el profesor guía en la O10) y la AUPRC y el AUROC de cada vuelta (D63). No se alcanzaron a leer antes de perder el acceso al servidor, el 20 de noviembre de 2026. Quedan en el servidor, o hay que volver a calcularlos.
+- **Tiempos:** En `REING_30D_CDM`, una vuelta de la regresión logística tardó de 2 a 16 minutos (de 15 a 23 pasadas); una del Random Forest, unos 24 minutos, y una de XGBoost, unos 8 segundos.
+- **Verificaciones:**
+
+  | Qué | Resultado |
+  |---|---|
+  | Script 17, etapa base | Las 72 verificaciones de las 9 combinaciones, 8 en cada una |
+  | Script 18 | Sus 8 verificaciones sobre 15 combinaciones, entre ellas que la ponderación fijada coincide con el veredicto del ensayo |
+  | Prueba independiente del script 17 | Todas sus comprobaciones se cumplen (949 s) |
+  | Prueba independiente del script 18 | Todas sus comprobaciones se cumplen (286 s) |
+
+- **Evidencia:** en el servidor, `~/Tesis_Javiera/salida_17_base.txt`, `salida_18_base.txt`, `salida_pruebas_base.txt` y las secciones 1 a 4 de `reportes/18_metricas.md`, del 17 de noviembre de 2026. La persona a cargo las copió desde la Terminal. Los archivos quedaron en el servidor, al que se perdió el acceso el 20 de noviembre.
+- **Visto bueno:** La persona a cargo de la tesis aprobó el 20 de noviembre de 2026 pasar estos resultados a la bitácora («Sí, pásalos»).
+
+### H40 · 2026-11-18 · La lista A no pierde frente a la lista sin filtro en ninguna de las 12 comparaciones
+- **Actividad:** 3.2 (responde a la observación O7 de la revisión del profesor guía del 30 de octubre de 2026)
+- **Hallazgo:** La etapa sin filtro de D64 se entrenó en el servidor el 17 y el 18 de noviembre de 2026 (script 17, 1.606,3 minutos, 12 combinaciones, con entre 7.360 y 7.631 columnas), y el script 18 la evaluó el 18 (51,9 minutos). La comparación usa los mismos sorteos de pacientes para las dos listas, y la caída se mide desde la sin filtro hacia la A (D67): la del AUROC en puntos y la de la AUPRC como proporción del valor de la sin filtro. Los márgenes del objetivo específico 3 son 0,02 y 10 %.
+
+  | Variable | Modelo | Caída de la AUPRC (intervalo) | Caída del AUROC (intervalo) | Veredicto |
+  |---|---|---|---|---|
+  | `REING_7D` | Regresión logística | 0,4 % (−0,7 % a 1,4 %) | +0,004 (+0,002 a +0,005) | No pierde |
+  | `REING_7D` | Random Forest | 0,8 % (−0,5 % a 2,0 %) | +0,005 (+0,003 a +0,006) | No pierde |
+  | `REING_7D` | XGBoost | 1,9 % (0,9 % a 2,9 %) | +0,003 (+0,002 a +0,004) | No pierde |
+  | `REING_7D_CDM` | Regresión logística | 0,7 % (−1,1 % a 2,7 %) | +0,002 (−0,000 a +0,004) | No pierde |
+  | `REING_7D_CDM` | Random Forest | 3,1 % (1,2 % a 4,9 %) | +0,007 (+0,005 a +0,009) | No pierde |
+  | `REING_7D_CDM` | XGBoost | 0,1 % (−1,8 % a 2,0 %) | +0,003 (+0,001 a +0,004) | No pierde |
+  | `REING_30D` | Regresión logística | 1,0 % (0,6 % a 1,4 %) | +0,005 (+0,005 a +0,006) | No pierde |
+  | `REING_30D` | Random Forest | −0,4 % (−0,9 % a −0,0 %) | +0,003 (+0,002 a +0,004) | No pierde |
+  | `REING_30D` | XGBoost | 0,4 % (0,1 % a 0,7 %) | +0,001 (+0,001 a +0,002) | No pierde |
+  | `REING_30D_CDM` | Regresión logística | 2,0 % (1,3 % a 2,6 %) | +0,010 (+0,009 a +0,011) | No pierde |
+  | `REING_30D_CDM` | Random Forest | −0,4 % (−1,1 % a 0,3 %) | +0,005 (+0,004 a +0,006) | No pierde |
+  | `REING_30D_CDM` | XGBoost | −0,0 % (−0,6 % a 0,6 %) | +0,002 (+0,002 a +0,003) | No pierde |
+
+- **Lectura:** Las 12 comparaciones quedan lejos de los márgenes. La mayor caída de la AUPRC es la del Random Forest de `REING_7D_CDM`, 3,1 % (1,2 % a 4,9 %), menos de la mitad del margen. La mayor del AUROC es la de la regresión logística de `REING_30D_CDM`, 0,010 (0,009 a 0,011), la mitad del margen. En tres casos la lista A queda igual o apenas por encima en AUPRC: el Random Forest de `REING_30D` y de `REING_30D_CDM` (−0,4 %) y XGBoost de `REING_30D_CDM` (0,0 %). Con entre 57 y 424 códigos, según la variable, la lista A conserva prácticamente toda la información de los casi 7.000 códigos con al menos 100 casos: el filtro de la Etapa 3 (D45) no deja fuera información útil para estos modelos.
+- **Costo:** La etapa sin filtro tardó 134 minutos por combinación, frente a 78 de la etapa base. En `REING_30D_CDM`, una vuelta de la regresión logística tardó de 16 a 18 minutos (una, 55), y una del Random Forest, de 28 a 32.
+- **Verificaciones:**
+
+  | Qué | Resultado |
+  |---|---|
+  | Script 17, etapa sin filtro | Las 96 verificaciones de las 12 combinaciones, 8 en cada una |
+  | Script 18 | Sus 8 verificaciones sobre 27 combinaciones |
+  | Prueba independiente del script 17 | Todas sus comprobaciones se cumplen (410 s) |
+  | Prueba independiente del script 18 | Todas sus comprobaciones se cumplen (515 s) |
+
+- **Consecuencia:** Frente a la lista sin filtro, la lista A sigue como la principal (D64). Faltan las comparaciones con la lista agrupada y la lista C, y el modelo sin hospital.
+- **Evidencia:** en el servidor, `~/Tesis_Javiera/salida_17_sin_filtro.txt`, `salida_18_sin_filtro.txt`, `salida_pruebas_sin_filtro.txt` y las secciones 1 y 7 de `reportes/18_metricas.md`, del 18 de noviembre de 2026. La persona a cargo las copió desde la Terminal. Los archivos quedaron en el servidor, al que se perdió el acceso el 20 de noviembre.
+- **Visto bueno:** La persona a cargo de la tesis aprobó el 20 de noviembre de 2026 pasar estos resultados a la bitácora («Sí, pásalos»).
+- **Completa a:** D64, con su primer veredicto.
+
+### D68 · 2026-11-25 · Los modelos se entrenan en bioserver5 (DIINF, USACH), con el mismo entorno y 50 procesadores
+- **Actividad:** 3.2
+- **Qué pasó:** El 20 de noviembre de 2026 se perdió el acceso al servidor de la UFRGS (D58 y D65) para todos sus usuarios, también para el profesor guía, y sus administradores no han respondido. Lo que había allá se da por perdido: las predicciones, las métricas de los 1.000 sorteos, los reportes y las salidas de las 27 combinaciones del ensayo, la etapa base y la sin filtro. No se intenta recuperarlo por otra vía. Se salvaron el código, que está en GitHub; las tres tablas para los modelos, en el portátil, con el hash registrado (comprobado el 25 de noviembre de 2026); los resultados escritos en H37 a H40, y una copia de las tablas del reporte del script 18. El 23 de noviembre la Mesa de ayuda del DIINF de la USACH agregó a la persona a cargo, con una cuenta propia, a los usuarios de bioserver5; otro estudiante recibió acceso el mismo día.
+- **Cómo se entra:** Por SSH, desde el Símbolo del sistema del portátil, en la red cableada del DIINF o, fuera de la USACH, con la VPN institucional. Ya no hay RStudio Server: los comandos se escriben en la sesión de SSH y las tablas se suben con `scp`, el programa de copia de SSH. La persona a cargo inicia sesión; el asistente no tiene acceso y trabaja con lo que ella copia de la pantalla.
+- **Lo que tiene el servidor:** Según el diagnóstico de solo lectura del 25 de noviembre de 2026:
+
+  | Qué | En el servidor |
+  |---|---|
+  | Procesadores | 128: dos AMD EPYC 9334 de 32 núcleos, con dos hilos por núcleo. Al revisarlo, el 99 % estaba libre: otra persona usaba cerca de uno |
+  | Memoria | 1.007 GB, de los que 996 GB estaban disponibles |
+  | Tarjeta gráfica | No tiene |
+  | Disco de la carpeta personal | 2,1 TB libres |
+  | Python | Solo 3.10.12, del sistema; no hay conda |
+  | Herramientas | git, curl, tmux, screen, nohup y setsid |
+  | Límites de los procesos | Ninguno de tiempo ni de memoria |
+  | Internet | Responden PyPI, GitHub y conda-forge |
+  | Reinicio | Pendiente: si lo reinician, se detiene lo que esté corriendo, también dentro de tmux |
+
+- **Decisión:**
+
+  | Punto | Cómo |
+  |---|---|
+  | Servidor | bioserver5 reemplaza al servidor de la UFRGS. Lo de D58 sobre qué se sube y qué no sigue igual: nunca el conjunto de prueba ni los archivos crudos de 2019 |
+  | Entorno | El de D65, en `~/Tesis_Javiera/`: Python 3.14.5 de conda-forge en `~/Tesis_Javiera/entorno` y las mismas 13 bibliotecas con sus versiones exactas. Como el servidor no tiene conda, antes se instala Miniforge 26.9.4-2, el instalador de conda de conda-forge, en `~/Tesis_Javiera/miniforge3`. Es la versión publicada el 6 de noviembre de 2026, más de dos semanas antes, como pide D65, y se comprobó el hash del instalador con el de su página en GitHub |
+  | Procesadores | 50, en el parámetro `procesadores` de `reglas/parametros.csv`. El Random Forest arma sus 100 árboles de a tantos como procesadores tenga: con 32 son 4 rondas (32, 32, 32 y 4), y con 50, 2 rondas. Con 64 también son 2 rondas, así que 50 es el menor número con esa ganancia. Son el 39 % de los 128 procesadores; en la UFRGS se usaba el 50 % (32 de 64). El número de procesadores cambia solo el tiempo, no los modelos (H37) |
+  | XGBoost | En el procesador, como en H37: el servidor no tiene tarjeta gráfica |
+  | Entrenamientos largos | Dentro de tmux, como en D65. Con SSH es indispensable: lo que no esté en tmux se detiene si se corta la conexión o la VPN |
+  | Copias en el portátil | Después de cada etapa se traen al portátil, con `scp`, los reportes y, si se puede, las tablas de métricas y de predicciones, para que el servidor no tenga la única copia |
+
+- **Qué se vuelve a entrenar:** Las 12 combinaciones de la lista A con hospital y sin ponderar: las 9 de la etapa base y las 3 sin ponderar del ensayo. Hacen falta porque las comparaciones con la lista agrupada, la lista C y sin hospital se calculan sorteo por sorteo contra las predicciones de la lista A (D64 y D67). Con ellas se recuperan también la calibración de cada año del alta (D56, O10) y las métricas de cada vuelta, que no se alcanzaron a leer (H39). Las 3 combinaciones ponderadas del ensayo también se repiten, para recuperar H38 completo. La regresión logística de `REING_7D_CDM`, sin ponderar y ponderada, corre en una sesión de tmux aparte, con un solo procesador, porque la ponderada tardó 43 horas (H38); en la otra sesión van el Random Forest y XGBoost del ensayo y después la etapa base. A la vez se usan como máximo 51 procesadores. La etapa sin filtro no se repite: sus veredictos ya están en H40 y las comparaciones que faltan no la usan. Después siguen las etapas agrupada, sin hospital y C, en el orden de D64.
+- **Cómo se comprueba:** Con las mismas tablas, versiones, semillas y parámetros, las métricas deben coincidir con las de H38 y H39 en los decimales anotados. El procesador es de otro fabricante, así que podría cambiar el último decimal; si cambia más que eso, se revisa antes de seguir.
+- **Instalación:** La persona a cargo la hizo el 25 de noviembre de 2026 por SSH. Resultado: Python 3.14.5, numpy 2.5.3, pandas 3.0.3, pyarrow 25.0.1, scipy 1.18.1, scikit-learn 1.9.0, XGBoost 3.3.0, joblib 1.6.0, threadpoolctl 3.7.0, narwhals 2.27.1, cloudpickle 3.1.2, python-dateutil 2.9.0.post0, six 1.17.0 y nvidia-nccl-cu12 2.32.3: las 13 de D65 y ninguna otra, aparte de pip. pip no encontró dependencias faltantes («No broken requirements found»). La carpeta ocupa 2,2 GB. El código se clonó en `~/Tesis_Javiera/Codigo` (commit `c625ac9`) y las tres tablas se subieron a su `data/processed/` con `scp`, con el hash igual al registrado.
+- **Visto bueno:** La persona a cargo de la tesis aprobó escribir esta entrada el 25 de noviembre de 2026, con los 50 procesadores («escríbela»). Antes, ese mismo día, había ejecutado la instalación después de que se le explicó el plan.
+- **Reemplaza en parte a:** D58, en dónde se entrena y cómo se entra, y D65, en cuántos procesadores se usan y cómo se instala conda. El resto de las dos sigue vigente.
+- **Evidencia:** diagnóstico de solo lectura del 25 de noviembre de 2026 en bioserver5 (bloque de comandos por SSH); salidas de la instalación, de la comprobación de versiones, del `git clone` y de la comprobación del hash de las tablas; hash del instalador de Miniforge, de la página de la versión 26.9.4-2 en GitHub.
+- **Estado:** Adoptada. Pendiente de validar con profesor guía, sobre todo los 50 procesadores.
+
 ---
 
 ## Pendientes
 
-- Consultar al profesor guía si se pueden usar 40 procesadores (H37) y si conviene una cuenta propia en el servidor (D65).
-- En el servidor, con los scripts 17 (D66) y 18 (D67): los entrenamientos en el orden de D64, desde la etapa base, con sus métricas, comparaciones y pruebas. La prueba de tiempos (H37) y el ensayo de la ponderación (H38) están hechos.
-- Decidir cómo se traen al portátil los reportes que los scripts 17 y 18 y sus pruebas escriben en el servidor, porque el código se cambia solo en el portátil.
-- Informe de avance 6: los resultados de la 3.2, D50 a D57, H34, la respuesta a la O6 (cómo se separó el conjunto de prueba), D58 a D67 y H35 a H38.
+- Volver a entrenar en bioserver5 (D68) las 12 combinaciones de la lista A y las 3 ponderadas del ensayo, y comprobar que las métricas coinciden con H38 y H39. Con eso se recuperan la calibración de cada año del alta (D56, O10) y las métricas de cada vuelta, que no se alcanzaron a leer.
+- Las etapas agrupada, sin hospital y C de D64, con sus métricas, comparaciones y pruebas (scripts 17 y 18, D66 y D67). Ya están hechas la prueba de tiempos (H37), el ensayo de la ponderación (H38), la etapa base (H39) y la sin filtro (H40).
+- Después de cada etapa, traer al portátil los reportes y, si se puede, las tablas de métricas y de predicciones (D68).
+- Contarle al profesor guía el cambio de servidor y los 50 procesadores (D68).
+- Informe de avance 6: los resultados de la 3.2, D50 a D57, H34, la respuesta a la O6 (cómo se separó el conjunto de prueba), D58 a D68 y H35 en adelante.
