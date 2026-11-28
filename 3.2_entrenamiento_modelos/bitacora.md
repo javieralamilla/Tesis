@@ -1,8 +1,8 @@
 # Bitácora de la actividad 3.2: entrenamiento de LR, RF y XGBoost con validación cruzada
 
-Registro de los hallazgos y decisiones de la actividad 3.2 de la Carta Gantt («Entrenamiento LR, RF y XGBoost (CV)»), que corresponde a las Etapas 4 (esquema de partición y validación) y 5 (entrenamiento y comparación de modelos) del procedimiento de la propuesta. Continúa la numeración de las bitácoras anteriores (`docs/bitacora.md`, `2.2_depuracion_etiquetado/bitacora.md`, `2.3_validacion_particion/bitacora.md` y `3.1_filtro_dimensionalidad/bitacora.md`): aquí están las decisiones D58 a D68 y los hallazgos H35 a H40. Una entrada no se borra: si una decisión cambia, se agrega una nueva entrada que la reemplaza y se indica en el campo **Estado**.
+Registro de los hallazgos y decisiones de la actividad 3.2 de la Carta Gantt («Entrenamiento LR, RF y XGBoost (CV)»), que corresponde a las Etapas 4 (esquema de partición y validación) y 5 (entrenamiento y comparación de modelos) del procedimiento de la propuesta. Continúa la numeración de las bitácoras anteriores (`docs/bitacora.md`, `2.2_depuracion_etiquetado/bitacora.md`, `2.3_validacion_particion/bitacora.md` y `3.1_filtro_dimensionalidad/bitacora.md`): aquí están las decisiones D58 a D68 y los hallazgos H35 a H44. Una entrada no se borra: si una decisión cambia, se agrega una nueva entrada que la reemplaza y se indica en el campo **Estado**.
 
-Las decisiones D58 a D64 se tomaron el 7 y el 8 de noviembre de 2026, antes de escribir el código, una por una y con el visto bueno de la persona a cargo; D65, el 14 de noviembre, con el diagnóstico del servidor, y D66 y D67, el mismo día, con los scripts 17 y 18 escritos y probados. Fijan dónde se entrena y cómo se prepara el servidor (D58 y D65), qué le toca a esta actividad y qué a las siguientes (D59), cómo entra cada variable a cada modelo (D60), cómo se trata el desbalance (D61), con qué hiperparámetros se entrena (D62), cómo se calculan las métricas (D63), cómo se hacen y se juzgan las comparaciones que pidió el profesor guía en su revisión del 30 de octubre de 2026 (D64) y cómo se programan el entrenamiento (D66) y las métricas (D67). Los hallazgos H35 y H36 salieron al probar el script 17: cómo se pide la multa L1 en la versión de scikit-learn de la propuesta y por qué la regresión logística se calcula con liblinear. El hallazgo H37, del mismo día, es la prueba de tiempos en el servidor: cuánto tarda y cuánta memoria usa cada modelo, por qué XGBoost queda en el procesador y qué cambia con el número de procesadores. El hallazgo H38, del 16 de noviembre, es el resultado del ensayo de la ponderación: ningún modelo se pondera. H39 y H40, del 17 y el 18 de noviembre, son los resultados con la lista A y la primera comparación de listas, la A frente a la sin filtro. El 20 de noviembre se perdió el acceso al servidor, con las etapas agrupada, sin hospital y C todavía pendientes. D68, del 25 de noviembre, traslada el entrenamiento a bioserver5, del DIINF de la USACH, con el mismo entorno y 50 procesadores, y fija qué se vuelve a entrenar. Los modelos leen solo las tablas para los modelos de D57 (bitácora de la 3.1), que tienen solo el conjunto de desarrollo. El conjunto de prueba no se abre: se usa una sola vez, en la actividad 4.1. Los resultados se presentarán en el informe de avance 6, junto con D50 a D57, H34 y la respuesta a la observación O6.
+Las decisiones D58 a D64 se tomaron el 7 y el 8 de noviembre de 2026, antes de escribir el código, una por una y con el visto bueno de la persona a cargo; D65, el 14 de noviembre, con el diagnóstico del servidor, y D66 y D67, el mismo día, con los scripts 17 y 18 escritos y probados. Fijan dónde se entrena y cómo se prepara el servidor (D58 y D65), qué le toca a esta actividad y qué a las siguientes (D59), cómo entra cada variable a cada modelo (D60), cómo se trata el desbalance (D61), con qué hiperparámetros se entrena (D62), cómo se calculan las métricas (D63), cómo se hacen y se juzgan las comparaciones que pidió el profesor guía en su revisión del 30 de octubre de 2026 (D64) y cómo se programan el entrenamiento (D66) y las métricas (D67). Los hallazgos H35 y H36 salieron al probar el script 17: cómo se pide la multa L1 en la versión de scikit-learn de la propuesta y por qué la regresión logística se calcula con liblinear. El hallazgo H37, del mismo día, es la prueba de tiempos en el servidor: cuánto tarda y cuánta memoria usa cada modelo, por qué XGBoost queda en el procesador y qué cambia con el número de procesadores. El hallazgo H38, del 16 de noviembre, es el resultado del ensayo de la ponderación: ningún modelo se pondera. H39 y H40, del 17 y el 18 de noviembre, son los resultados con la lista A y la primera comparación de listas, la A frente a la sin filtro. El 20 de noviembre se perdió el acceso al servidor, con las etapas agrupada, sin hospital y C todavía pendientes. D68, del 25 de noviembre, traslada el entrenamiento a bioserver5, del DIINF de la USACH, con el mismo entorno y 50 procesadores, y fija qué se vuelve a entrenar. H41, del 26 de noviembre, muestra que la repetición da exactamente los mismos resultados; H42 trae la calibración por año del alta y las métricas de cada vuelta; H43 y H44, del 26 y el 27, cierran las comparaciones de D64: la lista A no pierde frente a ninguna otra lista, y sin hospital el modelo pierde poco. Los modelos leen solo las tablas para los modelos de D57 (bitácora de la 3.1), que tienen solo el conjunto de desarrollo. El conjunto de prueba no se abre: se usa una sola vez, en la actividad 4.1. Los resultados se presentarán en el informe de avance 6, junto con D50 a D57, H34 y la respuesta a la observación O6.
 
 **Tipos de entrada:** `H` = hallazgo (algo que se observó en los datos),
 `D` = decisión (algo que se resolvió hacer).
@@ -32,6 +32,10 @@ Las decisiones D58 a D64 se tomaron el 7 y el 8 de noviembre de 2026, antes de e
 | Resultado principal | H39 | Con la lista A, XGBoost tiene la AUPRC y el AUROC más altos en las cuatro variables (AUROC de 0,730 a 0,777). La regresión logística y XGBoost están calibrados; el Random Forest da predicciones demasiado extremas. |
 | La A frente a la sin filtro | H40 | La lista A no pierde en ninguna de las 12 comparaciones: su AUPRC cae a lo más un 3,1 % y su AUROC, a lo más 0,010. |
 | Servidor nuevo | D68 | Desde el 25 de noviembre de 2026, bioserver5, del DIINF de la USACH, por SSH: el entorno de D65, con conda instalado desde Miniforge, y 50 procesadores. Se vuelven a entrenar la lista A y el ensayo, porque lo del servidor de la UFRGS se perdió; la sin filtro no (H40). |
+| Repetición | H41 | En bioserver5 los resultados de la lista A y del ensayo son idénticos, celda por celda, a los de H38 y H39. |
+| Calibración por año | H42 | La pendiente de la regresión logística y de XGBoost queda cerca de 1 en los seis años; el intercepto va de −0,10 a +0,07. Las métricas de cada vuelta son parejas. |
+| La A frente a la agrupada y la C | H43 | La lista A no pierde en ninguna de las 24 comparaciones; con H40, en ninguna de las 36. Sigue como la lista principal. |
+| Sin hospital | H44 | Sin `HOSPITAL`, la AUPRC baja entre 0,5 % y 3,5 % y el AUROC, como mucho, 0,003. Se decide en la 3.3. |
 
 ---
 
@@ -226,7 +230,7 @@ Las decisiones D58 a D64 se tomaron el 7 y el 8 de noviembre de 2026, antes de e
 - **Completa a:** D53 y D55 (bitácora de la 3.1). Responde a la propuesta de H30.
 - **Evidencia:** exploración de solo lectura del 8 de noviembre de 2026 sobre `modelos_casos.parquet` y `listas_codigos.parquet` (árboles de juguete, solo para ilustrar).
 - **Precisada por:** D67 (14 de noviembre de 2026): la caída se mide siempre desde la otra lista hacia la A, como proporción del valor de la otra lista, también frente a la agrupada, y el veredicto se lee en los extremos del intervalo.
-- **Resultados:** H40 (18 de noviembre de 2026): la A no pierde frente a la sin filtro en las 12 comparaciones. Faltan la agrupada, la C y sin hospital.
+- **Resultados:** H40 (18 de noviembre de 2026): la A no pierde frente a la sin filtro en las 12 comparaciones. H43 (27 de noviembre de 2026): tampoco frente a la agrupada ni la C, en las 24. H44 (26 de noviembre de 2026): sin hospital, la AUPRC baja entre 0,5 % y 3,5 %.
 - **Estado:** Adoptada. Pendiente de validar con profesor guía.
 
 ### D65 · 2026-11-14 · El entorno del servidor: carpeta propia, Python 3.14.5 con conda y entrenamientos en tmux
@@ -540,6 +544,7 @@ Las decisiones D58 a D64 se tomaron el 7 y el 8 de noviembre de 2026, antes de e
 
 - **Evidencia:** en el servidor, `~/Tesis_Javiera/salida_17_base.txt`, `salida_18_base.txt`, `salida_pruebas_base.txt` y las secciones 1 a 4 de `reportes/18_metricas.md`, del 17 de noviembre de 2026. La persona a cargo las copió desde la Terminal. Los archivos quedaron en el servidor, al que se perdió el acceso el 20 de noviembre.
 - **Visto bueno:** La persona a cargo de la tesis aprobó el 20 de noviembre de 2026 pasar estos resultados a la bitácora («Sí, pásalos»).
+- **Completada por:** H41 y H42 (26 de noviembre de 2026): la repetición en bioserver5 da las mismas cifras, y la calibración por año y las métricas de cada vuelta ya se leyeron.
 
 ### H40 · 2026-11-18 · La lista A no pierde frente a la lista sin filtro en ninguna de las 12 comparaciones
 - **Actividad:** 3.2 (responde a la observación O7 de la revisión del profesor guía del 30 de octubre de 2026)
@@ -611,14 +616,129 @@ Las decisiones D58 a D64 se tomaron el 7 y el 8 de noviembre de 2026, antes de e
 - **Visto bueno:** La persona a cargo de la tesis aprobó escribir esta entrada el 25 de noviembre de 2026, con los 50 procesadores («escríbela»). Antes, ese mismo día, había ejecutado la instalación después de que se le explicó el plan.
 - **Reemplaza en parte a:** D58, en dónde se entrena y cómo se entra, y D65, en cuántos procesadores se usan y cómo se instala conda. El resto de las dos sigue vigente.
 - **Evidencia:** diagnóstico de solo lectura del 25 de noviembre de 2026 en bioserver5 (bloque de comandos por SSH); salidas de la instalación, de la comprobación de versiones, del `git clone` y de la comprobación del hash de las tablas; hash del instalador de Miniforge, de la página de la versión 26.9.4-2 en GitHub.
-- **Estado:** Adoptada. Pendiente de validar con profesor guía, sobre todo los 50 procesadores.
+- **Estado:** Adoptada. La repetición quedó comprobada en H41 (26 de noviembre de 2026).
+
+### H41 · 2026-11-26 · La repetición en bioserver5 da exactamente los mismos resultados que en la UFRGS
+- **Actividad:** 3.2
+- **Hallazgo:** Con el entorno de D68 se volvieron a entrenar en bioserver5 las 12 combinaciones de la lista A con hospital y sin ponderar y las 3 ponderadas del ensayo, entre el 25 y el 26 de noviembre de 2026. El script 18 las evaluó con los mismos 1.000 sorteos de pacientes. En las 15, la AUPRC, el AUROC, el Brier, el intercepto, la pendiente y sus intervalos son idénticos, celda por celda, a los de H38 y H39. Se comparó con un programa de solo lectura contra la copia de esos reportes que había quedado en el portátil.
+- **Señales de que el cálculo es el mismo:**
+
+  | Qué | UFRGS | bioserver5 |
+  |---|---|---|
+  | Casos con probabilidad 0 del Random Forest de `REING_7D_CDM` (reingresan) | 455.804 (1.221) | 455.804 (1.221) |
+  | Pasadas de la regresión logística ponderada en las cinco vueltas | 48, 186, 102, 73 y 115 | 48, 186, 102, 73 y 115 |
+  | Veredicto del ensayo (cambio de la AUPRC al ponderar) | LR −3,9 %, RF −13,3 %, XGB −1,2 % | LR −3,9 %, RF −13,3 %, XGB −1,2 % |
+
+- **Lectura:** Con las mismas tablas, versiones, semillas y parámetros, el resultado no depende del equipo ni del número de procesadores, aunque el procesador sea de otro fabricante. Por eso los veredictos de la lista sin filtro (H40), que no se repitió (D68), se mantienen.
+- **Tiempos en bioserver5:**
+
+  | Etapa | Tiempo | En la UFRGS |
+  |---|---|---|
+  | Ensayo: Random Forest y XGBoost | 40 min | Unas 2 h 33 min |
+  | Ensayo: regresión logística, sin ponderar y ponderada | 1.277 min (21 h 17 min) | Unas 45 h 30 min |
+  | Base | 177 min | 705 min |
+  | Agrupada | 260 min | — |
+  | Sin hospital | 271 min | — |
+  | C | 290 min | — |
+  | Script 18 de cada etapa | 22 a 62 min | 42 a 55 min |
+
+- **Verificaciones:** el script 18 final cumple sus 8 verificaciones sobre 51 combinaciones, entre ellas que la ponderación fijada coincide con el veredicto del ensayo. Las pruebas independientes cumplen sus 19 y 15 comprobaciones (343 y 425 s). El registro tiene todas las vueltas con el commit `ca88716`, sin avisos.
+- **Evidencia:** reportes del 17 y del 18, salidas y registro de bioserver5, copiados al portátil el 27 de noviembre de 2026 en `Resultados_servidor/2026-11-27_3.2_completa/`, con el hash del archivo comprimido igual en el servidor y en el portátil.
+- **Visto bueno:** La persona a cargo de la tesis aprobó pasar estos resultados a la bitácora el 28 de noviembre de 2026 («sí»).
+- **Completa a:** D68.
+
+### H42 · 2026-11-26 · La calibración por año del alta y las métricas de cada vuelta
+- **Actividad:** 3.2 (responde a la observación O10 de la revisión del profesor guía del 30 de octubre de 2026; D56)
+- **Hallazgo:** Con las predicciones fuera de pliegue de la lista A se calcularon, por primera vez, el intercepto y la pendiente de cada año del alta (D56) y la AUPRC y el AUROC de cada vuelta (D63). No se habían alcanzado a leer en el servidor de la UFRGS (H39).
+- **Pendiente por año:**
+
+  | Modelo | Variables de 7 días | Variables de 30 días |
+  |---|---|---|
+  | Regresión logística | 0,94 a 1,03 | 0,96 a 1,05 |
+  | Random Forest | 0,59 a 0,66 | 0,85 a 0,91 |
+  | XGBoost | 0,94 a 0,99 | 0,98 a 1,04 |
+
+- **Intercepto por año, ejemplo con XGBoost y `REING_30D`:**
+
+  | Año | Casos | Reingresó | Predicho | Intercepto (intervalo) |
+  |---|---|---|---|---|
+  | 2019 | 644.415 | 5,70 % | 5,49 % | +0,041 (+0,030 a +0,052) |
+  | 2020 | 413.202 | 5,66 % | 5,71 % | −0,009 (−0,023 a +0,005) |
+  | 2021 | 508.698 | 5,62 % | 5,77 % | −0,029 (−0,042 a −0,016) |
+  | 2022 | 564.053 | 5,76 % | 5,90 % | −0,027 (−0,040 a −0,015) |
+  | 2023 | 615.867 | 6,14 % | 6,10 % | +0,008 (−0,003 a +0,018) |
+  | 2024 | 529.197 | 6,45 % | 6,36 % | +0,015 (+0,003 a +0,027) |
+
+- **Lectura:** La pendiente de la regresión logística y de XGBoost queda cerca de 1 en los seis años. La del Random Forest es baja en todos, así que sus predicciones demasiado extremas (H39) no dependen del año. El intercepto va de −0,10 a +0,07 en las cuatro variables y los tres modelos, con el mismo patrón: los tres modelos se quedan algo cortos en 2019 y se pasan algo en 2021 y 2022; en 2024, la regresión logística y XGBoost se quedan levemente cortos, y el Random Forest queda cerca de 0. La explicación más probable es que el año no es una variable del modelo (D49), así que el modelo usa una tasa promedio; además, `VENTANA_CORTADA` marca por igual 2019 y 2021. Las diferencias son de décimas de punto: en el ejemplo, 5,49 % predicho frente a 5,70 % real. La parte temporal de D56, entrenar con 2019–2022 y evaluar 2023–2024, es de la actividad 4.1 (D59).
+- **Métricas de cada vuelta:** muy parejas en las 12 combinaciones. Por ejemplo, el AUROC de XGBoost con `REING_30D` va de 0,756 a 0,758, y la AUPRC de la regresión logística con `REING_30D_CDM`, de 0,121 a 0,124. Ninguna vuelta se aparta de las demás.
+- **Evidencia:** secciones 5 y 6 del reporte del script 18 del 27 de noviembre de 2026.
+- **Visto bueno:** La persona a cargo de la tesis aprobó pasar estos resultados a la bitácora el 28 de noviembre de 2026 («sí»).
+- **Completa a:** D56 (bitácora de la 2.3), en la parte de las predicciones fuera de pliegue.
+
+### H43 · 2026-11-27 · La lista A no pierde frente a la lista agrupada ni frente a la lista C
+- **Actividad:** 3.2 (responde a la observación O7 de la revisión del profesor guía del 30 de octubre de 2026)
+- **Hallazgo:** Las etapas agrupada y C de D64 se entrenaron en bioserver5 el 26 de noviembre de 2026, y el script 18 las comparó con la lista A con los mismos sorteos de pacientes. La caída se mide desde la otra lista hacia la A (D67); los márgenes del objetivo específico 3 son 0,02 en AUROC y 10 % en AUPRC.
+
+  | Variable | Modelo | Frente a | Caída de la AUPRC (intervalo) | Caída del AUROC (intervalo) | Veredicto |
+  |---|---|---|---|---|---|
+  | `REING_7D` | Regresión logística | agrupada | 0,1 % (−0,3 % a 0,5 %) | −0,001 (−0,001 a −0,000) | No pierde |
+  | `REING_7D` | Regresión logística | C | 0,9 % (0,2 % a 1,5 %) | +0,007 (+0,006 a +0,007) | No pierde |
+  | `REING_7D` | Random Forest | agrupada | 1,6 % (0,7 % a 2,5 %) | +0,001 (+0,000 a +0,003) | No pierde |
+  | `REING_7D` | Random Forest | C | 1,5 % (0,6 % a 2,4 %) | +0,004 (+0,003 a +0,006) | No pierde |
+  | `REING_7D` | XGBoost | agrupada | 1,3 % (0,3 % a 2,2 %) | +0,001 (+0,000 a +0,002) | No pierde |
+  | `REING_7D` | XGBoost | C | 0,3 % (−0,5 % a 1,0 %) | +0,000 (−0,000 a +0,001) | No pierde |
+  | `REING_7D_CDM` | Regresión logística | agrupada | 1,3 % (0,4 % a 2,3 %) | +0,000 (−0,000 a +0,001) | No pierde |
+  | `REING_7D_CDM` | Regresión logística | C | 4,7 % (3,5 % a 6,0 %) | +0,011 (+0,010 a +0,012) | No pierde |
+  | `REING_7D_CDM` | Random Forest | agrupada | 1,2 % (−0,3 % a 2,7 %) | +0,001 (−0,001 a +0,003) | No pierde |
+  | `REING_7D_CDM` | Random Forest | C | 1,2 % (−0,1 % a 2,4 %) | +0,003 (+0,001 a +0,004) | No pierde |
+  | `REING_7D_CDM` | XGBoost | agrupada | 1,3 % (−0,4 % a 3,0 %) | +0,001 (−0,000 a +0,001) | No pierde |
+  | `REING_7D_CDM` | XGBoost | C | −0,4 % (−2,3 % a 1,6 %) | −0,000 (−0,001 a +0,001) | No pierde |
+  | `REING_30D` | Regresión logística | agrupada | −0,3 % (−0,5 % a −0,1 %) | −0,000 (−0,001 a −0,000) | No pierde |
+  | `REING_30D` | Regresión logística | C | 0,7 % (0,5 % a 0,9 %) | +0,003 (+0,003 a +0,003) | No pierde |
+  | `REING_30D` | Random Forest | agrupada | −0,1 % (−0,5 % a 0,2 %) | +0,000 (−0,000 a +0,001) | No pierde |
+  | `REING_30D` | Random Forest | C | 0,3 % (−0,1 % a 0,6 %) | +0,002 (+0,001 a +0,002) | No pierde |
+  | `REING_30D` | XGBoost | agrupada | −0,1 % (−0,4 % a 0,3 %) | +0,000 (−0,000 a +0,000) | No pierde |
+  | `REING_30D` | XGBoost | C | −0,1 % (−0,4 % a 0,1 %) | −0,000 (−0,001 a −0,000) | No pierde |
+  | `REING_30D_CDM` | Regresión logística | agrupada | −0,4 % (−0,8 % a −0,1 %) | +0,001 (+0,000 a +0,001) | No pierde |
+  | `REING_30D_CDM` | Regresión logística | C | 1,9 % (1,5 % a 2,2 %) | +0,008 (+0,007 a +0,008) | No pierde |
+  | `REING_30D_CDM` | Random Forest | agrupada | −0,0 % (−0,6 % a 0,5 %) | +0,001 (+0,000 a +0,002) | No pierde |
+  | `REING_30D_CDM` | Random Forest | C | 0,9 % (0,4 % a 1,4 %) | +0,002 (+0,001 a +0,003) | No pierde |
+  | `REING_30D_CDM` | XGBoost | agrupada | 0,9 % (0,3 % a 1,5 %) | +0,002 (+0,001 a +0,002) | No pierde |
+  | `REING_30D_CDM` | XGBoost | C | −0,9 % (−1,4 % a −0,4 %) | −0,000 (−0,001 a +0,000) | No pierde |
+
+- **Lectura:** Las 24 comparaciones quedan lejos de los márgenes. Frente a la agrupada, que junta los diagnósticos en su categoría de tres caracteres, la mayor caída es 1,6 % en AUPRC y 0,002 en AUROC: agrupar no mejora la predicción. Frente a la C, que tiene entre 629 y 1.595 códigos, la mayor caída es la de la regresión logística de `REING_7D_CDM`, 4,7 % (3,5 % a 6,0 %) en AUPRC y 0,011 en AUROC, menos de la mitad del margen. La regresión logística es el modelo que más aprovecha los códigos extra; con XGBoost la A queda igual o un poco mejor que la C.
+- **Consecuencia:** Junto con H40, la lista A no pierde en ninguna de las 36 comparaciones de D64. Sigue como la lista principal para la actividad 3.3, y no hay nada que llevar al profesor guía antes de esa actividad.
+- **Evidencia:** sección 7 del reporte del script 18 del 27 de noviembre de 2026, después de que las dos pruebas independientes cumplieran todas sus comprobaciones.
+- **Visto bueno:** La persona a cargo de la tesis aprobó pasar estos resultados a la bitácora el 28 de noviembre de 2026 («sí»).
+- **Completa a:** D64, junto con H40.
+
+### H44 · 2026-11-26 · Sin hospital, el modelo pierde poco
+- **Actividad:** 3.2 (responde a la observación O9 de la revisión del profesor guía del 30 de octubre de 2026; D55)
+- **Hallazgo:** La etapa sin hospital de D64 entrenó la lista A sin la variable `HOSPITAL` el 26 de noviembre de 2026. Como pide D64, solo se informa la caída frente al modelo con hospital, con los mismos sorteos de pacientes.
+
+  | Variable | Modelo | Caída de la AUPRC (intervalo) | Caída del AUROC (intervalo) |
+  |---|---|---|---|
+  | `REING_7D` | Regresión logística | 1,3 % (1,0 % a 1,7 %) | +0,002 (+0,002 a +0,003) |
+  | `REING_7D` | Random Forest | 0,8 % (−0,1 % a 1,6 %) | +0,002 (+0,001 a +0,003) |
+  | `REING_7D` | XGBoost | 1,5 % (0,6 % a 2,3 %) | +0,002 (+0,002 a +0,003) |
+  | `REING_7D_CDM` | Regresión logística | 1,4 % (1,0 % a 1,8 %) | +0,002 (+0,002 a +0,003) |
+  | `REING_7D_CDM` | Random Forest | 3,5 % (2,1 % a 4,7 %) | +0,003 (+0,001 a +0,005) |
+  | `REING_7D_CDM` | XGBoost | 1,6 % (−0,3 % a 3,4 %) | +0,003 (+0,002 a +0,003) |
+  | `REING_30D` | Regresión logística | 0,9 % (0,8 % a 1,1 %) | +0,001 (+0,001 a +0,001) |
+  | `REING_30D` | Random Forest | 0,7 % (0,3 % a 1,0 %) | +0,001 (+0,000 a +0,001) |
+  | `REING_30D` | XGBoost | 0,8 % (0,6 % a 1,1 %) | +0,001 (+0,000 a +0,001) |
+  | `REING_30D_CDM` | Regresión logística | 0,8 % (0,6 % a 0,9 %) | +0,001 (+0,001 a +0,001) |
+  | `REING_30D_CDM` | Random Forest | 0,6 % (0,0 % a 1,2 %) | +0,000 (−0,000 a +0,001) |
+  | `REING_30D_CDM` | XGBoost | 0,5 % (−0,0 % a 1,0 %) | +0,000 (−0,000 a +0,001) |
+
+- **Lectura:** Sin el hospital, la AUPRC baja entre 0,5 % y 3,5 % y el AUROC, como mucho, 0,003. El modelo se apoya poco en el hospital: buena parte de esa información parece llegar por otras variables. Si conviene dejarlo o sacarlo se decide en la actividad 3.3, al elegir las variables (D55).
+- **Evidencia:** sección 8 del reporte del script 18 del 27 de noviembre de 2026.
+- **Visto bueno:** La persona a cargo de la tesis aprobó pasar estos resultados a la bitácora el 28 de noviembre de 2026 («sí»).
+- **Completa a:** D64 y D55 (bitácora de la 3.1).
 
 ---
 
 ## Pendientes
 
-- Volver a entrenar en bioserver5 (D68) las 12 combinaciones de la lista A y las 3 ponderadas del ensayo, y comprobar que las métricas coinciden con H38 y H39. Con eso se recuperan la calibración de cada año del alta (D56, O10) y las métricas de cada vuelta, que no se alcanzaron a leer.
-- Las etapas agrupada, sin hospital y C de D64, con sus métricas, comparaciones y pruebas (scripts 17 y 18, D66 y D67). Ya están hechas la prueba de tiempos (H37), el ensayo de la ponderación (H38), la etapa base (H39) y la sin filtro (H40).
-- Después de cada etapa, traer al portátil los reportes y, si se puede, las tablas de métricas y de predicciones (D68).
-- Contarle al profesor guía el cambio de servidor y los 50 procesadores (D68).
+- Guardar en Git los reportes finales de los scripts 17 y 18 y de sus pruebas, que hoy están en el servidor y en `Resultados_servidor/2026-11-27_3.2_completa/` del portátil, fuera de Git.
 - Informe de avance 6: los resultados de la 3.2, D50 a D57, H34, la respuesta a la O6 (cómo se separó el conjunto de prueba), D58 a D68 y H35 en adelante.
